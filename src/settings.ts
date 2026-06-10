@@ -136,11 +136,10 @@ export interface AiChatOptions {
   maxTokens?: number
   /** Explicit model id — usually passed via modelForTask(settings, taskId). */
   model?:     string
-  /** Sampling temperature. Use 0 for structured/JSON output (aiJson sets this). */
-  temperature?: number
-  /** Assistant prefill — forces the reply to continue from this text (e.g. "{" for JSON). */
-  prefill?:   string
 }
+// NOTE: current Claude models (Haiku 4.5 / Sonnet 4.6 / Opus 4.8) have removed
+// `temperature` and assistant-prefill — sending either returns a 400. JSON output
+// is enforced by the system prompt + robust parsing in aiJson, not by those.
 
 interface AnthropicTextBlock { type: string; text?: string }
 interface AnthropicResponse {
@@ -167,10 +166,6 @@ export async function aiChat(
     .filter(m => m.role !== 'system')
     .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
 
-  // Assistant prefill: the reply is forced to continue from this text.
-  // Standard technique for guaranteed-structure output (e.g. prefill "{" for JSON).
-  if (opts.prefill) turns.push({ role: 'assistant', content: opts.prefill })
-
   // Cache the system prefix so repeated calls with the same prompt reuse tokens
   // (~0.1× cost on reads). Only engages once the prefix passes the model's
   // minimum cacheable size; below that it's a harmless no-op.
@@ -181,7 +176,6 @@ export async function aiChat(
   const body = JSON.stringify({
     model,
     max_tokens: opts.maxTokens ?? 1024,
-    ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
     ...(systemField ? { system: systemField } : {}),
     messages: turns,
   })
@@ -228,7 +222,7 @@ export async function aiChat(
       .filter(b => b.type === 'text' && typeof b.text === 'string')
       .map(b => b.text as string)
       .join('')
-    return { text: (opts.prefill ?? '') + text }
+    return { text }
   }
 
   const first = await attempt()
@@ -242,12 +236,12 @@ export async function aiChat(
 }
 
 // ─── aiJson — structured output helper ────────────────────────────────────────
-// Prefills the assistant turn with "{" (or "[") so the model MUST continue
-// valid JSON, runs at temperature 0, extracts the JSON body, and retries the
-// whole call once if parsing still fails. Use for every JSON-contract feature.
+// The system prompt instructs JSON-only output; this strips any fences/prose,
+// slices the JSON body (object or array), and retries the whole call once if
+// parsing still fails. Use for every JSON-contract feature.
 
 export interface AiJsonOptions extends AiChatOptions {
-  /** "{"  for object responses (default), "[" for array responses. */
+  /** Expected top-level shape — "{" object (default) or "[" array. Parse hint only. */
   prefill?: '{' | '['
 }
 
@@ -256,15 +250,13 @@ export async function aiJson<T>(
   settings: Settings,
   opts: AiJsonOptions = {},
 ): Promise<T> {
-  const prefill = opts.prefill ?? '{'
-  const close   = prefill === '{' ? '}' : ']'
+  const open  = opts.prefill ?? '{'
+  const close = open === '{' ? '}' : ']'
 
   const once = async (): Promise<T> => {
-    const raw = await aiChat(messages, settings, {
-      ...opts, prefill, temperature: opts.temperature ?? 0,
-    })
+    const raw = await aiChat(messages, settings, { model: opts.model, maxTokens: opts.maxTokens })
     const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim()
-    const start = cleaned.indexOf(prefill)
+    const start = cleaned.indexOf(open)
     const end   = cleaned.lastIndexOf(close)
     if (start === -1 || end === -1 || end < start) throw new Error('AI returned no parsable JSON.')
     return JSON.parse(cleaned.slice(start, end + 1)) as T

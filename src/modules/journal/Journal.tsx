@@ -50,9 +50,8 @@ async function enhanceEntry(raw: string): Promise<EnhanceResult> {
     themes?: unknown
     reflection?: unknown
   }
-  // temperature 0.7: enhancement is creative writing, not strict extraction
   const p = await aiJson<ParsedEnhance>(msgs, settings,
-    { model: modelForTask(settings, 'journal.enhance'), maxTokens: 1600, temperature: 0.7 })
+    { model: modelForTask(settings, 'journal.enhance'), maxTokens: 1600 })
   return {
     polished: typeof p.polished === 'string' && p.polished.trim() ? p.polished : raw,
     stickers: Array.isArray(p.stickers)
