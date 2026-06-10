@@ -36,6 +36,10 @@ export interface Task {
   // Todo-specific
   priority?:  Priority
   dueDate?:   string | null
+
+  // Cross-module provenance (set by createExternalTask — e.g. L.O.G sync)
+  logMission?: string
+  logDream?:   string
 }
 
 // ─── Milestone labels (cyberpunk-flavoured) ───────────────────────────────────

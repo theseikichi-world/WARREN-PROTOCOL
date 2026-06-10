@@ -4,6 +4,7 @@ import {
   type Constellation, type PlanItem,
   DEFAULT_CATEGORIES,
 } from './types'
+import { createExternalTask } from '../scrap7/store'
 
 export type { LogState }
 
@@ -201,60 +202,19 @@ export function syncPlanItemToScrap7(item: PlanItem): string {
 }
 
 // ─── SCRAP-7 sync ─────────────────────────────────────────────────────────────
-// Writes a task into SCRAP-7's localStorage so it appears in the Tasks module.
-// Uses the same ID so completion state can be cross-referenced.
+// All cross-module task creation goes through SCRAP-7's own createExternalTask,
+// so the Task shape (and its migrations) live in exactly one place.
+// Same ID is reused so completion state can be cross-referenced.
 
 export function syncTaskToScrap7(task: LogTask, missionTitle: string, dreamTitle: string): void {
-  try {
-    const SCRAP7_KEY = 'scrap7_v3'
-    const raw   = localStorage.getItem(SCRAP7_KEY)
-    const state = raw ? JSON.parse(raw) : {
-      tasks: [], categories: ['Goals'], chatHistory: [], lastDailyReset: new Date().toISOString().slice(0, 10),
-    }
-
-    const base = {
-      id:        task.id,
-      text:      `${task.text}`,
-      category:  'Goals',
-      taskType:  task.type,
-      completed: task.done,
-      createdAt: task.createdAt,
-      // metadata visible in SCRAP-7
-      logMission: missionTitle,
-      logDream:   dreamTitle,
-    }
-
-    const extra: Record<string, unknown> = {}
-    if (task.type === 'habit') {
-      Object.assign(extra, {
-        direction: 'positive', streak: 0, score: 0,
-        todayCount: 0, lastTrackedDate: null,
-        trackingHistory: [], skippedDates: [],
-        target: 1, unit: 'times',
-      })
-    } else if (task.type === 'daily') {
-      Object.assign(extra, {
-        schedule: { type: 'everyday' }, streak: 0, completionHistory: [],
-      })
-    } else {
-      // todo
-      Object.assign(extra, { priority: 'medium', dueDate: null })
-    }
-
-    const fullTask = { ...base, ...extra }
-
-    // Upsert (replace if exists, otherwise prepend)
-    const idx = (state.tasks as Array<{ id: string }>).findIndex(t => t.id === task.id)
-    if (idx >= 0) state.tasks[idx] = fullTask
-    else state.tasks.unshift(fullTask)
-
-    if (!(state.categories as string[]).includes('Goals')) state.categories.push('Goals')
-
-    localStorage.setItem(SCRAP7_KEY, JSON.stringify(state))
-
-    // Notify SCRAP-7 if it's mounted (custom event on window)
-    window.dispatchEvent(new CustomEvent('warren:sync', { detail: { type: 'task_synced', taskId: task.id } }))
-  } catch (e) {
-    console.error('[L.O.G] syncTaskToScrap7 failed', e)
-  }
+  createExternalTask({
+    id:         task.id,
+    text:       task.text,
+    category:   'Goals',
+    taskType:   task.type,
+    completed:  task.done,
+    createdAt:  task.createdAt,
+    logMission: missionTitle,
+    logDream:   dreamTitle,
+  })
 }

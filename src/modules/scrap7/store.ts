@@ -121,7 +121,8 @@ export interface NewTaskData {
   dueDate?:   string | null
 }
 
-export function createTask(state: Scrap7State, data: NewTaskData): Scrap7State {
+/** The single place that knows each task type's full field set. */
+function buildTask(data: NewTaskData, overrides: Partial<Task> = {}): Task {
   const base: Task = {
     id:        crypto.randomUUID(),
     text:      data.text,
@@ -156,7 +157,54 @@ export function createTask(state: Scrap7State, data: NewTaskData): Scrap7State {
     })
   }
 
-  return { ...state, tasks: [base, ...state.tasks] }
+  return { ...base, ...overrides }
+}
+
+export function createTask(state: Scrap7State, data: NewTaskData): Scrap7State {
+  return { ...state, tasks: [buildTask(data), ...state.tasks] }
+}
+
+// ─── External task intake (cross-module sync) ─────────────────────────────────
+// Other modules (L.O.G, INFINITY-8, …) create SCRAP-7 tasks through this
+// function so the Task shape lives in exactly one place. It loads via
+// loadState (so migrations apply), upserts by id, saves, and fires
+// warren:sync — safe to call while SCRAP-7 isn't mounted.
+
+export interface ExternalTaskData extends NewTaskData {
+  /** Reuse the caller's id so completion state can be cross-referenced (upsert key). */
+  id?:        string
+  completed?: boolean
+  createdAt?: string
+  /** Provenance shown/stored on the task (e.g. mission + dream titles). */
+  logMission?: string
+  logDream?:   string
+}
+
+export function createExternalTask(data: ExternalTaskData): void {
+  try {
+    const state = loadState()
+    const task = buildTask(data, {
+      ...(data.id ? { id: data.id } : {}),
+      ...(data.completed !== undefined ? { completed: data.completed } : {}),
+      ...(data.createdAt ? { createdAt: data.createdAt } : {}),
+      ...(data.logMission ? { logMission: data.logMission } : {}),
+      ...(data.logDream ? { logDream: data.logDream } : {}),
+    })
+
+    const idx = state.tasks.findIndex(t => t.id === task.id)
+    const tasks = idx >= 0
+      ? state.tasks.map((t, i) => i === idx ? task : t)
+      : [task, ...state.tasks]
+
+    const categories = state.categories.includes(task.category)
+      ? state.categories
+      : [...state.categories, task.category]
+
+    saveState({ ...state, tasks, categories })
+    window.dispatchEvent(new CustomEvent('warren:sync', { detail: { type: 'task_synced', taskId: task.id } }))
+  } catch (e) {
+    console.error('[scrap7] createExternalTask failed', e)
+  }
 }
 
 // ─── Track habit ──────────────────────────────────────────────────────────────

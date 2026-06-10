@@ -107,7 +107,7 @@ SCRAP-7 listens in `useEffect` and reloads from localStorage.
 - Returns `{ synthesis, links: [{ dreams[], insight }], plan: [{ text, type, serves }] }` → persisted on `state.constellation`.
 - `ConstellationPanel` shows the synthesis, interconnections, and a unified plan; each plan item deploys to SCRAP-7 individually or "DEPLOY ALL". `PlanItem.deployed` flag prevents dup re-deploys.
 
-**SCRAP-7 sync:** `syncTaskToScrap7()` now handles **todo** too (not just daily/habit); `syncPlanItemToScrap7()` pushes a clean-named plan item. After sync, dispatches `warren:sync`.
+**SCRAP-7 sync:** `syncTaskToScrap7()` / `syncPlanItemToScrap7()` are thin wrappers over SCRAP-7's **`createExternalTask()`** (scrap7/store) — the single owner of the Task shape. It loads via `loadState` (so migrations apply), upserts by id, persists, and dispatches `warren:sync`. L.O.G no longer hand-builds Task objects or raw-writes `scrap7_v3`. Provenance is typed: `Task.logMission` / `Task.logDream`.
 
 ---
 
@@ -395,6 +395,11 @@ type Settings = {
 ## Changelog
 
 ### 2026-06 (Session 4, hardening pass)
+- **AI 400 regression fixed**: current Claude models removed `temperature` + assistant-prefill —
+  both stripped from `aiChat`/`aiJson`; JSON enforced by prompt + robust parsing (retry kept).
+- **`createExternalTask()`**: cross-module task creation centralized in scrap7/store
+  (shared `buildTask`, migrations apply, upsert by id, `warren:sync`). L.O.G sync is now a
+  thin wrapper; raw `scrap7_v3` writes eliminated. +5 task-shape tests (39 total).
 - **ESLint + vitest added** — flat config, 34 store-math tests (all green), 0 lint errors.
 - **Git initialized** — repo at project root, pushed to `github.com/theseikichi-world/WARREN-PROTOCOL` (`main`).
 - **AI layer hardened**: `aiChat` gained assistant-**prefill**, `temperature`, and one **retry**
