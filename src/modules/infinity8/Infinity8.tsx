@@ -10,7 +10,7 @@ import {
   loadState as loadScrap7, saveState as saveScrap7,
   completeTask, uncompleteTask, trackHabit, updateTask, createTask,
 } from '../scrap7/store'
-import { aiChat, loadSettings, modelForTask, type AiMessage } from '../../settings'
+import { aiJson, loadSettings, modelForTask } from '../../settings'
 
 const NEON   = '#22d3ee'   // infinity cyan
 const NEON_D = 'rgba(34,211,238,0.1)'
@@ -248,13 +248,10 @@ export default function Infinity8() {
       }).join('\n')
       const msg = `Wake ${eff.wake}, bedtime ${eff.sleep} (${sleepHours(eff)}h sleep). Break between activities: ${eff.breakMin}min.
 Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single day is overloaded.`
-      const raw = await aiChat([
+      const parsed = await aiJson<Record<string, unknown>>([
         { role: 'system', content: OPTIMIZE_SYSTEM },
         { role: 'user',   content: msg },
       ], settings, { model: modelForTask(settings, 'infinity8.optimize'), maxTokens: 1800 })
-      const clean = raw.replace(/```json\s*/gi, '').replace(/```/g, '').trim()
-      const s = clean.indexOf('{'), e = clean.lastIndexOf('}')
-      const parsed = JSON.parse(clean.slice(s, e + 1))
       const normDays = (d: unknown): string[] | 'everyday' => {
         if (d === 'everyday' || d == null) return 'everyday'
         if (Array.isArray(d)) { const f = d.map(String).filter(x => DAY_KEYS.includes(x)); return f.length ? f : 'everyday' }

@@ -11,7 +11,7 @@ import {
   type DiscoverItem, type Candidate, type EpisodeInfo, type GameEntry,
   type MediaItem, type MediaType, vibeFor,
 } from './types'
-import { aiChat, loadSettings, modelForTask } from '../../settings'
+import { aiJson, loadSettings, modelForTask } from '../../settings'
 
 const TMDB_BASE = 'https://api.themoviedb.org/3'
 const TMDB_IMG  = 'https://image.tmdb.org/t/p/w300'
@@ -228,15 +228,12 @@ export async function fetchDetails(c: Candidate): Promise<DetailsResult> {
 
   // ── Claude fallback (no TMDB key) ──
   const settings = loadSettings()
-  const raw = await aiChat([
+  const parsed = await aiJson<DetailsResult>([
     { role: 'system', content: `You are a movie/TV database. Return ONLY valid JSON:
 {"title":"official English title","year":2026,"type":"movie"|"tv","genre":["Genre1","Genre2"],"synopsis":"2-3 sentences, no spoilers","emoji":"single emoji","mood_color":"#hex","director":"name or null","creator":"showrunner or null","cast":["A","B","C"],"imdb_rating":7.3,"total_seasons":1,"tagline":"tagline","episodes_in_season":8,"episodes_released":8,"air_schedule":"Tuesdays · Apple TV+","next_episode_date":null,"release_date":"YYYY-MM-DD or null"}
 TV series → type "tv". Fill all fields from your knowledge. air_schedule null for movies.` },
     { role: 'user', content: `Title: ${c.title}${c.year ? ` (${c.year})` : ''}${c.imdb_id ? `\nIMDB: ${c.imdb_id}` : ''}${c.cast ? `\nCast: ${c.cast}` : ''}\nType hint: ${c.type}` },
   ], settings, { model: modelForTask(settings, 'pictures.metadata'), maxTokens: 700 })
-  const clean = raw.replace(/```json/gi, '').replace(/```/g, '').trim()
-  const s = clean.indexOf('{'), e = clean.lastIndexOf('}')
-  const parsed = JSON.parse(clean.slice(s, e + 1)) as DetailsResult
   return { ...parsed, imdb_id: c.imdb_id ?? null }
 }
 

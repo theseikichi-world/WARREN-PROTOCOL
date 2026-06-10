@@ -136,6 +136,10 @@ export interface AiChatOptions {
   maxTokens?: number
   /** Explicit model id — usually passed via modelForTask(settings, taskId). */
   model?:     string
+  /** Sampling temperature. Use 0 for structured/JSON output (aiJson sets this). */
+  temperature?: number
+  /** Assistant prefill — forces the reply to continue from this text (e.g. "{" for JSON). */
+  prefill?:   string
 }
 
 interface AnthropicTextBlock { type: string; text?: string }
@@ -163,6 +167,10 @@ export async function aiChat(
     .filter(m => m.role !== 'system')
     .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
 
+  // Assistant prefill: the reply is forced to continue from this text.
+  // Standard technique for guaranteed-structure output (e.g. prefill "{" for JSON).
+  if (opts.prefill) turns.push({ role: 'assistant', content: opts.prefill })
+
   // Cache the system prefix so repeated calls with the same prompt reuse tokens
   // (~0.1× cost on reads). Only engages once the prefix passes the model's
   // minimum cacheable size; below that it's a harmless no-op.
@@ -170,46 +178,103 @@ export async function aiChat(
     ? [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }]
     : undefined
 
-  let res: Response
-  try {
-    res = await fetch(ANTHROPIC_URL, {
-      method:  'POST',
-      headers: {
-        'x-api-key':                                 apiKey,
-        'anthropic-version':                         '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-        'content-type':                              'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: opts.maxTokens ?? 1024,
-        ...(systemField ? { system: systemField } : {}),
-        messages: turns,
-      }),
-    })
-  } catch {
-    throw new Error('Could not reach Claude (network error). Check your connection.')
-  }
+  const body = JSON.stringify({
+    model,
+    max_tokens: opts.maxTokens ?? 1024,
+    ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+    ...(systemField ? { system: systemField } : {}),
+    messages: turns,
+  })
 
-  if (!res.ok) {
-    let detail = ''
+  const attempt = async (): Promise<{ text: string } | { retry: true; reason: string }> => {
+    let res: Response
     try {
-      const body = await res.json() as AnthropicResponse
-      detail = body.error?.message ?? ''
-    } catch { /* non-JSON error body */ }
-
-    if (res.status === 401) throw new Error('Claude API key rejected (401). Check the key in Settings → AI Assistant.')
-    if (res.status === 429) throw new Error('Claude rate limit hit (429). Wait a moment and try again.')
-    if (res.status === 400 && /credit|billing/i.test(detail)) {
-      throw new Error('Claude request blocked — your account may be out of credit. Check console.anthropic.com → Billing.')
+      res = await fetch(ANTHROPIC_URL, {
+        method:  'POST',
+        headers: {
+          'x-api-key':                                 apiKey,
+          'anthropic-version':                         '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+          'content-type':                              'application/json',
+        },
+        body,
+      })
+    } catch {
+      return { retry: true, reason: 'Could not reach Claude (network error). Check your connection.' }
     }
-    throw new Error(`Claude API error ${res.status}${detail ? `: ${detail}` : ''}`)
+
+    if (!res.ok) {
+      let detail = ''
+      try {
+        const errBody = await res.json() as AnthropicResponse
+        detail = errBody.error?.message ?? ''
+      } catch { /* non-JSON error body */ }
+
+      if (res.status === 401) throw new Error('Claude API key rejected (401). Check the key in Settings → AI Assistant.')
+      if (res.status === 400 && /credit|billing/i.test(detail)) {
+        throw new Error('Claude request blocked — your account may be out of credit. Check console.anthropic.com → Billing.')
+      }
+      // Transient: rate limit / overloaded / server hiccup → retry once
+      if (res.status === 429 || res.status === 529 || res.status >= 500) {
+        return { retry: true, reason: res.status === 429
+          ? 'Claude rate limit hit (429). Wait a moment and try again.'
+          : `Claude is overloaded (${res.status}). Try again in a moment.` }
+      }
+      throw new Error(`Claude API error ${res.status}${detail ? `: ${detail}` : ''}`)
+    }
+
+    const data = await res.json() as AnthropicResponse
+    const text = (data.content ?? [])
+      .filter(b => b.type === 'text' && typeof b.text === 'string')
+      .map(b => b.text as string)
+      .join('')
+    return { text: (opts.prefill ?? '') + text }
   }
 
-  const data = await res.json() as AnthropicResponse
-  const text = (data.content ?? [])
-    .filter(b => b.type === 'text' && typeof b.text === 'string')
-    .map(b => b.text as string)
-    .join('')
-  return text || 'No response.'
+  const first = await attempt()
+  if ('text' in first) return first.text || 'No response.'
+
+  // One retry with a short backoff for transient failures
+  await new Promise(r => setTimeout(r, 2000))
+  const second = await attempt()
+  if ('text' in second) return second.text || 'No response.'
+  throw new Error(second.reason)
+}
+
+// ─── aiJson — structured output helper ────────────────────────────────────────
+// Prefills the assistant turn with "{" (or "[") so the model MUST continue
+// valid JSON, runs at temperature 0, extracts the JSON body, and retries the
+// whole call once if parsing still fails. Use for every JSON-contract feature.
+
+export interface AiJsonOptions extends AiChatOptions {
+  /** "{"  for object responses (default), "[" for array responses. */
+  prefill?: '{' | '['
+}
+
+export async function aiJson<T>(
+  messages: AiMessage[],
+  settings: Settings,
+  opts: AiJsonOptions = {},
+): Promise<T> {
+  const prefill = opts.prefill ?? '{'
+  const close   = prefill === '{' ? '}' : ']'
+
+  const once = async (): Promise<T> => {
+    const raw = await aiChat(messages, settings, {
+      ...opts, prefill, temperature: opts.temperature ?? 0,
+    })
+    const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim()
+    const start = cleaned.indexOf(prefill)
+    const end   = cleaned.lastIndexOf(close)
+    if (start === -1 || end === -1 || end < start) throw new Error('AI returned no parsable JSON.')
+    return JSON.parse(cleaned.slice(start, end + 1)) as T
+  }
+
+  try {
+    return await once()
+  } catch (e) {
+    // Auth/billing errors shouldn't be retried — surface immediately
+    if (e instanceof Error && /401|billing|credit/i.test(e.message)) throw e
+    return once()
+  }
 }

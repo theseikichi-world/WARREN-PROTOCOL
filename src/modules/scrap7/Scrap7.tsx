@@ -10,7 +10,7 @@ import {
   todayScheduledDailies, fuzzyMatchTask, type NewTaskData,
 } from './store'
 import { parseCommand } from './commandParser'
-import { loadSettings, aiChat, modelForTask, type AiMessage } from '../../settings'
+import { loadSettings, aiJson, modelForTask, type AiMessage } from '../../settings'
 
 const NEON = '#00b4ff'
 
@@ -55,24 +55,14 @@ interface Scrap7AiResult {
   delete: number[]
 }
 
-/** Robustly extract the JSON object from a model reply (handles fences / stray prose). */
-function parseScrap7Json(raw: string): Scrap7AiResult | null {
-  try {
-    const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim()
-    const start = cleaned.indexOf('{')
-    const end   = cleaned.lastIndexOf('}')
-    if (start === -1 || end === -1) return null
-    const obj = JSON.parse(cleaned.slice(start, end + 1))
-    if (!obj || typeof obj !== 'object') return null
-    return {
-      reply:  typeof obj.reply === 'string' ? obj.reply : '',
-      tasks:  Array.isArray(obj.tasks) ? obj.tasks : [],
-      delete: Array.isArray(obj.delete)
-        ? obj.delete.map((n: unknown) => Number(n)).filter((n: number) => Number.isInteger(n) && n > 0)
-        : [],
-    }
-  } catch {
-    return null
+/** Normalize the parsed AI object into a safe Scrap7AiResult. */
+function normalizeScrap7(obj: Record<string, unknown>): Scrap7AiResult {
+  return {
+    reply:  typeof obj.reply === 'string' ? obj.reply : '',
+    tasks:  Array.isArray(obj.tasks) ? obj.tasks as Scrap7AiTask[] : [],
+    delete: Array.isArray(obj.delete)
+      ? (obj.delete as unknown[]).map(n => Number(n)).filter(n => Number.isInteger(n) && n > 0)
+      : [],
   }
 }
 
@@ -860,15 +850,8 @@ export default function Scrap7() {
         { role: 'system', content: SCRAP7_SYSTEM + `\n\nEXISTING TASKS (numbered):\n${context}` },
         { role: 'user',   content: raw },
       ]
-      const out = await aiChat(msgs, settings, { model: modelForTask(settings, 'scrap7.assistant') })
-
-      const parsedAI = parseScrap7Json(out)
-      if (!parsedAI) {
-        // Model didn't return JSON — just show whatever it said
-        s = addMessage(s, { text: out, sender: 'scrap7' })
-        persist(s); setLastReply(out); setThinking(false)
-        return
-      }
+      const out = await aiJson<Record<string, unknown>>(msgs, settings, { model: modelForTask(settings, 'scrap7.assistant') })
+      const parsedAI = normalizeScrap7(out)
 
       // ── Deletes first (so a "move to another tab" delete+recreate works cleanly) ──
       const deleted: string[] = []

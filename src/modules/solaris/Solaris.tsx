@@ -9,7 +9,7 @@ import {
   loadSolarisState, saveSolarisState, type SolarisState,
   setProfile, getDay, addEntry, removeEntry, getStreak, type NewFoodData,
 } from './store'
-import { loadSettings, aiChat, modelForTask } from '../../settings'
+import { loadSettings, aiJson, modelForTask } from '../../settings'
 
 const NEON     = '#ffb13c'   // solar gold
 const NEON_DIM = 'rgba(255,177,60,0.1)'
@@ -398,17 +398,10 @@ function DeliveryPanel({ profile, targets, consumed, onAccept, onClose }: {
 Dietary preference: ${profile.diet || 'none'}.
 REMAINING budget for the rest of today: ${remaining.calories} kcal, ${remaining.protein}g protein, ${remaining.carbs}g carbs, ${remaining.fat}g fat.
 Design the delivery.`
-      const raw = await aiChat([
+      const parsed = await aiJson<DeliveryMeal[]>([
         { role: 'system', content: DELIVERY_SYSTEM },
         { role: 'user',   content: userMsg },
-      ], settings, { model: modelForTask(settings, 'solaris.delivery'), maxTokens: 1536 })
-
-      // robust JSON extraction
-      const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim()
-      const start = cleaned.indexOf('[')
-      const end   = cleaned.lastIndexOf(']')
-      if (start === -1 || end === -1) throw new Error('Station returned an unreadable manifest.')
-      const parsed = JSON.parse(cleaned.slice(start, end + 1)) as DeliveryMeal[]
+      ], settings, { model: modelForTask(settings, 'solaris.delivery'), maxTokens: 1536, prefill: '[' })
       const valid = parsed
         .filter(m => m && m.name && typeof m.calories === 'number')
         .map(m => ({

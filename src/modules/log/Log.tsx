@@ -14,7 +14,7 @@ import {
   setDreamAnalysis, clearDreamAnalysis, setConstellation, clearConstellation,
   syncPlanItemToScrap7,
 } from './store'
-import { aiChat, loadSettings, modelForTask, type AiMessage } from '../../settings'
+import { aiJson, loadSettings, modelForTask, type AiMessage } from '../../settings'
 
 const LOG_NEON  = '#c084fc'
 const LOG_DIM   = 'rgba(192,132,252,0.1)'
@@ -662,9 +662,7 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
         { role: 'system', content: LOG_ANALYSIS_SYSTEM },
         { role: 'user',   content: `Dream: ${dream.title}\n\n${dream.description || 'No description provided.'}` },
       ]
-      const raw = await aiChat(msgs, settings, { model: modelForTask(settings, 'log.analysis'), maxTokens: 2048 })
-      const clean = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
-      const parsed = JSON.parse(clean)
+      const parsed = await aiJson<Record<string, unknown>>(msgs, settings, { model: modelForTask(settings, 'log.analysis'), maxTokens: 2048 })
       const result: DreamAnalysis = {
         analysis: typeof parsed.analysis === 'string' ? parsed.analysis : '',
         missions: Array.isArray(parsed.missions) ? parsed.missions : [],
@@ -1245,13 +1243,10 @@ export default function Log() {
       const dreamsText = state.dreams
         .map((d, i) => `#${i + 1} [${d.category}] ${d.title}\n${d.description || '(no description)'}`)
         .join('\n\n')
-      const raw = await aiChat([
+      const parsed = await aiJson<Record<string, unknown>>([
         { role: 'system', content: CONSTELLATION_SYSTEM },
         { role: 'user',   content: `Dreams in priority order (#1 = highest):\n\n${dreamsText}` },
       ], settings, { model: modelForTask(settings, 'log.analysis'), maxTokens: 2048 })
-      const clean = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
-      const s = clean.indexOf('{'), e = clean.lastIndexOf('}')
-      const parsed = JSON.parse(clean.slice(s, e + 1))
       const c: Constellation = {
         synthesis: typeof parsed.synthesis === 'string' ? parsed.synthesis : '',
         links: Array.isArray(parsed.links)

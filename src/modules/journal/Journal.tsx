@@ -4,7 +4,7 @@ import {
   loadJournal, saveJournal, deleteEntry,
   journalStreak, allStickers, todayKey, fmtStardate, fmtDay,
 } from './store'
-import { aiChat, loadSettings, modelForTask, type AiMessage } from '../../settings'
+import { aiJson, loadSettings, modelForTask, type AiMessage } from '../../settings'
 
 const NEON   = '#ffd700'   // captain's gold
 const NEON_D = 'rgba(255,215,0,0.1)'
@@ -43,10 +43,16 @@ async function enhanceEntry(raw: string): Promise<EnhanceResult> {
     { role: 'system', content: ENHANCE_SYSTEM },
     { role: 'user', content: raw },
   ]
-  const out = await aiChat(msgs, settings, { model: modelForTask(settings, 'journal.enhance'), maxTokens: 1600 })
-  const clean = out.replace(/```json/gi, '').replace(/```/g, '').trim()
-  const s = clean.indexOf('{'), e = clean.lastIndexOf('}')
-  const p = JSON.parse(clean.slice(s, e + 1))
+  interface ParsedEnhance {
+    polished?: unknown
+    stickers?: unknown
+    mood?: { label?: unknown; emoji?: unknown; color?: string }
+    themes?: unknown
+    reflection?: unknown
+  }
+  // temperature 0.7: enhancement is creative writing, not strict extraction
+  const p = await aiJson<ParsedEnhance>(msgs, settings,
+    { model: modelForTask(settings, 'journal.enhance'), maxTokens: 1600, temperature: 0.7 })
   return {
     polished: typeof p.polished === 'string' && p.polished.trim() ? p.polished : raw,
     stickers: Array.isArray(p.stickers)
@@ -54,7 +60,8 @@ async function enhanceEntry(raw: string): Promise<EnhanceResult> {
           .map((x: Sticker) => ({ emoji: String(x.emoji), label: String(x.label ?? '') }))
       : [],
     mood: p.mood?.emoji
-      ? { label: String(p.mood.label ?? ''), emoji: String(p.mood.emoji), color: /^#[0-9a-f]{3,8}$/i.test(p.mood.color) ? p.mood.color : NEON }
+      ? { label: String(p.mood.label ?? ''), emoji: String(p.mood.emoji),
+          color: /^#[0-9a-f]{3,8}$/i.test(String(p.mood.color ?? '')) ? String(p.mood.color) : NEON }
       : { label: '', emoji: '📖', color: NEON },
     themes: Array.isArray(p.themes) ? p.themes.slice(0, 4).map(String) : [],
     reflection: typeof p.reflection === 'string' ? p.reflection : '',
