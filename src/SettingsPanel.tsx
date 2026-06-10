@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart'
 import { type Settings, ACCENT_PRESETS, CLAUDE_MODELS, DEFAULT_MODEL, AI_TASKS, modelForTask, saveSettings, applySettings } from './settings'
+import { downloadBackup, exportAllJson, importBackup } from './backup'
 
 // ─── Toggle switch ────────────────────────────────────────────────────────────
 function Toggle({ on, onChange, accent }: { on: boolean; onChange: (v: boolean) => void; accent: string }) {
@@ -63,6 +64,9 @@ interface Props {
 export default function SettingsPanel({ settings, onClose, onChange }: Props) {
   const [visible, setVisible] = useState(false)
   const [autostartLoading, setAutostartLoading] = useState(false)
+  const [backupMsg, setBackupMsg] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
+  const [importText, setImportText] = useState('')
 
   // Slide-in animation
   useEffect(() => {
@@ -428,6 +432,70 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
               <p style={{ fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.3)', fontFamily: 'var(--font)', marginTop: 3, lineHeight: 1.4 }}>{hint}</p>
             </div>
           ))}
+
+          {/* ── Backup ── */}
+          <Section label="Backup" />
+          <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
+            lineHeight: 1.6, marginBottom: 10 }}>
+            All Warren data lives on this machine. Export a backup file regularly —
+            habits, goals, texts, journal, library, everything.
+          </p>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+            <button onClick={() => { try { downloadBackup(); setBackupMsg('✓ Backup downloaded') } catch { setBackupMsg('Download failed — use Copy') } }}
+              style={{ flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
+                fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
+                color: acc, border: `1px solid ${acc}40`, background: `${acc}0c` }}>
+              ⬇ EXPORT FILE</button>
+            <button onClick={async () => {
+              try { await navigator.clipboard.writeText(exportAllJson()); setBackupMsg('✓ Copied to clipboard') }
+              catch { setBackupMsg('Clipboard blocked — use Export File') }
+            }}
+              style={{ flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
+                fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
+                color: 'rgba(220,240,255,0.6)', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent' }}>
+              ⧉ COPY JSON</button>
+            <button onClick={() => { setImportOpen(v => !v); setBackupMsg('') }}
+              style={{ flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
+                fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
+                color: importOpen ? '#ff6b00' : 'rgba(220,240,255,0.6)',
+                border: `1px solid ${importOpen ? 'rgba(255,107,0,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                background: importOpen ? 'rgba(255,107,0,0.08)' : 'transparent' }}>
+              ⬆ IMPORT</button>
+          </div>
+          {backupMsg && (
+            <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
+              color: backupMsg.startsWith('✓') ? '#39ff14' : '#ff6b00', marginBottom: 8 }}>{backupMsg}</p>
+          )}
+          {importOpen && (
+            <div style={{ marginBottom: 12 }}>
+              <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={4}
+                placeholder='Paste a Warren backup JSON here…'
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 6, resize: 'none',
+                  background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,107,0,0.25)', outline: 'none',
+                  fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(220,240,255,0.8)',
+                  boxSizing: 'border-box', userSelect: 'text', WebkitUserSelect: 'text' }}/>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(255,107,0,0.6)',
+                margin: '4px 0 6px', lineHeight: 1.5 }}>
+                ⚠ Restoring overwrites current data for every key in the backup, then reloads.
+              </p>
+              <button disabled={!importText.trim()} onClick={() => {
+                try {
+                  const n = importBackup(importText)
+                  setBackupMsg(`✓ Restored ${n} keys — reloading…`)
+                  setTimeout(() => window.location.reload(), 800)
+                } catch (e) {
+                  setBackupMsg(e instanceof Error ? e.message : 'Import failed')
+                }
+              }}
+                style={{ width: '100%', padding: '8px', borderRadius: 6,
+                  cursor: importText.trim() ? 'pointer' : 'default',
+                  fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800, letterSpacing: '0.1em',
+                  color: importText.trim() ? '#ff6b00' : 'rgba(148,163,184,0.3)',
+                  border: `1px solid ${importText.trim() ? 'rgba(255,107,0,0.45)' : 'rgba(255,255,255,0.06)'}`,
+                  background: importText.trim() ? 'rgba(255,107,0,0.1)' : 'transparent' }}>
+                RESTORE & RELOAD</button>
+            </div>
+          )}
 
           {/* ── About ── */}
           <Section label="About" />

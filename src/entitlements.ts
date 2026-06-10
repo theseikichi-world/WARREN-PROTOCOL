@@ -1,10 +1,8 @@
 /**
  * Entitlements — which modules the current user has unlocked.
- * Stored in Supabase: profiles.entitlements (jsonb)
- * Shape: { akki: true, bevi: false, hoot: true, ... }
- *
- * During development / before auth is wired up, DEV_UNLOCK_ALL
- * returns true for every module so you can work on any screen.
+ * Currently local-only (no backend). DEV_UNLOCK_ALL opens everything in dev;
+ * built modules have direct routes and bypass this check entirely.
+ * Revisit if/when Warren gets accounts + paid modules.
  */
 
 import type { ModuleId } from './guild'
@@ -19,8 +17,7 @@ export function hasAccess(entitlements: Entitlements, id: ModuleId, isFree: bool
   return entitlements[id] === true
 }
 
-/** Stub — replace with real Supabase fetch once auth is wired */
+/** Stub — wire to a real backend if Warren ever gets accounts. */
 export async function fetchEntitlements(_userId: string): Promise<Entitlements> {
-  // TODO: replace with supabase.from('profiles').select('entitlements').eq('id', userId)
   return {}
 }
