@@ -381,10 +381,22 @@ type Settings = {
 
 ---
 
+## Tooling
+
+- **Lint:** `npm run lint` — ESLint 9 flat config (`eslint.config.js`): typescript-eslint
+  recommended + react-hooks + react-refresh. `no-explicit-any` off; unused-vars warn (allows `_` prefix).
+- **Tests:** `npm test` (vitest, node env, `src/**/*.test.ts`). 34 tests cover the fragile pure math:
+  `computeTargets`/`sumDay` (SOLARIS), `buildDay`/`classifyPeriod`/`sleepHours`/time-helpers (INFINITY-8),
+  `applyReview` SM-2 (A.R.D.O), `getHabitTier` (SCRAP-7). Add a test when you touch store math.
+- **Build:** `npm run build` (`tsc && vite build`). Test files type-check but aren't bundled.
+
+---
+
 ## Changelog
 
 ### 2026-06 (Session 4, hardening pass)
-- **Git initialized** — repo at project root, `master`, commits from dc161b4. Commit after every feature.
+- **ESLint + vitest added** — flat config, 34 store-math tests (all green), 0 lint errors.
+- **Git initialized** — repo at project root, pushed to `github.com/theseikichi-world/WARREN-PROTOCOL` (`main`).
 - **AI layer hardened**: `aiChat` gained assistant-**prefill**, `temperature`, and one **retry**
   (2s backoff) on 429/529/5xx/network. New **`aiJson<T>(messages, settings, {prefill: '{'|'['})`**
   (temperature 0 default, parse-retry) replaced 6 duplicated JSON parsers — ALL structured-output

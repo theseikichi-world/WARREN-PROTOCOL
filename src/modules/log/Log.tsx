@@ -8,9 +8,9 @@ import {
 import {
   loadLogState, saveLogState, type LogState,
   createDream, updateDream, deleteDream, moveDream,
-  addMission, updateMission, completeMission, deleteMission, type NewMissionData,
+  addMission, completeMission, deleteMission, type NewMissionData,
   addTask, toggleTask, deleteTask, markTaskSynced,
-  addSignal, deleteSignal, addCategory, syncTaskToScrap7,
+  addSignal, deleteSignal, syncTaskToScrap7,
   setDreamAnalysis, clearDreamAnalysis, setConstellation, clearConstellation,
   syncPlanItemToScrap7,
 } from './store'
@@ -1406,7 +1406,7 @@ export default function Log() {
             expanded={expandedDreams.has(dream.id)}
             onToggleExpand={() => setExpandedDreams(prev => {
               const next = new Set(prev)
-              next.has(dream.id) ? next.delete(dream.id) : next.add(dream.id)
+              if (next.has(dream.id)) next.delete(dream.id); else next.add(dream.id)
               return next
             })}
             state={state}

@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
-  type ArdoText, type TextType, type Language, type SessionType, type Chunk,
+  type ArdoText, type TextType, type Language, type SessionType,
   type ReviewCard,
   TEXT_TYPE_LABEL, LANG_LABEL, SCORE_LABELS,
   getChunkStatus, STATUS_COLOR, getFirstLine, getHint, todayKey,
 } from './types'
 import {
   loadArdoState, saveArdoState, type ArdoState, type SessionItem, type NewTextData,
-  addText, markTextLearned, reviveText, updateChunkAnchor,
+  addText, markTextLearned, reviveText,
   getDueItems, getLearnItems, getAllItems,
   applySessionResults, applyLearnSession,
-  startSprint, advanceSprint, sprintMsUntil, getSprintDueCount,
+  startSprint, advanceSprint, getSprintDueCount,
   getTextStats, getTotalDue, autoChunk,
 } from './store'
 import { SPRINT_STAGE_LABELS } from './types'
@@ -667,7 +667,9 @@ function FullRunView({ text, onDone }: {
   }, [phase, timer])
 
   const toggleHint = (order: number) => setHints(prev => {
-    const next = new Set(prev); next.has(order) ? next.delete(order) : next.add(order); return next
+    const next = new Set(prev)
+    if (next.has(order)) next.delete(order); else next.add(order)
+    return next
   })
 
   const fmt = (s: number) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   type MediaItem, type MediaType, type Status, type DiscoverItem, type Candidate,
-  type ItemReview, type EpisodeInfo, type GameEntry,
+  type ItemReview, type EpisodeInfo,
   loadLib, saveLib, uid, daysUntil, scoreColor, REVIEW_CATS,
 } from './types'
 import {
