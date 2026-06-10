@@ -1,0 +1,85 @@
+:root {
+  --bg:         rgba(6, 11, 22, 0.78);
+  --bg-panel:   rgba(10, 18, 35, 0.72);
+  --bg-card:    rgba(13, 24, 48, 0.65);
+  --border:     rgba(0, 245, 255, 0.09);
+  --border-dim: rgba(255, 255, 255, 0.04);
+  --text:       rgba(220, 240, 255, 0.92);
+  --text-muted: rgba(148, 163, 184, 0.45);
+  --cyan:       #00f5ff;
+  --green:      #39ff14;
+  --red:        #ff0033;
+  --purple:     #bf5fff;
+  --font:       'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+
+  /* Font scale — consistent across the whole app */
+  --fs-xl:   16px;   /* greetings, big numbers      */
+  --fs-lg:   14px;   /* task titles, body text       */
+  --fs-md:   12px;   /* secondary text, labels       */
+  --fs-sm:   11px;   /* small labels, tabs           */
+  --fs-xs:   10px;   /* badges, tiny labels          */
+  --fs-2xs:   9px;   /* micro labels                 */
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%; width: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--text);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button {
+  font-family: var(--font);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar       { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,245,255,0.15); border-radius: 2px; }
+
+/* ── Animations ─────────────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes introFadeOut {
+  0%   { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
+}
+@keyframes scanline {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(0,245,255,0.12), inset 0 1px 0 rgba(0,245,255,0.05); }
+  50%       { box-shadow: 0 0 24px rgba(0,245,255,0.22), inset 0 1px 0 rgba(0,245,255,0.08); }
+}
+
+.pulse      { animation: pulse 2s ease-in-out infinite; }
+.fade-in    { animation: fadeIn 0.3s ease forwards; }
+.slide-up   { animation: slideUp 0.4s ease forwards; }
+.glow-pulse { animation: glowPulse 4s ease-in-out infinite; }
