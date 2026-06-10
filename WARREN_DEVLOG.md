@@ -383,6 +383,16 @@ type Settings = {
 
 ## Changelog
 
+### 2026-06 (Session 4, hardening pass)
+- **Git initialized** — repo at project root, `master`, commits from dc161b4. Commit after every feature.
+- **AI layer hardened**: `aiChat` gained assistant-**prefill**, `temperature`, and one **retry**
+  (2s backoff) on 429/529/5xx/network. New **`aiJson<T>(messages, settings, {prefill: '{'|'['})`**
+  (temperature 0 default, parse-retry) replaced 6 duplicated JSON parsers — ALL structured-output
+  call sites now go through it. Journal uses temperature 0.7 (creative writing).
+- **Backup**: `src/backup.ts` + Settings → Backup section (⬇ export file / ⧉ copy JSON /
+  ⬆ paste-import with validation + reload). Exports every localStorage key except discover caches.
+- **Removed dead `@supabase/supabase-js` dependency**; entitlements stays as a local-only stub.
+
 ### 2026-06 (Session 4)
 - **CAPTAIN'S JOURNAL** (hoot slot): diary where AI polishes your text (original always kept,
   RAW/✨ toggle), awards 3-5 physical-style **stickers** per entry (+ collection book), detects
