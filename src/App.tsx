@@ -14,6 +14,7 @@ import Infinity8 from './modules/infinity8/Infinity8'
 import Pictures  from './modules/pictures/Pictures'
 import Journal   from './modules/journal/Journal'
 import { getNowSnapshot, fmtClock, fmtDur } from './modules/infinity8/store'
+import { gatherSuggestions, topSuggestion, type Suggestion } from './modules/infinity8/suggestions'
 import { CyberIcon } from './components/CyberIcon'
 
 // ─── Matrix intro ─────────────────────────────────────────────────────────────
@@ -259,13 +260,24 @@ function SidebarBtn({ iconId, neon, active, title, dim = false, onClick }: {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 // ─── Live "what's now" card (INFINITY-8 → Hub) ────────────────────────────────
 const INF = '#22d3ee'
+const SUGGEST_TONE: Record<Suggestion['tone'], string> = {
+  play: '#ff8a4c', grow: '#8b9bff', care: '#ffd76b',
+}
 function NowCard() {
   const navigate = useNavigate()
   const [snap, setSnap] = useState(() => getNowSnapshot())
   const [nowMin, setNowMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() })
+  const [suggest, setSuggest] = useState<Suggestion | null>(null)
 
   useEffect(() => {
-    const refresh = () => { setSnap(getNowSnapshot()); const d = new Date(); setNowMin(d.getHours() * 60 + d.getMinutes()) }
+    const refresh = () => {
+      const s = getNowSnapshot()
+      setSnap(s)
+      const d = new Date(); setNowMin(d.getHours() * 60 + d.getMinutes())
+      const free = !s.awake || !s.current || s.current.kind === 'free' || s.current.kind === 'break'
+      setSuggest(free ? topSuggestion(gatherSuggestions(), s.freeMinutes) : null)
+    }
+    refresh()
     const id = setInterval(refresh, 30000)
     window.addEventListener('warren:sync', refresh)
     window.addEventListener('focus', refresh)
@@ -284,9 +296,10 @@ function NowCard() {
       : `now → ${fmtClock(cur!.end)} · ${fmtDur(Math.max(0, cur!.end - nowMin))} left`
 
   return (
+   <div style={{ marginBottom: 16 }}>
     <button onClick={() => navigate('/infinity8')} className="glow-pulse" style={{
       width: '100%', textAlign: 'left', cursor: 'pointer',
-      padding: '13px 15px', borderRadius: 10, marginBottom: 16,
+      padding: '13px 15px', borderRadius: 10,
       background: `linear-gradient(135deg, ${INF}14, rgba(57,255,20,0.04))`,
       border: `1px solid ${INF}30`,
       display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.15s',
@@ -316,6 +329,34 @@ function NowCard() {
         )}
       </div>
     </button>
+
+    {/* The guild's invitation for the free time at hand */}
+    {isFreeNow && suggest && (
+      <button onClick={() => navigate(suggest.path)} style={{
+        width: '100%', textAlign: 'left', cursor: 'pointer', marginTop: 6,
+        padding: '8px 12px', borderRadius: 9,
+        background: `${SUGGEST_TONE[suggest.tone]}10`,
+        border: `1px solid ${SUGGEST_TONE[suggest.tone]}38`,
+        display: 'flex', alignItems: 'center', gap: 10, transition: 'border-color 0.15s',
+      }}
+        onMouseEnter={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}70`}
+        onMouseLeave={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}38`}
+      >
+        <span style={{ fontSize: 18, flexShrink: 0 }}>{suggest.icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 7, fontWeight: 800, letterSpacing: '0.16em',
+            color: `${SUGGEST_TONE[suggest.tone]}b0` }}>THE GUILD SUGGESTS</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'rgba(225,250,255,0.95)', marginTop: 1,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.label}</p>
+          {suggest.detail && (
+            <p style={{ fontSize: 8, color: 'rgba(148,163,184,0.6)', marginTop: 1,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.detail}</p>
+          )}
+        </div>
+        <span style={{ fontSize: 8, color: `${SUGGEST_TONE[suggest.tone]}cc`, flexShrink: 0 }}>~{fmtDur(suggest.minutes)}</span>
+      </button>
+    )}
+   </div>
   )
 }
 

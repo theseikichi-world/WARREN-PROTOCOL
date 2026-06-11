@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { gatherSuggestions, assignToFreeBlocks, type Suggestion } from './suggestions'
 import {
   loadInf8State, saveInf8State, type Inf8State,
   type Anchors, type DayEvent, type Block, type Period,
@@ -25,6 +27,10 @@ const BLOCK_COLOR: Record<Block['kind'], string> = {
 }
 const BLOCK_ICON: Record<Block['kind'], string> = {
   meal: '🍽', work: '💼', event: '◆', commitment: '◇', break: '·', free: '✦',
+}
+// Guild-suggestion tone palette: play = entertainment, grow = progress, care = wellbeing
+const TONE: Record<Suggestion['tone'], string> = {
+  play: '#ff8a4c', grow: '#8b9bff', care: '#ffd76b',
 }
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
@@ -229,9 +235,20 @@ export default function Infinity8() {
     return () => { window.removeEventListener('warren:sync', onSync); clearInterval(id) }
   }, [])
 
+  const navigate = useNavigate()
+
   const commitments = useMemo(() => getTodayCommitments(state.durations, state.prefTime), [state.durations, state.prefTime, refresh])
   const plan = useMemo(() => buildDay(eff, commitments, state.events[today] ?? []),
     [eff, commitments, state.events, today])
+
+  // GUILD SUGGESTS — natural invitations spread across the day's free blocks
+  const suggestions = useMemo(() => gatherSuggestions(), [refresh])
+  const freeSuggestions = useMemo(() => {
+    const free = plan.blocks
+      .filter(b => b.kind === 'free' && b.end > nowMin && (b.end - b.start) >= 25)
+      .map(b => ({ id: b.id, minutes: b.end - b.start }))
+    return assignToFreeBlocks(free, suggestions)
+  }, [plan, suggestions, nowMin])
 
   // ── Smart weekly optimize (AI rewrites SCRAP-7 schedules) ──
   const runOptimize = async () => {
@@ -430,8 +447,10 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
         wakeMin={toMin(eff.wake)}
         sleepMin={toMin(eff.sleep)}
         nowMin={nowMin}
+        suggestions={freeSuggestions}
         onToggle={toggleCommitment}
         onRemoveEvent={id => persist(removeEvent(state, today, id))}
+        onGo={path => navigate(path)}
       />
 
       {/* Optimize proposal */}
@@ -548,11 +567,13 @@ const PPM    = 1.75           // pixels per minute (1 hour ≈ 105px; 20 min ≈
 const GUTTER = 42             // left hour-label column
 const TOP_PAD = 18           // room above for the WAKE cap
 
-function Timeline({ blocks, wakeMin, sleepMin, nowMin, onToggle, onRemoveEvent }: {
+function Timeline({ blocks, wakeMin, sleepMin, nowMin, suggestions, onToggle, onRemoveEvent, onGo }: {
   blocks: Block[]
   wakeMin: number; sleepMin: number; nowMin: number
+  suggestions: Record<string, Suggestion[]>
   onToggle: (b: Block) => void
   onRemoveEvent: (id: string) => void
+  onGo: (path: string) => void
 }) {
   const lastEnd = blocks.reduce((m, b) => Math.max(m, b.end), sleepMin)
   const start = wakeMin
@@ -600,8 +621,10 @@ function Timeline({ blocks, wakeMin, sleepMin, nowMin, onToggle, onRemoveEvent }
         {blocks.map(b => (
           <TimelineBlock key={b.id} b={b} top={y(b.start)} height={(b.end - b.start) * PPM}
             isNow={nowMin >= b.start && nowMin < b.end}
+            suggestions={suggestions[b.id]}
             onToggle={() => onToggle(b)}
-            onRemoveEvent={b.kind === 'event' ? () => onRemoveEvent(b.id) : undefined} />
+            onRemoveEvent={b.kind === 'event' ? () => onRemoveEvent(b.id) : undefined}
+            onGo={onGo} />
         ))}
 
         {/* Now line */}
@@ -618,9 +641,10 @@ function Timeline({ blocks, wakeMin, sleepMin, nowMin, onToggle, onRemoveEvent }
   )
 }
 
-function TimelineBlock({ b, top, height, isNow, onToggle, onRemoveEvent }: {
+function TimelineBlock({ b, top, height, isNow, suggestions, onToggle, onRemoveEvent, onGo }: {
   b: Block; top: number; height: number; isNow: boolean
-  onToggle: () => void; onRemoveEvent?: () => void
+  suggestions?: Suggestion[]
+  onToggle: () => void; onRemoveEvent?: () => void; onGo?: (path: string) => void
 }) {
   const [hov, setHov] = useState(false)
   const color = BLOCK_COLOR[b.kind]
@@ -628,6 +652,46 @@ function TimelineBlock({ b, top, height, isNow, onToggle, onRemoveEvent }: {
   const isFree   = b.kind === 'free'
   const h        = Math.max(16, height - 2)
   const tall     = h >= 44   // room for badges
+
+  // Free time with guild invitations — header + clickable suggestion chips
+  if (isFree && suggestions && suggestions.length) {
+    return (
+      <div style={{ position: 'absolute', left: GUTTER, right: 0, top: top + 1, height: h,
+        borderRadius: 7, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 3,
+        padding: '4px 8px', backgroundColor: 'rgba(8,20,14,0.34)',
+        border: '1px dashed rgba(57,255,20,0.28)', borderLeft: '3px dashed rgba(57,255,20,0.5)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 11, opacity: 0.55 }}>✦</span>
+          <span style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
+            color: 'rgba(57,255,20,0.6)', letterSpacing: '0.02em',
+            textShadow: '0 1px 4px rgba(0,0,0,0.55)' }}>Free · {fmtDur(b.end - b.start)}</span>
+          <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 800, letterSpacing: '0.14em',
+            color: 'rgba(57,255,20,0.45)', flexShrink: 0 }}>GUILD SUGGESTS</span>
+        </div>
+        {suggestions.map(s => (
+          <button key={s.id} onClick={() => onGo?.(s.path)} title={s.detail}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', textAlign: 'left',
+              padding: '4px 7px', borderRadius: 5, cursor: 'pointer', flexShrink: 0,
+              background: `${TONE[s.tone]}12`, border: `1px solid ${TONE[s.tone]}40` }}>
+            <span style={{ fontSize: 12, flexShrink: 0 }}>{s.icon}</span>
+            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+              <span style={{ display: 'block', fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
+                fontWeight: 700, color: TONE[s.tone],
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
+              {s.detail && (
+                <span style={{ display: 'block', fontFamily: 'var(--font)', fontSize: 7,
+                  color: 'rgba(148,163,184,0.6)',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.detail}</span>
+              )}
+            </span>
+            <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${TONE[s.tone]}cc`, flexShrink: 0 }}>
+              ~{fmtDur(s.minutes)}
+            </span>
+          </button>
+        ))}
+      </div>
+    )
+  }
 
   // Break: faint hatch band (still proportional)
   if (b.kind === 'break') {

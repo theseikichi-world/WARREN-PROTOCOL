@@ -396,6 +396,15 @@ type Settings = {
 ## Changelog
 
 ### 2026-06 (Session 4, hardening pass)
+- **Guild Suggests** — cross-module free-time invitations. New pure engine
+  `infinity8/suggestions.ts` reads each module (Pictures mid-binge shows / watchlist films /
+  games, A.R.D.O due cards, L.O.G next dream step + constellation plan, Journal blank page) and
+  emits weighted `Suggestion`s tagged `play | grow | care` (entertainment is first-class).
+  Gap-fit pickers (`suggestionsForGap` / `topSuggestion` / `assignToFreeBlocks`) match
+  invitations to free blocks by duration — big blocks draw a film, small gaps a drill or page —
+  one per module for variety, never repeated across blocks. Rendered as clickable chips inside
+  INFINITY-8 free blocks (→ navigate to that module) and as a "THE GUILD SUGGESTS" row on the
+  Hub NOW card when free. +10 picker tests (49 total). Verified live in preview.
 - **Journal enhancement streams live**: new `aiStream()` SSE helper; prompt reformatted to
   prose → `<<<DEBRIEF>>>` → metadata JSON; polish types out on the card in real time; seal
   is instant (no more blocking composer spinner).
