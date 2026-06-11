@@ -235,6 +235,117 @@ export async function aiChat(
   throw new Error(second.reason)
 }
 
+// ─── aiStream — SSE streaming variant ─────────────────────────────────────────
+// Same request as aiChat but with `stream: true`; calls onText with the
+// accumulated text after every delta so the UI can render live. Returns the
+// full text. Retries once on transient pre-stream failures; a mid-stream
+// drop returns what arrived so far (partial output beats a hard error).
+
+export async function aiStream(
+  messages: AiMessage[],
+  settings: Settings,
+  opts: AiChatOptions & { onText: (full: string) => void },
+): Promise<string> {
+  const apiKey = settings.aiApiKey.trim()
+  if (!apiKey) {
+    throw new Error('No Claude API key set. Open Settings → AI Assistant and paste your key from console.anthropic.com.')
+  }
+
+  const model = opts.model && isClaudeModel(opts.model)
+    ? opts.model
+    : (isClaudeModel(settings.aiModel) ? settings.aiModel : DEFAULT_MODEL)
+
+  const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n')
+  const turns  = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+
+  const body = JSON.stringify({
+    model,
+    max_tokens: opts.maxTokens ?? 1024,
+    stream: true,
+    ...(system ? { system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }] } : {}),
+    messages: turns,
+  })
+
+  const open = async (): Promise<Response | { retry: true; reason: string }> => {
+    let res: Response
+    try {
+      res = await fetch(ANTHROPIC_URL, {
+        method:  'POST',
+        headers: {
+          'x-api-key':                                 apiKey,
+          'anthropic-version':                         '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+          'content-type':                              'application/json',
+        },
+        body,
+      })
+    } catch {
+      return { retry: true, reason: 'Could not reach Claude (network error). Check your connection.' }
+    }
+    if (!res.ok) {
+      let detail = ''
+      try { detail = ((await res.json()) as AnthropicResponse).error?.message ?? '' } catch { /* non-JSON */ }
+      if (res.status === 401) throw new Error('Claude API key rejected (401). Check the key in Settings → AI Assistant.')
+      if (res.status === 400 && /credit|billing/i.test(detail)) {
+        throw new Error('Claude request blocked — your account may be out of credit. Check console.anthropic.com → Billing.')
+      }
+      if (res.status === 429 || res.status === 529 || res.status >= 500) {
+        return { retry: true, reason: res.status === 429
+          ? 'Claude rate limit hit (429). Wait a moment and try again.'
+          : `Claude is overloaded (${res.status}). Try again in a moment.` }
+      }
+      throw new Error(`Claude API error ${res.status}${detail ? `: ${detail}` : ''}`)
+    }
+    return res
+  }
+
+  let res = await open()
+  if (!(res instanceof Response)) {
+    await new Promise(r => setTimeout(r, 2000))
+    const second = await open()
+    if (!(second instanceof Response)) throw new Error(second.reason)
+    res = second
+  }
+
+  if (!res.body) throw new Error('Claude returned no stream body.')
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buf = ''
+  let full = ''
+  let streamError: string | null = null
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      let nl: number
+      while ((nl = buf.indexOf('\n')) !== -1) {
+        const line = buf.slice(0, nl).trim()
+        buf = buf.slice(nl + 1)
+        if (!line.startsWith('data:')) continue
+        const payload = line.slice(5).trim()
+        if (!payload) continue
+        let ev: { type?: string; delta?: { type?: string; text?: string }; error?: { message?: string } }
+        try { ev = JSON.parse(payload) } catch { continue }
+        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && typeof ev.delta.text === 'string') {
+          full += ev.delta.text
+          opts.onText(full)
+        } else if (ev.type === 'error') {
+          streamError = ev.error?.message ?? 'Stream error'
+        }
+      }
+    }
+  } catch {
+    // mid-stream network drop — fall through with whatever arrived
+  }
+
+  if (!full && streamError) throw new Error(`Claude stream error: ${streamError}`)
+  return full
+}
+
 // ─── aiJson — structured output helper ────────────────────────────────────────
 // The system prompt instructs JSON-only output; this strips any fences/prose,
 // slices the JSON body (object or array), and retries the whole call once if

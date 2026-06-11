@@ -289,8 +289,9 @@ SCRAP-7 listens in `useEffect` and reloads from localStorage.
 
 **Core principle:** `entry.raw` (the user's words) is **never modified or lost**. AI adds alongside it.
 
-**Flow:** ✍️ Composer ("TODAY'S PAGE IS BLANK" CTA, stardate header) → "✨ ENHANCE & SEAL" or "SEAL AS-IS" (no AI). Enhancement (`journal.enhance` AI task, Sonnet, responds in the entry's language) returns JSON:
-`{ polished, stickers: [{emoji,label}]×3-5, mood: {label,emoji,color}, themes, reflection }`
+**Flow:** ✍️ Composer ("TODAY'S PAGE IS BLANK" CTA, stardate header) → "✨ ENHANCE & SEAL" or "SEAL AS-IS" (no AI). **Seal is instant** — the entry lands in the log immediately; enhancement then **streams onto the card live** ("🦉 THE OWL IS POLISHING…" box with typing cursor).
+
+**Streaming format** (`journal.enhance` AI task, Sonnet, responds in the entry's language): polished prose first (streamed via `aiStream`), then a `<<<DEBRIEF>>>` marker, then metadata JSON `{ stickers×3-5, mood, themes, reflection }` parsed at stream end (`parseEnhanceOutput`, tolerates a missing marker or old-style full-JSON replies). `aiStream` in settings.ts is the SSE helper: same request as `aiChat` + `stream: true`, `onText(full)` per delta, one retry on transient pre-stream errors, mid-stream drop returns partial text.
 
 **Features:**
 - **RAW / ✨ toggle** per entry — switch between original and polished text
@@ -395,6 +396,9 @@ type Settings = {
 ## Changelog
 
 ### 2026-06 (Session 4, hardening pass)
+- **Journal enhancement streams live**: new `aiStream()` SSE helper; prompt reformatted to
+  prose → `<<<DEBRIEF>>>` → metadata JSON; polish types out on the card in real time; seal
+  is instant (no more blocking composer spinner).
 - **AI 400 regression fixed**: current Claude models removed `temperature` + assistant-prefill —
   both stripped from `aiChat`/`aiJson`; JSON enforced by prompt + robust parsing (retry kept).
 - **`createExternalTask()`**: cross-module task creation centralized in scrap7/store

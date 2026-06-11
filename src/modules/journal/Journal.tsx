@@ -4,7 +4,7 @@ import {
   loadJournal, saveJournal, deleteEntry,
   journalStreak, allStickers, todayKey, fmtStardate, fmtDay,
 } from './store'
-import { aiJson, loadSettings, modelForTask, type AiMessage } from '../../settings'
+import { aiStream, loadSettings, modelForTask, type AiMessage } from '../../settings'
 
 const NEON   = '#ffd700'   // captain's gold
 const NEON_D = 'rgba(255,215,0,0.1)'
@@ -14,12 +14,19 @@ const RAISED = 'rgba(26,21,6,0.95)'
 const FAINT  = 'rgba(255,215,0,0.08)'
 
 // ─── AI enhancement ───────────────────────────────────────────────────────────
+// Output format is prose-first so the polish can STREAM live to the card,
+// followed by a marker and the metadata JSON (parsed once the stream ends).
+const DEBRIEF_MARK = '<<<DEBRIEF>>>'
+
 const ENHANCE_SYSTEM = `You are the wise owl first-officer of a starship, reviewing the captain's personal journal entry.
 Respond in the SAME LANGUAGE the entry is written in (Russian → Russian, English → English).
 
-Return ONLY a JSON object, no fences, no prose outside it:
+Reply in EXACTLY this format, in this order:
+
+1. The polished entry: rewrite it with better flow, grammar and vividness — keep the author's voice, events, feelings and meaning EXACTLY; fix errors, improve rhythm; similar length. Plain prose only — no preamble, no quotes, no headings.
+2. Then, on its own line, the marker: ${DEBRIEF_MARK}
+3. Then ONLY a JSON object, no fences:
 {
-  "polished": "the entry rewritten with better flow, grammar and vividness — keep the author's voice, events, feelings and meaning EXACTLY; fix errors, improve rhythm; similar length",
   "stickers": [{ "emoji": "🌟", "label": "1-3 word caption" }],
   "mood": { "label": "one-word mood", "emoji": "😊", "color": "#hexcolor matching the mood" },
   "themes": ["theme1", "theme2"],
@@ -37,23 +44,37 @@ interface EnhanceResult {
   reflection: string
 }
 
-async function enhanceEntry(raw: string): Promise<EnhanceResult> {
-  const settings = loadSettings()
-  const msgs: AiMessage[] = [
-    { role: 'system', content: ENHANCE_SYSTEM },
-    { role: 'user', content: raw },
-  ]
-  interface ParsedEnhance {
+/** Split the streamed output into polished prose + metadata JSON, defensively. */
+function parseEnhanceOutput(full: string, raw: string): EnhanceResult {
+  let polished = ''
+  let metaPart = ''
+
+  const idx = full.indexOf(DEBRIEF_MARK)
+  if (idx !== -1) {
+    polished = full.slice(0, idx).trim()
+    metaPart = full.slice(idx + DEBRIEF_MARK.length)
+  } else if (full.trim().startsWith('{')) {
+    // model ignored the format and returned old-style full JSON
+    metaPart = full
+  } else {
+    polished = full.trim()
+  }
+
+  interface ParsedMeta {
     polished?: unknown
     stickers?: unknown
     mood?: { label?: unknown; emoji?: unknown; color?: string }
     themes?: unknown
     reflection?: unknown
   }
-  const p = await aiJson<ParsedEnhance>(msgs, settings,
-    { model: modelForTask(settings, 'journal.enhance'), maxTokens: 1600 })
+  let p: ParsedMeta = {}
+  const s = metaPart.indexOf('{'), e = metaPart.lastIndexOf('}')
+  if (s !== -1 && e > s) {
+    try { p = JSON.parse(metaPart.slice(s, e + 1)) } catch { /* keep prose, drop meta */ }
+  }
+
   return {
-    polished: typeof p.polished === 'string' && p.polished.trim() ? p.polished : raw,
+    polished: polished || (typeof p.polished === 'string' && p.polished.trim() ? p.polished : raw),
     stickers: Array.isArray(p.stickers)
       ? p.stickers.filter((x: Sticker) => x?.emoji).slice(0, 5)
           .map((x: Sticker) => ({ emoji: String(x.emoji), label: String(x.label ?? '') }))
@@ -65,6 +86,23 @@ async function enhanceEntry(raw: string): Promise<EnhanceResult> {
     themes: Array.isArray(p.themes) ? p.themes.slice(0, 4).map(String) : [],
     reflection: typeof p.reflection === 'string' ? p.reflection : '',
   }
+}
+
+/** Stream the enhancement; onLive receives the polished prose as it types out. */
+async function enhanceEntry(raw: string, onLive: (text: string) => void): Promise<EnhanceResult> {
+  const settings = loadSettings()
+  const msgs: AiMessage[] = [
+    { role: 'system', content: ENHANCE_SYSTEM },
+    { role: 'user', content: raw },
+  ]
+  const full = await aiStream(msgs, settings, {
+    model: modelForTask(settings, 'journal.enhance'),
+    maxTokens: 1600,
+    // hide the marker (even partially streamed) from the live view
+    onText: t => onLive(t.split('<<<')[0]),
+  })
+  if (!full.trim()) throw new Error('The owl returned an empty page. Try again.')
+  return parseEnhanceOutput(full, raw)
 }
 
 // ─── Sticker chip — styled like a physical sticker ────────────────────────────
@@ -96,14 +134,13 @@ function StickerChip({ s, i, size = 'md' }: { s: Sticker; i: number; size?: 'sm'
 }
 
 // ─── Composer ─────────────────────────────────────────────────────────────────
-function Composer({ initial, onSeal, onCancel, enhancing }: {
+function Composer({ initial, onSeal, onCancel }: {
   initial?: string
   onSeal: (text: string, enhance: boolean) => void
   onCancel: () => void
-  enhancing: boolean
 }) {
   const [text, setText] = useState(initial ?? '')
-  const can = text.trim().length >= 3 && !enhancing
+  const can = text.trim().length >= 3
 
   return (
     <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -144,7 +181,7 @@ function Composer({ initial, onSeal, onCancel, enhancing }: {
             background: can ? `linear-gradient(135deg, ${NEON}, #ffb700)` : 'rgba(255,255,255,0.04)',
             border: 'none', boxShadow: can ? `0 4px 18px ${NEON}40` : 'none', transition: 'all 0.2s',
           }}>
-            {enhancing ? '🦉 ENHANCING…' : '✨ ENHANCE & SEAL'}
+            ✨ ENHANCE & SEAL
           </button>
           <button disabled={!can} onClick={() => onSeal(text.trim(), false)} style={{
             flex: 1, padding: '11px', borderRadius: 8, cursor: can ? 'pointer' : 'default',
@@ -160,12 +197,13 @@ function Composer({ initial, onSeal, onCancel, enhancing }: {
 }
 
 // ─── Entry card ───────────────────────────────────────────────────────────────
-function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId }: {
+function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId, liveText }: {
   entry: JournalEntry
   onUpdate: (id: string, patch: Partial<JournalEntry>) => void
   onDelete: (id: string) => void
   onEnhance: (entry: JournalEntry) => void
   enhancingId: string | null
+  liveText: string
 }) {
   const [expanded, setExpanded] = useState(false)
   const [hov, setHov] = useState(false)
@@ -227,6 +265,25 @@ function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId }: {
         <p style={{ fontFamily: FONT, fontSize: 10.5, lineHeight: 1.8, whiteSpace: 'pre-wrap',
           color: showPolished ? 'rgba(255,248,220,0.92)' : 'rgba(235,230,210,0.8)',
           letterSpacing: '0.02em' }}>{preview}</p>
+
+        {/* Live polish — the owl typing in real time */}
+        {enhancing && (
+          <div style={{ marginTop: 9, padding: '9px 12px', borderRadius: 9,
+            background: 'rgba(30,24,6,0.9)', border: `1px solid ${NEON}30`,
+            borderLeft: `3px solid ${NEON}`, boxShadow: `0 0 14px ${NEON}12` }}>
+            <p style={{ fontFamily: FONT, fontSize: 7, fontWeight: 800, color: `${NEON}90`,
+              letterSpacing: '0.18em', marginBottom: 5 }}>
+              🦉 THE OWL IS POLISHING<span className="pulse">…</span>
+            </p>
+            <p style={{ fontFamily: FONT, fontSize: 10.5, lineHeight: 1.8, whiteSpace: 'pre-wrap',
+              color: 'rgba(255,248,220,0.92)', letterSpacing: '0.02em' }}>
+              {liveText}
+              <span style={{ display: 'inline-block', width: 7, height: 13, marginLeft: 2,
+                verticalAlign: 'text-bottom', background: NEON,
+                boxShadow: `0 0 6px ${NEON}`, animation: 'pulse 1s ease-in-out infinite' }}/>
+            </p>
+          </div>
+        )}
 
         {/* Themes */}
         {expanded && (entry.themes?.length ?? 0) > 0 && (
@@ -314,7 +371,7 @@ export default function Journal() {
   const [state, setState] = useState<JournalState>(() => loadJournal())
   const [screen, setScreen] = useState<'log' | 'compose'>('log')
   const [enhancingId, setEnhancingId] = useState<string | null>(null)
-  const [composeBusy, setComposeBusy] = useState(false)
+  const [liveText, setLiveText] = useState('')
   const [error, setError] = useState('')
   const [showStickers, setShowStickers] = useState(false)
 
@@ -325,9 +382,9 @@ export default function Journal() {
   const hasToday = state.entries.some(e => e.date === todayKey())
 
   const runEnhance = useCallback(async (id: string, raw: string) => {
-    setEnhancingId(id); setError('')
+    setEnhancingId(id); setLiveText(''); setError('')
     try {
-      const r = await enhanceEntry(raw)
+      const r = await enhanceEntry(raw, setLiveText)
       setState(prev => ({
         entries: prev.entries.map(e => e.id === id ? {
           ...e, polished: r.polished, stickers: r.stickers, mood: r.mood,
@@ -337,23 +394,21 @@ export default function Journal() {
       }))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Enhancement failed. Check AI settings.')
-    } finally { setEnhancingId(null) }
+    } finally { setEnhancingId(null); setLiveText('') }
   }, [])
 
-  const seal = useCallback(async (text: string, enhance: boolean) => {
+  // Seal is instant: the entry lands in the log right away, and (if requested)
+  // the owl's polish streams onto the card while you watch.
+  const seal = useCallback((text: string, enhance: boolean) => {
     const id = crypto.randomUUID()
     const entry = { id, date: todayKey(), createdAt: new Date().toISOString(), raw: text, view: 'raw' as const }
     setState(prev => ({ entries: [entry, ...prev.entries] }))
-    if (!enhance) { setScreen('log'); return }
-    setComposeBusy(true)
-    await runEnhance(id, text)
-    setComposeBusy(false)
     setScreen('log')
+    if (enhance) void runEnhance(id, text)
   }, [runEnhance])
 
   if (screen === 'compose') {
-    return <Composer enhancing={composeBusy}
-      onSeal={seal} onCancel={() => setScreen('log')}/>
+    return <Composer onSeal={seal} onCancel={() => setScreen('log')}/>
   }
 
   return (
@@ -434,7 +489,8 @@ export default function Journal() {
             onUpdate={(id, patch) => setState(prev => ({ entries: prev.entries.map(x => x.id === id ? { ...x, ...patch } : x) }))}
             onDelete={id => setState(prev => deleteEntry(prev, id))}
             onEnhance={en => runEnhance(en.id, en.raw)}
-            enhancingId={enhancingId}/>
+            enhancingId={enhancingId}
+            liveText={liveText}/>
         ))}
       </div>
 
