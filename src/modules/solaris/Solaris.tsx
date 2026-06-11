@@ -1,19 +1,21 @@
 import { useState, useMemo, useCallback } from 'react'
 import {
   type SolarisProfile, type Sex, type ActivityLevel, type Goal, type MealSlot,
-  type Targets,
-  ACTIVITY_META, GOAL_META, SLOT_META, SLOT_ORDER,
-  computeTargets, sumDay, todayKey,
+  type Targets, type Member,
+  ACTIVITY_META, GOAL_META, SLOT_META, SLOT_ORDER, MEMBER_EMOJI, CUP_ML,
+  computeTargets, computeBmi, recommendedWaterMl, sumDay, todayKey,
 } from './types'
 import {
   loadSolarisState, saveSolarisState, type SolarisState,
-  setProfile, getDay, addEntry, removeEntry, getStreak, type NewFoodData,
+  activeMember, addMember, updateMemberProfile, renameMember, removeMember, setActiveMember,
+  getDay, addEntry, removeEntry, getStreak, getWater, addWater, type NewFoodData,
 } from './store'
 import { loadSettings, aiJson, modelForTask } from '../../settings'
 
 const NEON     = '#ffb13c'   // solar gold
 const NEON_DIM = 'rgba(255,177,60,0.1)'
 const SOLAR    = '#ff7a45'   // warm orange
+const AQUA     = '#38bdf8'   // water blue
 
 // ─── Macro palette ─────────────────────────────────────────────────────────────
 const MACRO = {
@@ -21,6 +23,9 @@ const MACRO = {
   carbs:   { color: '#4ade80', label: 'CARBS'   },
   fat:     { color: '#ffb13c', label: 'FAT'     },
 }
+
+// A member's identity + vitals, as edited in the form.
+interface MemberDraft { name: string; emoji: string; profile: SolarisProfile }
 
 // ─── Orbital calorie ring (SVG) ────────────────────────────────────────────────
 function OrbitRing({ consumed, target }: { consumed: number; target: number }) {
@@ -92,26 +97,133 @@ function MacroBar({ kind, consumed, target }: {
   )
 }
 
-// ─── Profile / calibration form ────────────────────────────────────────────────
-function ProfileForm({ initial, onSave, onCancel }: {
-  initial: SolarisProfile | null
-  onSave:  (p: SolarisProfile) => void
-  onCancel?: () => void
+// ─── BMI chip ──────────────────────────────────────────────────────────────────
+function BmiChip({ profile, showAdvice }: { profile: SolarisProfile; showAdvice?: boolean }) {
+  const info = computeBmi(profile)
+  if (!info.bmi) return null
+  const mismatch = profile.goal !== info.advise
+  return (
+    <div title={`Healthy weight for your height: ${info.healthyKg[0]}–${info.healthyKg[1]} kg`}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '3px 8px', borderRadius: 6, background: `${info.color}14`, border: `1px solid ${info.color}40` }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900, color: info.color }}>{info.bmi}</span>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, letterSpacing: '0.1em',
+          color: info.color }}>BMI · {info.label.toUpperCase()}</span>
+      </div>
+      {showAdvice && mismatch && (
+        <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.6)',
+          letterSpacing: '0.03em', marginTop: 4, lineHeight: 1.5 }}>
+          Healthy range {info.healthyKg[0]}–{info.healthyKg[1]} kg · station suggests a{' '}
+          <span style={{ color: GOAL_META[info.advise].color, fontWeight: 700 }}>{GOAL_META[info.advise].label}</span> goal
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ─── Water meter ───────────────────────────────────────────────────────────────
+function WaterMeter({ consumedMl, targetMl, onAdd }: {
+  consumedMl: number; targetMl: number; onAdd: (deltaMl: number) => void
 }) {
-  const [weightKg, setWeight]   = useState(String(initial?.weightKg ?? ''))
-  const [heightCm, setHeight]   = useState(String(initial?.heightCm ?? ''))
-  const [age, setAge]           = useState(String(initial?.age ?? ''))
-  const [sex, setSex]           = useState<Sex>(initial?.sex ?? 'male')
-  const [activity, setActivity] = useState<ActivityLevel>(initial?.activity ?? 'standard')
-  const [goal, setGoal]         = useState<Goal>(initial?.goal ?? 'maintain')
-  const [diet, setDiet]         = useState(initial?.diet ?? '')
+  const pct  = targetMl > 0 ? Math.min(1, consumedMl / targetMl) : 0
+  const cups = Math.round(consumedMl / CUP_ML)
+  const done = consumedMl >= targetMl && targetMl > 0
+  return (
+    <div style={{ margin: '0 14px 8px', padding: '10px 12px', borderRadius: 9,
+      background: `${AQUA}08`, border: `1px solid ${AQUA}22` }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <span style={{ fontSize: 13 }}>💧</span>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700, color: AQUA,
+          letterSpacing: '0.14em', flex: 1 }}>HYDRATION</p>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, color: done ? '#4ade80' : AQUA }}>
+          {(consumedMl / 1000).toFixed(consumedMl % 1000 === 0 ? 0 : 1)}/{(targetMl / 1000).toFixed(1)} L
+        </span>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${AQUA}70` }}>{cups} cups</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button onClick={() => onAdd(-CUP_ML)} title="Remove a cup" style={waterBtn}>−</button>
+        <div style={{ flex: 1, height: 8, borderRadius: 4, overflow: 'hidden',
+          background: 'rgba(56,189,248,0.1)', position: 'relative' }}>
+          <div style={{ height: '100%', width: `${pct * 100}%`,
+            background: done ? '#4ade80' : `linear-gradient(90deg, ${AQUA}, #7dd3fc)`,
+            boxShadow: `0 0 8px ${done ? '#4ade80' : AQUA}80`, borderRadius: 4, transition: 'width 0.4s ease' }} />
+        </div>
+        <button onClick={() => onAdd(CUP_ML)} title="Add a cup (250 ml)" style={{ ...waterBtn, color: AQUA, borderColor: `${AQUA}45` }}>+</button>
+      </div>
+    </div>
+  )
+}
+const waterBtn: React.CSSProperties = {
+  width: 26, height: 26, borderRadius: 7, fontSize: 15, fontWeight: 700, flexShrink: 0,
+  color: `${AQUA}90`, border: `1px solid ${AQUA}28`, background: 'rgba(56,189,248,0.06)', cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+}
+
+// ─── Member switcher ───────────────────────────────────────────────────────────
+function MemberSwitcher({ members, activeId, onSwitch, onAdd }: {
+  members: Member[]; activeId: string | null
+  onSwitch: (id: string) => void; onAdd: () => void
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 6, padding: '8px 14px', overflowX: 'auto',
+      borderBottom: `1px solid ${NEON}10` }}>
+      {members.map(m => {
+        const on = m.id === activeId
+        const t = computeTargets(m.profile)
+        const consumed = sumDay(m.days[todayKey()]).calories
+        const left = Math.max(0, t.calories - consumed)
+        return (
+          <button key={m.id} onClick={() => onSwitch(m.id)} style={{
+            display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0,
+            padding: '5px 10px 5px 7px', borderRadius: 9, cursor: 'pointer',
+            border: `1px solid ${on ? `${NEON}55` : 'rgba(255,255,255,0.07)'}`,
+            background: on ? NEON_DIM : 'transparent', transition: 'all 0.15s',
+          }}>
+            <span style={{ fontSize: 17, filter: on ? `drop-shadow(0 0 5px ${NEON}90)` : 'none' }}>{m.emoji}</span>
+            <div style={{ textAlign: 'left' }}>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+                color: on ? NEON : 'rgba(255,240,220,0.7)', letterSpacing: '0.04em' }}>{m.name}</p>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 6.5,
+                color: on ? `${NEON}70` : 'rgba(148,163,184,0.4)', letterSpacing: '0.04em' }}>{left} kcal left</p>
+            </div>
+          </button>
+        )
+      })}
+      <button onClick={onAdd} title="Add crew member" style={{
+        flexShrink: 0, width: 34, borderRadius: 9, cursor: 'pointer',
+        fontFamily: 'var(--font)', fontSize: 16, fontWeight: 300, color: `${NEON}80`,
+        border: `1px dashed ${NEON}30`, background: 'transparent', transition: 'all 0.15s',
+      }}
+        onMouseEnter={e => e.currentTarget.style.background = NEON_DIM}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >+</button>
+    </div>
+  )
+}
+
+// ─── Profile / calibration form (identity + vitals) ────────────────────────────
+function ProfileForm({ initial, isFirst, onSave, onCancel, onDelete }: {
+  initial: MemberDraft | null
+  isFirst?: boolean
+  onSave:  (d: MemberDraft) => void
+  onCancel?: () => void
+  onDelete?: () => void
+}) {
+  const [name, setName]         = useState(initial?.name ?? '')
+  const [emoji, setEmoji]       = useState(initial?.emoji ?? MEMBER_EMOJI[0])
+  const [weightKg, setWeight]   = useState(String(initial?.profile.weightKg ?? ''))
+  const [heightCm, setHeight]   = useState(String(initial?.profile.heightCm ?? ''))
+  const [age, setAge]           = useState(String(initial?.profile.age ?? ''))
+  const [sex, setSex]           = useState<Sex>(initial?.profile.sex ?? 'male')
+  const [activity, setActivity] = useState<ActivityLevel>(initial?.profile.activity ?? 'standard')
+  const [goal, setGoal]         = useState<Goal>(initial?.profile.goal ?? 'maintain')
+  const [diet, setDiet]         = useState(initial?.profile.diet ?? '')
 
   const w = parseFloat(weightKg), h = parseFloat(heightCm), a = parseFloat(age)
-  const valid = w > 0 && h > 0 && a > 0
+  const valid = name.trim() !== '' && w > 0 && h > 0 && a > 0
 
-  const preview: Targets | null = valid
-    ? computeTargets({ weightKg: w, heightCm: h, age: a, sex, activity, goal, diet })
-    : null
+  const draftProfile: SolarisProfile = { weightKg: w, heightCm: h, age: a, sex, activity, goal, diet }
+  const preview: Targets | null = w > 0 && h > 0 && a > 0 ? computeTargets(draftProfile) : null
 
   const inp: React.CSSProperties = {
     width: '100%', padding: '7px 10px', borderRadius: 5,
@@ -136,15 +248,38 @@ function ProfileForm({ initial, onSave, onCancel }: {
             letterSpacing: '0.1em' }}>← BACK</button>
         )}
         <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
-          color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>CREW CALIBRATION</p>
+          color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>
+          {isFirst ? 'CREW CALIBRATION' : initial ? 'EDIT CREW MEMBER' : 'NEW CREW MEMBER'}
+        </p>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: `${NEON}60`,
           lineHeight: 1.7, letterSpacing: '0.03em' }}>
-          The station calibrates every meal to <em>your</em> body. Enter your vitals — Solaris
-          computes your daily energy budget and macro split.
+          The station calibrates every meal to <em>this</em> body. Enter the vitals — Solaris
+          computes a personal energy budget, macro split, BMI and water target.
         </p>
+
+        {/* identity: avatar + name */}
+        <div>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}50`,
+            letterSpacing: '0.12em', marginBottom: 6 }}>CREW IDENTITY</p>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Name *"
+              style={{ ...inp, flex: 1 }} autoFocus
+              onFocus={e => e.target.style.borderColor = `${NEON}55`}
+              onBlur={e => e.target.style.borderColor = `${NEON}20`} />
+          </div>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 8 }}>
+            {MEMBER_EMOJI.map(em => (
+              <button key={em} onClick={() => setEmoji(em)} style={{
+                width: 32, height: 32, borderRadius: 7, fontSize: 16, cursor: 'pointer',
+                border: `1px solid ${emoji === em ? `${NEON}55` : 'rgba(255,255,255,0.06)'}`,
+                background: emoji === em ? NEON_DIM : 'transparent', transition: 'all 0.12s',
+              }}>{em}</button>
+            ))}
+          </div>
+        </div>
 
         {/* vitals */}
         <div style={{ display: 'flex', gap: 8 }}>
@@ -227,8 +362,11 @@ function ProfileForm({ initial, onSave, onCancel }: {
         {preview && (
           <div style={{ padding: '12px 14px', borderRadius: 10,
             background: `${NEON}06`, border: `1px solid ${NEON}22` }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700,
-              color: NEON, letterSpacing: '0.18em', marginBottom: 10 }}>YOUR DAILY RATION</p>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700,
+                color: NEON, letterSpacing: '0.18em', flex: 1 }}>DAILY RATION</p>
+              <BmiChip profile={draftProfile} />
+            </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
               <span style={{ fontFamily: 'var(--font)', fontSize: 28, fontWeight: 900,
                 color: NEON, textShadow: `0 0 12px ${NEON}70`, lineHeight: 1 }}>{preview.calories}</span>
@@ -237,7 +375,7 @@ function ProfileForm({ initial, onSave, onCancel }: {
               <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.4)',
                 marginLeft: 'auto' }}>BMR {preview.bmr} · TDEE {preview.tdee}</span>
             </div>
-            <div style={{ display: 'flex', gap: 14 }}>
+            <div style={{ display: 'flex', gap: 14, marginBottom: 10 }}>
               {([['protein', preview.protein], ['carbs', preview.carbs], ['fat', preview.fat]] as const).map(([k, v]) => (
                 <div key={k}>
                   <p style={{ fontFamily: 'var(--font)', fontSize: 15, fontWeight: 800,
@@ -246,19 +384,38 @@ function ProfileForm({ initial, onSave, onCancel }: {
                     letterSpacing: '0.1em', marginTop: 2 }}>{MACRO[k].label}</p>
                 </div>
               ))}
+              <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 15, fontWeight: 800, color: AQUA, lineHeight: 1 }}>
+                  {(recommendedWaterMl(draftProfile) / 1000).toFixed(1)}L</p>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${AQUA}80`,
+                  letterSpacing: '0.1em', marginTop: 2 }}>💧 WATER</p>
+              </div>
             </div>
+            <BmiChip profile={draftProfile} showAdvice />
           </div>
         )}
 
         <button disabled={!valid}
-          onClick={() => valid && onSave({ weightKg: w, heightCm: h, age: a, sex, activity, goal, diet: diet.trim() })}
+          onClick={() => valid && onSave({ name: name.trim(), emoji, profile: { ...draftProfile, diet: diet.trim() } })}
           style={{
             padding: '11px', borderRadius: 7, cursor: valid ? 'pointer' : 'default',
             fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800, letterSpacing: '0.12em',
             color: valid ? NEON : 'rgba(148,163,184,0.25)',
             border: `1px solid ${valid ? `${NEON}45` : 'rgba(255,255,255,0.05)'}`,
             background: valid ? NEON_DIM : 'transparent', transition: 'all 0.15s',
-          }}>⬡ CALIBRATE STATION</button>
+          }}>⬡ {initial && !isFirst ? 'SAVE CREW MEMBER' : 'CALIBRATE STATION'}</button>
+
+        {onDelete && (
+          <button onClick={onDelete} style={{
+            padding: '8px', borderRadius: 7, cursor: 'pointer',
+            fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.12em',
+            color: 'rgba(255,84,112,0.6)', border: '1px solid rgba(255,84,112,0.2)',
+            background: 'transparent', transition: 'all 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,84,112,0.08)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >✕ REMOVE FROM CREW</button>
+        )}
       </div>
     </div>
   )
@@ -607,7 +764,8 @@ function SlotGroup({ slot, entries, onAdd, onRemove }: {
 // ─── Main Solaris module ──────────────────────────────────────────────────────
 type Screen =
   | { type: 'dashboard' }
-  | { type: 'profile' }
+  | { type: 'edit'; memberId: string }
+  | { type: 'add' }
   | { type: 'delivery' }
 
 export default function Solaris() {
@@ -618,35 +776,59 @@ export default function Solaris() {
   const persist = useCallback((s: SolarisState) => { saveSolarisState(s); setState(s) }, [])
 
   const today  = todayKey()
-  const day    = getDay(state, today)
-  const totals = useMemo(() => sumDay(day), [day])
-  const targets = state.profile ? computeTargets(state.profile) : null
-  const streak = getStreak(state)
+  const member = activeMember(state)
 
-  // ── No profile → onboarding ──
-  if (!state.profile) {
-    return <ProfileForm initial={null} onSave={p => persist(setProfile(state, p))} />
+  const day     = useMemo(() => member ? getDay(state, member.id, today) : { date: today, entries: [] }, [state, member, today])
+  const totals  = useMemo(() => sumDay(day), [day])
+  const targets = member ? computeTargets(member.profile) : null
+  const streak  = member ? getStreak(state, member.id) : 0
+  const water   = member ? getWater(state, member.id, today) : 0
+  const waterTarget = member ? recommendedWaterMl(member.profile) : 0
+
+  // ── No members yet → onboard the first one ──
+  if (!member) {
+    return (
+      <ProfileForm initial={null} isFirst
+        onSave={d => persist(addMember(state, d.name, d.emoji, d.profile))} />
+    )
   }
 
-  // ── Edit profile ──
-  if (screen.type === 'profile') {
+  // ── Add a new crew member ──
+  if (screen.type === 'add') {
     return (
-      <ProfileForm
-        initial={state.profile}
-        onSave={p => { persist(setProfile(state, p)); setScreen({ type: 'dashboard' }) }}
-        onCancel={() => setScreen({ type: 'dashboard' })}
-      />
+      <ProfileForm initial={null}
+        onSave={d => { persist(addMember(state, d.name, d.emoji, d.profile)); setScreen({ type: 'dashboard' }) }}
+        onCancel={() => setScreen({ type: 'dashboard' })} />
     )
+  }
+
+  // ── Edit an existing crew member ──
+  if (screen.type === 'edit') {
+    const target = state.members.find(m => m.id === screen.memberId)
+    if (target) {
+      return (
+        <ProfileForm
+          initial={{ name: target.name, emoji: target.emoji, profile: target.profile }}
+          onSave={d => {
+            let s = updateMemberProfile(state, target.id, d.profile)
+            s = renameMember(s, target.id, d.name, d.emoji)
+            persist(s); setScreen({ type: 'dashboard' })
+          }}
+          onCancel={() => setScreen({ type: 'dashboard' })}
+          onDelete={() => { persist(removeMember(state, target.id)); setScreen({ type: 'dashboard' }) }}
+        />
+      )
+    }
   }
 
   // ── Delivery ──
   if (screen.type === 'delivery' && targets) {
     return (
       <DeliveryPanel
-        profile={state.profile}
+        profile={member.profile}
         targets={targets}
         consumed={totals}
-        onAccept={m => persist(addEntry(state, today, m))}
+        onAccept={m => persist(addEntry(state, member.id, today, m))}
         onClose={() => setScreen({ type: 'dashboard' })}
       />
     )
@@ -660,7 +842,7 @@ export default function Solaris() {
       {/* Add food overlay */}
       {addSlot && (
         <AddFoodForm slot={addSlot}
-          onSave={d => { persist(addEntry(state, today, d)); setAddSlot(null) }}
+          onSave={d => { persist(addEntry(state, member.id, today, d)); setAddSlot(null) }}
           onCancel={() => setAddSlot(null)} />
       )}
 
@@ -683,7 +865,7 @@ export default function Solaris() {
               letterSpacing: '0.1em' }}>DAY STREAK</p>
           </div>
         )}
-        <button onClick={() => setScreen({ type: 'profile' })} title="Recalibrate profile" style={{
+        <button onClick={() => setScreen({ type: 'edit', memberId: member.id })} title={`Edit ${member.name}`} style={{
           width: 28, height: 28, borderRadius: 7, fontSize: 13,
           color: `${NEON}70`, border: `1px solid ${NEON}25`, background: 'transparent', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
@@ -693,18 +875,28 @@ export default function Solaris() {
         >⚙</button>
       </div>
 
+      {/* Crew switcher */}
+      <MemberSwitcher members={state.members} activeId={member.id}
+        onSwitch={id => persist(setActiveMember(state, id))}
+        onAdd={() => setScreen({ type: 'add' })} />
+
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {/* Ration overview */}
         {targets && (
           <div style={{ padding: '14px', display: 'flex', gap: 16, alignItems: 'center' }}>
             <OrbitRing consumed={totals.calories} target={targets.calories} />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ alignSelf: 'flex-start' }}><BmiChip profile={member.profile} /></div>
               <MacroBar kind="protein" consumed={totals.protein} target={targets.protein} />
               <MacroBar kind="carbs"   consumed={totals.carbs}   target={targets.carbs} />
               <MacroBar kind="fat"     consumed={totals.fat}     target={targets.fat} />
             </div>
           </div>
         )}
+
+        {/* Hydration */}
+        <WaterMeter consumedMl={water} targetMl={waterTarget}
+          onAdd={delta => persist(addWater(state, member.id, today, delta))} />
 
         {/* Delivery CTA */}
         <button onClick={() => setScreen({ type: 'delivery' })} style={{
@@ -722,7 +914,7 @@ export default function Solaris() {
               color: NEON, letterSpacing: '0.14em' }}>REQUEST TODAY'S DELIVERY</p>
             <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}55`,
               letterSpacing: '0.04em', marginTop: 1 }}>
-              Personalised meals grown for your remaining budget
+              Personalised meals grown for {member.name}'s remaining budget
             </p>
           </div>
           <span style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}60` }}>→</span>
@@ -734,7 +926,7 @@ export default function Solaris() {
             <SlotGroup key={slot} slot={slot}
               entries={day.entries.filter(e => e.slot === slot)}
               onAdd={() => setAddSlot(slot)}
-              onRemove={id => persist(removeEntry(state, today, id))}
+              onRemove={id => persist(removeEntry(state, member.id, today, id))}
             />
           ))}
         </div>

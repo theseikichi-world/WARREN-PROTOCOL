@@ -37,9 +37,31 @@ export interface DayLog {
   entries: FoodEntry[]
 }
 
-export interface SolarisState {
-  profile: SolarisProfile | null
+// ─── Crew members (a household) ───────────────────────────────────────────────
+// SOLARIS tracks a whole crew, not just one person. Each member carries their own
+// profile, food log and water intake; the pantry is shared across the station.
+
+export interface Member {
+  id:      string
+  name:    string
+  emoji:   string                   // avatar glyph
+  profile: SolarisProfile
   days:    Record<string, DayLog>   // keyed by YYYY-MM-DD
+  water:   Record<string, number>   // YYYY-MM-DD → ml drunk that day
+}
+
+// ─── Shared pantry (grocery inventory) ────────────────────────────────────────
+export interface PantryItem {
+  id:      string
+  name:    string
+  qty:     string          // free text — "2", "500g", "a bunch"
+  addedAt: string
+}
+
+export interface SolarisState {
+  members:        Member[]
+  activeMemberId: string | null
+  pantry:         PantryItem[]        // shared across the crew
 }
 
 // ─── Computed nutrition targets ───────────────────────────────────────────────
@@ -104,6 +126,46 @@ export function computeTargets(p: SolarisProfile): Targets {
 
   return { bmr, tdee, calories, protein, carbs, fat }
 }
+
+// ─── BMI (body-mass index + healthy-weight read) ──────────────────────────────
+
+export interface BmiInfo {
+  bmi:    number          // rounded to 1 decimal
+  label:  string          // Underweight | Healthy | Overweight | Obese
+  color:  string
+  advise: Goal            // the goal this BMI gently points toward
+  healthyKg: [number, number]  // healthy weight range for this height (kg)
+}
+
+export function computeBmi(p: { weightKg: number; heightCm: number }): BmiInfo {
+  const m = p.heightCm / 100
+  const bmi = m > 0 ? p.weightKg / (m * m) : 0
+  const r = Math.round(bmi * 10) / 10
+  const healthyKg: [number, number] = [
+    Math.round(18.5 * m * m), Math.round(24.9 * m * m),
+  ]
+  if (bmi < 18.5)  return { bmi: r, label: 'Underweight', color: '#38bdf8', advise: 'bulk',     healthyKg }
+  if (bmi < 25)    return { bmi: r, label: 'Healthy',     color: '#4ade80', advise: 'maintain', healthyKg }
+  if (bmi < 30)    return { bmi: r, label: 'Overweight',  color: '#ffb13c', advise: 'cut',      healthyKg }
+  return                  { bmi: r, label: 'Obese',       color: '#ff5470', advise: 'cut',      healthyKg }
+}
+
+// ─── Water intake ─────────────────────────────────────────────────────────────
+// Per-kg targets scaled by how hard the crew member works (sweat loss). Rounded
+// to a tidy 50 ml. One cup = 250 ml.
+
+export const CUP_ML = 250
+
+const WATER_PER_KG: Record<ActivityLevel, number> = {
+  pod: 31, light: 33, standard: 35, active: 37, pilot: 40,
+}
+
+export function recommendedWaterMl(p: SolarisProfile): number {
+  return Math.round((p.weightKg * WATER_PER_KG[p.activity]) / 50) * 50
+}
+
+// ─── Member avatars ───────────────────────────────────────────────────────────
+export const MEMBER_EMOJI = ['🧑‍🚀', '👩‍🚀', '🧑‍🔬', '👶', '🧒', '👵', '👴', '🐱']
 
 export interface DayTotals {
   calories: number

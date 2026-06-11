@@ -396,6 +396,18 @@ type Settings = {
 ## Changelog
 
 ### 2026-06 (Session 4, hardening pass)
+- **SOLARIS → family households (foundation pass)**. State refactored from a single
+  `{ profile, days }` to a crew: `SolarisState = { members: Member[], activeMemberId, pantry }`
+  where each `Member` owns its own profile, food log and per-day water; the pantry is shared.
+  Migration wraps any legacy single profile into one member ("You"). New algorithms in types.ts:
+  `computeBmi()` (BMI + Underweight/Healthy/Overweight/Obese band, colour, healthy-kg range,
+  gentle goal advice) and `recommendedWaterMl()` (per-kg target scaled by activity, 250 ml cups).
+  UI: crew switcher (avatars + kcal-left, tap to switch, "+" to add), add/edit/delete member
+  flow, BMI chip on the dashboard + in the calibration preview, and a per-member hydration meter
+  with cup +/−. Delivery + food logging now run against the active member. +12 tests
+  (BMI, water, member CRUD isolation, water clamp, migration) → 61 total. Verified live in preview
+  (two-member household, per-body targets confirmed). Still to come: AI meal-logging chat,
+  ingredient/meal photo upload (needs a vision helper), and pantry→dish suggestions.
 - **Guild Suggests** — cross-module free-time invitations. New pure engine
   `infinity8/suggestions.ts` reads each module (Pictures mid-binge shows / watchlist films /
   games, A.R.D.O due cards, L.O.G next dream step + constellation plan, Journal blank page) and
