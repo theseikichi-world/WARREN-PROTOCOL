@@ -44,10 +44,20 @@ export interface DayLog {
 export interface Member {
   id:      string
   name:    string
-  emoji:   string                   // avatar glyph
+  emoji:   string                          // avatar glyph
   profile: SolarisProfile
-  days:    Record<string, DayLog>   // keyed by YYYY-MM-DD
-  water:   Record<string, number>   // YYYY-MM-DD → ml drunk that day
+  days:    Record<string, DayLog>          // keyed by YYYY-MM-DD
+  water:   Record<string, DrinkEntry[]>    // YYYY-MM-DD → drinks logged that day
+}
+
+// ─── Drinks (hydration log) ───────────────────────────────────────────────────
+export type DrinkKind = 'water' | 'coffee' | 'tea' | 'juice' | 'milk'
+
+export interface DrinkEntry {
+  id:   string
+  kind: DrinkKind
+  ml:   number       // actual volume drunk
+  at:   string       // ISO timestamp
 }
 
 // ─── Shared pantry (grocery inventory) ────────────────────────────────────────
@@ -155,6 +165,7 @@ export function computeBmi(p: { weightKg: number; heightCm: number }): BmiInfo {
 // to a tidy 50 ml. One cup = 250 ml.
 
 export const CUP_ML = 250
+export const HALF_CUP_ML = 125          // default quick-add (½ cup)
 
 const WATER_PER_KG: Record<ActivityLevel, number> = {
   pod: 31, light: 33, standard: 35, active: 37, pilot: 40,
@@ -162,6 +173,25 @@ const WATER_PER_KG: Record<ActivityLevel, number> = {
 
 export function recommendedWaterMl(p: SolarisProfile): number {
   return Math.round((p.weightKg * WATER_PER_KG[p.activity]) / 50) * 50
+}
+
+// Each drink type counts toward the daily goal by its hydration FACTOR — plain
+// water is 100%, caffeinated/sugary drinks a little less. `serveMl` is the
+// default serving the quick-add chip pours.
+export const DRINKS: Record<DrinkKind, { label: string; emoji: string; serveMl: number; factor: number }> = {
+  water:  { label: 'Water',  emoji: '💧', serveMl: 250, factor: 1.0  },
+  coffee: { label: 'Coffee', emoji: '☕', serveMl: 200, factor: 0.8  },
+  tea:    { label: 'Tea',    emoji: '🍵', serveMl: 200, factor: 0.9  },
+  juice:  { label: 'Juice',  emoji: '🧃', serveMl: 200, factor: 0.85 },
+  milk:   { label: 'Milk',   emoji: '🥛', serveMl: 250, factor: 0.9  },
+}
+
+export const DRINK_ORDER: DrinkKind[] = ['water', 'coffee', 'tea', 'juice', 'milk']
+
+/** Effective hydration (ml) a day's drinks contribute, after per-drink weighting. */
+export function effectiveHydration(drinks: DrinkEntry[] | undefined): number {
+  if (!drinks) return 0
+  return Math.round(drinks.reduce((s, d) => s + d.ml * (DRINKS[d.kind]?.factor ?? 1), 0))
 }
 
 // ─── Member avatars ───────────────────────────────────────────────────────────

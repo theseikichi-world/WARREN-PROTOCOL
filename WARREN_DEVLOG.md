@@ -396,6 +396,17 @@ type Settings = {
 ## Changelog
 
 ### 2026-06 (Session 4, hardening pass)
+- **SOLARIS hydration → weighted drinks log**. Water is no longer a single ml number;
+  each member's `water` is now a per-day `DrinkEntry[]`. New `DRINKS` table gives every
+  drink a hydration `factor` (water 100%, tea 90%, juice/milk 85–90%, coffee 80%) and a
+  default serving; `effectiveHydration()` sums ml×factor so the meter reflects *real*
+  hydration. UI: ½-cup quick-add (`HALF_CUP_ML`), per-drink chips (💧☕🍵🧃🥛), a custom
+  amount field, and an expandable day log showing each drink with its weighted value and a
+  remove ✕. Store API swapped `getWater/addWater` → `getDrinks/addDrink/removeDrink`;
+  `loadSolarisState` migrates any legacy numeric water total into a single water entry.
+  +1 test (weighted log + legacy-water migration) → 62 total. Verified live (coffee 200→160,
+  tea 200→180). Decisions logged: "Request today's delivery" will be **merged into the
+  upcoming pantry→dishes** feature (one "what should I eat?" suggester); hydration is weighted.
 - **SOLARIS → family households (foundation pass)**. State refactored from a single
   `{ profile, days }` to a crew: `SolarisState = { members: Member[], activeMemberId, pantry }`
   where each `Member` owns its own profile, food log and per-day water; the pantry is shared.

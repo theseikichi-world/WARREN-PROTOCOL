@@ -1,14 +1,15 @@
 import { useState, useMemo, useCallback } from 'react'
 import {
   type SolarisProfile, type Sex, type ActivityLevel, type Goal, type MealSlot,
-  type Targets, type Member,
-  ACTIVITY_META, GOAL_META, SLOT_META, SLOT_ORDER, MEMBER_EMOJI, CUP_ML,
-  computeTargets, computeBmi, recommendedWaterMl, sumDay, todayKey,
+  type Targets, type Member, type DrinkKind, type DrinkEntry,
+  ACTIVITY_META, GOAL_META, SLOT_META, SLOT_ORDER, MEMBER_EMOJI, CUP_ML, HALF_CUP_ML,
+  DRINKS, DRINK_ORDER, computeTargets, computeBmi, recommendedWaterMl, effectiveHydration,
+  sumDay, todayKey,
 } from './types'
 import {
   loadSolarisState, saveSolarisState, type SolarisState,
   activeMember, addMember, updateMemberProfile, renameMember, removeMember, setActiveMember,
-  getDay, addEntry, removeEntry, getStreak, getWater, addWater, type NewFoodData,
+  getDay, addEntry, removeEntry, getStreak, getDrinks, addDrink, removeDrink, type NewFoodData,
 } from './store'
 import { loadSettings, aiJson, modelForTask } from '../../settings'
 
@@ -121,42 +122,121 @@ function BmiChip({ profile, showAdvice }: { profile: SolarisProfile; showAdvice?
   )
 }
 
-// ─── Water meter ───────────────────────────────────────────────────────────────
-function WaterMeter({ consumedMl, targetMl, onAdd }: {
-  consumedMl: number; targetMl: number; onAdd: (deltaMl: number) => void
+// ─── Water meter (weighted drinks log) ─────────────────────────────────────────
+function WaterMeter({ drinks, targetMl, onAdd, onRemove }: {
+  drinks: DrinkEntry[]; targetMl: number
+  onAdd: (kind: DrinkKind, ml: number) => void
+  onRemove: (id: string) => void
 }) {
-  const pct  = targetMl > 0 ? Math.min(1, consumedMl / targetMl) : 0
-  const cups = Math.round(consumedMl / CUP_ML)
-  const done = consumedMl >= targetMl && targetMl > 0
+  const [open, setOpen]             = useState(false)
+  const [customKind, setCustomKind] = useState<DrinkKind>('water')
+  const [customMl, setCustomMl]     = useState('')
+
+  const effective = effectiveHydration(drinks)
+  const pct  = targetMl > 0 ? Math.min(1, effective / targetMl) : 0
+  const cups = Math.round((effective / CUP_ML) * 10) / 10
+  const done = effective >= targetMl && targetMl > 0
+  const fill = done ? '#4ade80' : AQUA
+
+  const addCustom = () => {
+    const ml = parseFloat(customMl)
+    if (ml > 0) { onAdd(customKind, ml); setCustomMl('') }
+  }
+
   return (
     <div style={{ margin: '0 14px 8px', padding: '10px 12px', borderRadius: 9,
       background: `${AQUA}08`, border: `1px solid ${AQUA}22` }}>
+      {/* summary */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <span style={{ fontSize: 13 }}>💧</span>
         <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700, color: AQUA,
           letterSpacing: '0.14em', flex: 1 }}>HYDRATION</p>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, color: done ? '#4ade80' : AQUA }}>
-          {(consumedMl / 1000).toFixed(consumedMl % 1000 === 0 ? 0 : 1)}/{(targetMl / 1000).toFixed(1)} L
+        <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, color: fill }}>
+          {(effective / 1000).toFixed(1)}/{(targetMl / 1000).toFixed(1)} L
         </span>
         <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${AQUA}70` }}>{cups} cups</span>
+        <button onClick={() => setOpen(o => !o)} title="Drink log & custom amount" style={{
+          fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, letterSpacing: '0.08em',
+          color: `${AQUA}90`, cursor: 'pointer' }}>{open ? 'CLOSE ▴' : `LOG ▾`}</button>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button onClick={() => onAdd(-CUP_ML)} title="Remove a cup" style={waterBtn}>−</button>
-        <div style={{ flex: 1, height: 8, borderRadius: 4, overflow: 'hidden',
-          background: 'rgba(56,189,248,0.1)', position: 'relative' }}>
-          <div style={{ height: '100%', width: `${pct * 100}%`,
-            background: done ? '#4ade80' : `linear-gradient(90deg, ${AQUA}, #7dd3fc)`,
-            boxShadow: `0 0 8px ${done ? '#4ade80' : AQUA}80`, borderRadius: 4, transition: 'width 0.4s ease' }} />
+
+      {/* progress bar */}
+      <div style={{ height: 8, borderRadius: 4, overflow: 'hidden', marginBottom: 8,
+        background: 'rgba(56,189,248,0.1)' }}>
+        <div style={{ height: '100%', width: `${pct * 100}%`,
+          background: done ? '#4ade80' : `linear-gradient(90deg, ${AQUA}, #7dd3fc)`,
+          boxShadow: `0 0 8px ${fill}80`, borderRadius: 4, transition: 'width 0.4s ease' }} />
+      </div>
+
+      {/* quick adds: ½-cup water + a chip per drink */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+        <button onClick={() => onAdd('water', HALF_CUP_ML)} title="Add ½ cup of water (125 ml)" style={{
+          ...drinkChip, color: AQUA, borderColor: `${AQUA}45`, fontWeight: 700 }}>+½ 💧</button>
+        {DRINK_ORDER.filter(k => k !== 'water').map(k => (
+          <button key={k} onClick={() => onAdd(k, DRINKS[k].serveMl)}
+            title={`Add ${DRINKS[k].label} (${DRINKS[k].serveMl} ml · ${Math.round(DRINKS[k].factor * 100)}% hydration)`}
+            style={drinkChip}>{DRINKS[k].emoji}</button>
+        ))}
+      </div>
+
+      {/* log + custom */}
+      {open && (
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${AQUA}18` }}>
+          {/* custom amount */}
+          <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
+            {DRINK_ORDER.map(k => (
+              <button key={k} onClick={() => setCustomKind(k)} title={DRINKS[k].label}
+                style={{ ...drinkChip, ...(customKind === k
+                  ? { color: AQUA, borderColor: `${AQUA}55`, background: 'rgba(56,189,248,0.12)' } : {}) }}>
+                {DRINKS[k].emoji}</button>
+            ))}
+            <input type="number" value={customMl} onChange={e => setCustomMl(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addCustom() }} placeholder="ml"
+              style={{ width: 56, padding: '5px 8px', borderRadius: 5, background: 'rgba(0,0,0,0.5)',
+                border: `1px solid ${AQUA}28`, outline: 'none', fontFamily: 'var(--font)',
+                fontSize: 'var(--fs-xs)', color: 'rgba(225,245,255,0.9)' }} />
+            <button onClick={addCustom} style={{ ...drinkChip, color: AQUA, borderColor: `${AQUA}45`,
+              fontWeight: 700, letterSpacing: '0.08em' }}>ADD</button>
+          </div>
+
+          {/* today's drinks */}
+          {drinks.length === 0 ? (
+            <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(148,163,184,0.4)',
+              letterSpacing: '0.04em' }}>No drinks logged yet today.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 120, overflowY: 'auto' }}>
+              {drinks.map(d => {
+                const meta = DRINKS[d.kind]
+                const eff = Math.round(d.ml * meta.factor)
+                return (
+                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '3px 4px' }}>
+                    <span style={{ fontSize: 12 }}>{meta.emoji}</span>
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 8, color: 'rgba(225,245,255,0.8)', flex: 1 }}>
+                      {meta.label} · {d.ml} ml
+                      {meta.factor < 1 && (
+                        <span style={{ color: `${AQUA}70` }}> → {eff} ml</span>
+                      )}
+                    </span>
+                    <button onClick={() => onRemove(d.id)} title="Remove" style={{
+                      fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(255,84,112,0.45)', cursor: 'pointer' }}
+                      onMouseEnter={e => e.currentTarget.style.color = '#ff5470'}
+                      onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,84,112,0.45)'}
+                    >✕</button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
-        <button onClick={() => onAdd(CUP_ML)} title="Add a cup (250 ml)" style={{ ...waterBtn, color: AQUA, borderColor: `${AQUA}45` }}>+</button>
-      </div>
+      )}
     </div>
   )
 }
-const waterBtn: React.CSSProperties = {
-  width: 26, height: 26, borderRadius: 7, fontSize: 15, fontWeight: 700, flexShrink: 0,
-  color: `${AQUA}90`, border: `1px solid ${AQUA}28`, background: 'rgba(56,189,248,0.06)', cursor: 'pointer',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
+const drinkChip: React.CSSProperties = {
+  minWidth: 30, height: 26, padding: '0 8px', borderRadius: 7, fontSize: 13, flexShrink: 0,
+  color: `${AQUA}90`, border: `1px solid ${AQUA}22`, background: 'rgba(56,189,248,0.05)', cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)',
 }
 
 // ─── Member switcher ───────────────────────────────────────────────────────────
@@ -782,7 +862,7 @@ export default function Solaris() {
   const totals  = useMemo(() => sumDay(day), [day])
   const targets = member ? computeTargets(member.profile) : null
   const streak  = member ? getStreak(state, member.id) : 0
-  const water   = member ? getWater(state, member.id, today) : 0
+  const drinks  = useMemo(() => member ? getDrinks(state, member.id, today) : [], [state, member, today])
   const waterTarget = member ? recommendedWaterMl(member.profile) : 0
 
   // ── No members yet → onboard the first one ──
@@ -895,8 +975,9 @@ export default function Solaris() {
         )}
 
         {/* Hydration */}
-        <WaterMeter consumedMl={water} targetMl={waterTarget}
-          onAdd={delta => persist(addWater(state, member.id, today, delta))} />
+        <WaterMeter drinks={drinks} targetMl={waterTarget}
+          onAdd={(kind, ml) => persist(addDrink(state, member.id, today, kind, ml))}
+          onRemove={id => persist(removeDrink(state, member.id, today, id))} />
 
         {/* Delivery CTA */}
         <button onClick={() => setScreen({ type: 'delivery' })} style={{

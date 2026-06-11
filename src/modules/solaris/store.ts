@@ -1,6 +1,7 @@
 import {
   type SolarisState, type SolarisProfile, type FoodEntry, type DayLog,
-  type MealSlot, type Member, type PantryItem, todayKey,
+  type MealSlot, type Member, type PantryItem, type DrinkEntry, type DrinkKind,
+  todayKey,
 } from './types'
 
 export type { SolarisState }
@@ -21,7 +22,7 @@ export function loadSolarisState(): SolarisState {
       return {
         members: p.members.map((m: Partial<Member>) => ({
           id: m.id ?? crypto.randomUUID(), name: m.name ?? 'Crew', emoji: m.emoji ?? '🧑‍🚀',
-          profile: m.profile as SolarisProfile, days: m.days ?? {}, water: m.water ?? {},
+          profile: m.profile as SolarisProfile, days: m.days ?? {}, water: normalizeWater(m.water),
         })),
         activeMemberId: p.activeMemberId ?? p.members[0]?.id ?? null,
         pantry: Array.isArray(p.pantry) ? p.pantry : [],
@@ -130,18 +131,41 @@ export function removeEntry(state: SolarisState, memberId: string, date: string,
   })
 }
 
-// ─── Water (per member, per day) ──────────────────────────────────────────────
+// ─── Water / drinks (per member, per day) ─────────────────────────────────────
 
-export function getWater(state: SolarisState, memberId: string, date: string = todayKey()): number {
-  const m = state.members.find(x => x.id === memberId)
-  return m?.water[date] ?? 0
+/** Coerce any stored water shape (legacy number, or drink array) into a drink log. */
+function normalizeWater(w: unknown): Record<string, DrinkEntry[]> {
+  if (!w || typeof w !== 'object') return {}
+  const out: Record<string, DrinkEntry[]> = {}
+  for (const [date, v] of Object.entries(w as Record<string, unknown>)) {
+    if (Array.isArray(v)) {
+      out[date] = v.filter((d): d is DrinkEntry => !!d && typeof (d as DrinkEntry).ml === 'number')
+    } else if (typeof v === 'number' && v > 0) {
+      out[date] = [{ id: crypto.randomUUID(), kind: 'water', ml: v, at: '' }]   // legacy total → one water entry
+    }
+  }
+  return out
 }
 
-/** Add (or, with a negative delta, remove) water for the day. Never goes below 0. */
-export function addWater(state: SolarisState, memberId: string, date: string, deltaMl: number): SolarisState {
+export function getDrinks(state: SolarisState, memberId: string, date: string = todayKey()): DrinkEntry[] {
+  const m = state.members.find(x => x.id === memberId)
+  return m?.water[date] ?? []
+}
+
+export function addDrink(state: SolarisState, memberId: string, date: string, kind: DrinkKind, ml: number): SolarisState {
+  const vol = Math.max(0, Math.round(ml))
+  if (!vol) return state
+  const entry: DrinkEntry = { id: crypto.randomUUID(), kind, ml: vol, at: new Date().toISOString() }
+  return mapMember(state, memberId, m => ({
+    ...m, water: { ...m.water, [date]: [...(m.water[date] ?? []), entry] },
+  }))
+}
+
+export function removeDrink(state: SolarisState, memberId: string, date: string, drinkId: string): SolarisState {
   return mapMember(state, memberId, m => {
-    const next = Math.max(0, (m.water[date] ?? 0) + deltaMl)
-    return { ...m, water: { ...m.water, [date]: next } }
+    const list = m.water[date]
+    if (!list) return m
+    return { ...m, water: { ...m.water, [date]: list.filter(d => d.id !== drinkId) } }
   })
 }
 

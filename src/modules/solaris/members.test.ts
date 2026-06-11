@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { computeBmi, recommendedWaterMl, type SolarisProfile, type SolarisState } from './types'
+import { computeBmi, recommendedWaterMl, effectiveHydration, type SolarisProfile, type SolarisState } from './types'
 import {
-  loadSolarisState, addMember, addEntry, removeEntry, addWater, getWater,
+  loadSolarisState, addMember, addEntry, removeEntry, addDrink, removeDrink, getDrinks,
   removeMember, setActiveMember, activeMember, updateMemberProfile,
 } from './store'
 
@@ -66,14 +66,16 @@ describe('member CRUD', () => {
     expect(wife.name).toBe('Wife')
   })
 
-  it('accumulates water and never goes below zero', () => {
+  it('logs drinks and weights hydration by type', () => {
     let s = addMember(empty, 'You', '🧑‍🚀', profile)
     const id = s.members[0].id
-    s = addWater(s, id, '2026-06-12', 250)
-    s = addWater(s, id, '2026-06-12', 250)
-    expect(getWater(s, id, '2026-06-12')).toBe(500)
-    s = addWater(s, id, '2026-06-12', -1000) // over-subtract
-    expect(getWater(s, id, '2026-06-12')).toBe(0)
+    s = addDrink(s, id, '2026-06-12', 'water', 250)
+    s = addDrink(s, id, '2026-06-12', 'coffee', 200) // 200 * 0.8 = 160 effective
+    const list = getDrinks(s, id, '2026-06-12')
+    expect(list).toHaveLength(2)
+    expect(effectiveHydration(list)).toBe(410) // 250 + 160
+    s = removeDrink(s, id, '2026-06-12', list[1].id)
+    expect(effectiveHydration(getDrinks(s, id, '2026-06-12'))).toBe(250)
   })
 
   it('reassigns active when the active member is removed', () => {
@@ -121,5 +123,16 @@ describe('migration from the old single-profile shape', () => {
     const s = loadSolarisState()
     expect(s.members).toEqual([])
     expect(s.activeMemberId).toBeNull()
+  })
+
+  it('converts a legacy numeric water total into a water drink entry', () => {
+    localStorage.setItem('solaris_v1', JSON.stringify({
+      members: [{ id: 'm', name: 'You', emoji: '🧑‍🚀', profile, days: {}, water: { '2026-06-11': 750 } }],
+      activeMemberId: 'm', pantry: [],
+    }))
+    const s = loadSolarisState()
+    const drinks = s.members[0].water['2026-06-11']
+    expect(drinks).toHaveLength(1)
+    expect(drinks[0]).toMatchObject({ kind: 'water', ml: 750 })
   })
 })
