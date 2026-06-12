@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import {
   type SolarisProfile, type Sex, type ActivityLevel, type Goal, type MealSlot,
-  type Targets, type Member, type DrinkKind, type DrinkEntry,
+  type Targets, type Member, type DrinkKind, type DrinkEntry, type PantryItem,
   ACTIVITY_META, GOAL_META, SLOT_META, SLOT_ORDER, MEMBER_EMOJI, CUP_ML, HALF_LITER_ML,
   DRINKS, DRINK_ORDER, computeTargets, computeBmi, recommendedWaterMl, effectiveHydration,
   sumDay, todayKey,
@@ -9,9 +9,11 @@ import {
 import {
   loadSolarisState, saveSolarisState, type SolarisState,
   activeMember, addMember, updateMemberProfile, renameMember, removeMember, setActiveMember,
-  getDay, addEntry, removeEntry, getStreak, getDrinks, addDrink, removeDrink, type NewFoodData,
+  getDay, addEntry, removeEntry, getStreak, getDrinks, addDrink, removeDrink,
+  addPantryItem, addPantryItems, removePantryItem, type NewFoodData,
 } from './store'
-import { loadSettings, aiJson, modelForTask } from '../../settings'
+import { loadSettings, aiJson, aiVisionJson, modelForTask, type ImageInput } from '../../settings'
+import { fileToImageInput } from './image'
 
 const NEON     = '#ffb13c'   // solar gold
 const NEON_DIM = 'rgba(255,177,60,0.1)'
@@ -595,23 +597,26 @@ function AddFoodForm({ slot, onSave, onCancel }: {
   )
 }
 
-// ─── AI delivery panel ─────────────────────────────────────────────────────────
+// ─── "What should I eat?" — pantry-aware dish ideas ────────────────────────────
 interface DeliveryMeal {
   name: string; slot: MealSlot
   calories: number; protein: number; carbs: number; fat: number
   why?: string
+  uses?: string[]   // pantry items this dish draws on
 }
 
-const DELIVERY_SYSTEM = `You are SOLARIS, the AI nutrition chef of an orbital agri-station that grows fresh food in space and delivers personalised meals to crew members.
-Given a crew member's remaining calorie/macro budget for the day and their dietary preference, design meals that fit the REMAINING budget as closely as possible.
+const DELIVERY_SYSTEM = `You are SOLARIS, the AI nutrition chef of an orbital agri-station that plates personalised meals for crew members.
+Suggest dishes that fit the crew member's REMAINING calorie/macro budget for the day and respect their dietary preference.
+If a PANTRY list is given, strongly prefer dishes built mainly from those ingredients, and for each dish list which pantry items it "uses". If the pantry is empty, suggest sensible meals from common staples.
 Respond with ONLY a JSON array, no prose, no markdown fences. Each item:
-{"name": string, "slot": "breakfast"|"lunch"|"dinner"|"snack", "calories": number, "protein": number, "carbs": number, "fat": number, "why": short string (max 8 words)}
-Return 2-4 meals. Keep total close to the remaining budget. Numbers are grams except calories (kcal).`
+{"name": string, "slot": "breakfast"|"lunch"|"dinner"|"snack", "calories": number, "protein": number, "carbs": number, "fat": number, "why": short string (max 8 words), "uses": string[] of pantry item names used (omit or [] if none)}
+Return 2-4 dishes. Keep total close to the remaining budget. Numbers are grams except calories (kcal).`
 
-function DeliveryPanel({ profile, targets, consumed, onAccept, onClose }: {
+function DeliveryPanel({ profile, targets, consumed, pantry, onAccept, onClose }: {
   profile:  SolarisProfile
   targets:  Targets
   consumed: { calories: number; protein: number; carbs: number; fat: number }
+  pantry:   PantryItem[]
   onAccept: (m: DeliveryMeal) => void
   onClose:  () => void
 }) {
@@ -620,21 +625,25 @@ function DeliveryPanel({ profile, targets, consumed, onAccept, onClose }: {
   const [meals, setMeals]     = useState<DeliveryMeal[] | null>(null)
   const [accepted, setAccepted] = useState<Set<number>>(new Set())
 
-  const remaining = {
+  const remaining = useMemo(() => ({
     calories: Math.max(0, targets.calories - consumed.calories),
     protein:  Math.max(0, targets.protein  - consumed.protein),
     carbs:    Math.max(0, targets.carbs    - consumed.carbs),
     fat:      Math.max(0, targets.fat      - consumed.fat),
-  }
+  }), [targets, consumed])
 
   const synthesize = useCallback(async () => {
     setLoading(true); setError(null)
     try {
       const settings = loadSettings()
+      const pantryLine = pantry.length
+        ? `PANTRY (prefer these): ${pantry.map(i => i.qty ? `${i.name} (${i.qty})` : i.name).join(', ')}.`
+        : 'PANTRY: empty — use common staples.'
       const userMsg = `Crew goal: ${GOAL_META[profile.goal].label} (${profile.goal}).
 Dietary preference: ${profile.diet || 'none'}.
+${pantryLine}
 REMAINING budget for the rest of today: ${remaining.calories} kcal, ${remaining.protein}g protein, ${remaining.carbs}g carbs, ${remaining.fat}g fat.
-Design the delivery.`
+Suggest what to eat.`
       const parsed = await aiJson<DeliveryMeal[]>([
         { role: 'system', content: DELIVERY_SYSTEM },
         { role: 'user',   content: userMsg },
@@ -649,15 +658,16 @@ Design the delivery.`
           carbs:    Math.round(m.carbs)    || 0,
           fat:      Math.round(m.fat)      || 0,
           why: m.why ? String(m.why) : undefined,
+          uses: Array.isArray(m.uses) ? m.uses.map(String).filter(Boolean) : undefined,
         }))
-      if (valid.length === 0) throw new Error('No meals in the manifest.')
+      if (valid.length === 0) throw new Error('No dishes came back.')
       setMeals(valid)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Delivery failed.')
+      setError(e instanceof Error ? e.message : 'Could not suggest dishes.')
     } finally {
       setLoading(false)
     }
-  }, [profile, remaining])
+  }, [profile, remaining, pantry])
 
   return (
     <div className="fade-in" style={{ position: 'absolute', inset: 0, zIndex: 20,
@@ -668,9 +678,9 @@ Design the delivery.`
           color: `${NEON}55`, letterSpacing: '0.1em' }}>← BACK</button>
         <div>
           <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
-            color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>TODAY'S DELIVERY</p>
+            color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>WHAT SHOULD I EAT?</p>
           <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`,
-            letterSpacing: '0.08em' }}>SYNTHESISED FROM ORBITAL AGRI-BAY</p>
+            letterSpacing: '0.08em' }}>{pantry.length ? `FROM YOUR PANTRY · ${pantry.length} ITEMS` : 'SYNTHESISED FROM ORBITAL AGRI-BAY'}</p>
         </div>
       </div>
 
@@ -700,7 +710,9 @@ Design the delivery.`
             <div style={{ fontSize: 30, marginBottom: 10, filter: `drop-shadow(0 0 12px ${NEON})` }}>🛰️</div>
             <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: `${NEON}55`,
               lineHeight: 1.7, marginBottom: 16 }}>
-              The agri-station will grow & plate meals<br/>tuned to your remaining budget.
+              {pantry.length
+                ? <>Dishes you can cook from your pantry,<br/>tuned to your remaining budget.</>
+                : <>Meal ideas tuned to your remaining budget.<br/>Stock the pantry for cook-from-what-you-have.</>}
             </p>
             <button onClick={synthesize} style={{
               padding: '11px 26px', borderRadius: 7, cursor: 'pointer',
@@ -709,7 +721,7 @@ Design the delivery.`
             }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,177,60,0.2)'}
               onMouseLeave={e => e.currentTarget.style.background = NEON_DIM}
-            >☄️ SYNTHESISE DELIVERY</button>
+            >🍳 SUGGEST DISHES</button>
           </div>
         )}
 
@@ -718,7 +730,7 @@ Design the delivery.`
             <div style={{ fontSize: 26, marginBottom: 12,
               animation: 'pulse 1.3s ease-in-out infinite' }}>🛰️</div>
             <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: NEON,
-              letterSpacing: '0.12em' }}>GROWING YOUR MEALS…</p>
+              letterSpacing: '0.12em' }}>PLATING YOUR DISHES…</p>
           </div>
         )}
 
@@ -759,6 +771,15 @@ Design the delivery.`
                   <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}55`,
                     fontStyle: 'italic', letterSpacing: '0.02em', marginBottom: 8 }}>“{m.why}”</p>
                 )}
+                {m.uses && m.uses.length > 0 && (
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+                    {m.uses.map((u, j) => (
+                      <span key={j} style={{ fontFamily: 'var(--font)', fontSize: 7, color: '#4ade80',
+                        padding: '2px 6px', borderRadius: 4, background: 'rgba(74,222,128,0.08)',
+                        border: '1px solid rgba(74,222,128,0.25)' }}>🧺 {u}</span>
+                    ))}
+                  </div>
+                )}
                 <button disabled={isAccepted} onClick={() => { onAccept(m); setAccepted(s => new Set(s).add(i)) }}
                   style={{
                     width: '100%', padding: '6px', borderRadius: 5, cursor: isAccepted ? 'default' : 'pointer',
@@ -766,7 +787,7 @@ Design the delivery.`
                     color: isAccepted ? '#4ade80' : NEON,
                     border: `1px solid ${isAccepted ? '#4ade8040' : `${NEON}35`}`,
                     background: isAccepted ? 'rgba(74,222,128,0.08)' : NEON_DIM, transition: 'all 0.15s',
-                  }}>{isAccepted ? '✓ ON MANIFEST' : '⬇ ACCEPT DELIVERY'}</button>
+                  }}>{isAccepted ? '✓ LOGGED' : '⬇ I ATE THIS'}</button>
               </div>
             </div>
           )
@@ -779,6 +800,281 @@ Design the delivery.`
               color: SOLAR, border: `1px solid ${SOLAR}40`, background: `${SOLAR}10`, transition: 'all 0.15s' }}
           >⬇ ACCEPT ALL & CLOSE</button>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ─── AI meal logging (describe or snap what you ate) ───────────────────────────
+const MEALPARSE_SYSTEM = `You are SOLARIS' meal-logging assistant. The crew member tells you — in words and/or a photo — what they ATE or DRANK.
+Identify each distinct food/drink item and estimate its nutrition realistically for the portion shown or described.
+Respond with ONLY a JSON array, no prose, no markdown fences. Each item:
+{"name": string, "slot": "breakfast"|"lunch"|"dinner"|"snack", "calories": number, "protein": number, "carbs": number, "fat": number}
+Numbers are grams except calories (kcal). If the meal slot isn't stated, infer a sensible one. Group obvious sub-parts into one dish when natural.`
+
+function MealLogPanel({ defaultSlot, onAccept, onClose }: {
+  defaultSlot: MealSlot
+  onAccept: (d: NewFoodData) => void
+  onClose: () => void
+}) {
+  const [text, setText]       = useState('')
+  const [image, setImage]     = useState<ImageInput | null>(null)
+  const [imgName, setImgName] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState<string | null>(null)
+  const [items, setItems]     = useState<NewFoodData[] | null>(null)
+  const [accepted, setAccepted] = useState<Set<number>>(new Set())
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const pickImage = async (file: File | undefined) => {
+    if (!file) return
+    setError(null)
+    try { setImage(await fileToImageInput(file)); setImgName(file.name) }
+    catch (e) { setError(e instanceof Error ? e.message : 'Could not read the image.') }
+  }
+
+  const parse = useCallback(async () => {
+    if (!text.trim() && !image) { setError('Describe a meal or attach a photo first.'); return }
+    setLoading(true); setError(null)
+    try {
+      const settings = loadSettings()
+      const model = modelForTask(settings, 'solaris.mealparse')
+      const prompt = `${text.trim() || 'Identify the food in the photo.'}\nDefault meal slot if unclear: ${defaultSlot}.`
+      const parsed = image
+        ? await aiVisionJson<NewFoodData[]>(MEALPARSE_SYSTEM, prompt, [image], settings, { model, maxTokens: 1200, prefill: '[' })
+        : await aiJson<NewFoodData[]>(
+            [{ role: 'system', content: MEALPARSE_SYSTEM }, { role: 'user', content: prompt }],
+            settings, { model, maxTokens: 1200, prefill: '[' })
+      const valid = (parsed as NewFoodData[])
+        .filter(m => m && m.name && typeof m.calories === 'number')
+        .map(m => ({
+          name: String(m.name),
+          slot: (SLOT_ORDER.includes(m.slot) ? m.slot : defaultSlot) as MealSlot,
+          calories: Math.round(m.calories) || 0,
+          protein:  Math.round(m.protein)  || 0,
+          carbs:    Math.round(m.carbs)    || 0,
+          fat:      Math.round(m.fat)      || 0,
+        }))
+      if (!valid.length) throw new Error('Could not read any food from that.')
+      setItems(valid)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Meal parse failed.')
+    } finally {
+      setLoading(false)
+    }
+  }, [text, image, defaultSlot])
+
+  return (
+    <div className="fade-in" style={{ position: 'absolute', inset: 0, zIndex: 20,
+      background: 'rgba(8,4,0,0.95)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '10px 14px', borderBottom: `1px solid ${NEON}18`,
+        display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 11,
+          color: `${NEON}55`, letterSpacing: '0.1em' }}>← CANCEL</button>
+        <div>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+            color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>LOG A MEAL</p>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`,
+            letterSpacing: '0.08em' }}>DESCRIBE IT OR SNAP IT — SOLARIS DOES THE MATH</p>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {!items && (
+          <>
+            <textarea value={text} onChange={e => setText(e.target.value)} rows={3} autoFocus
+              placeholder="e.g. two scrambled eggs, sourdough toast with butter, a flat white"
+              style={{ width: '100%', padding: '9px 11px', borderRadius: 7, resize: 'vertical',
+                background: 'rgba(0,0,0,0.5)', border: `1px solid ${NEON}20`, outline: 'none',
+                fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', color: 'rgba(255,240,220,0.9)', lineHeight: 1.5 }} />
+
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+              onChange={e => { void pickImage(e.target.files?.[0]); e.target.value = '' }} />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button onClick={() => fileRef.current?.click()} style={{
+                padding: '8px 12px', borderRadius: 7, cursor: 'pointer', flexShrink: 0,
+                fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
+                color: `${NEON}90`, border: `1px solid ${NEON}30`, background: NEON_DIM }}>📷 {image ? 'CHANGE PHOTO' : 'ADD PHOTO'}</button>
+              {image && (
+                <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: '#4ade80', flex: 1,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✓ {imgName || 'photo attached'}</span>
+              )}
+              {image && (
+                <button onClick={() => { setImage(null); setImgName('') }} title="Remove photo" style={{
+                  fontFamily: 'var(--font)', fontSize: 12, color: 'rgba(255,84,112,0.5)', cursor: 'pointer' }}>✕</button>
+              )}
+            </div>
+
+            {error && (
+              <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#ff5470', letterSpacing: '0.06em' }}>⚠ {error}</p>
+            )}
+
+            <button disabled={loading} onClick={parse} style={{
+              padding: '11px', borderRadius: 7, cursor: loading ? 'default' : 'pointer',
+              fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800, letterSpacing: '0.12em',
+              color: NEON, border: `1px solid ${NEON}45`, background: NEON_DIM, opacity: loading ? 0.6 : 1 }}>
+              {loading ? '◌ READING…' : '✦ READ MY MEAL'}</button>
+          </>
+        )}
+
+        {items && (
+          <>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}70`, letterSpacing: '0.1em' }}>
+              SOLARIS READ {items.length} ITEM{items.length > 1 ? 'S' : ''} — ADD WHAT'S RIGHT
+            </p>
+            {items.map((m, i) => {
+              const on = accepted.has(i)
+              return (
+                <div key={i} style={{ borderRadius: 9, padding: '10px 12px',
+                  background: 'rgba(20,12,2,0.6)', border: `1px solid ${on ? '#4ade8040' : `${NEON}18`}`, opacity: on ? 0.6 : 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 13 }}>{SLOT_META[m.slot].icon}</span>
+                    <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
+                      color: 'rgba(255,240,220,0.92)', flex: 1 }}>{m.name}</p>
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 900, color: NEON }}>{m.calories}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
+                    {([['protein', m.protein], ['carbs', m.carbs], ['fat', m.fat]] as const).map(([k, v]) => (
+                      <span key={k} style={{ fontFamily: 'var(--font)', fontSize: 8, color: MACRO[k].color }}>{MACRO[k].label[0]} {v}g</span>
+                    ))}
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 7, marginLeft: 'auto',
+                      color: 'rgba(148,163,184,0.4)' }}>{SLOT_META[m.slot].label}</span>
+                  </div>
+                  <button disabled={on} onClick={() => { onAccept(m); setAccepted(s => new Set(s).add(i)) }} style={{
+                    width: '100%', padding: '6px', borderRadius: 5, cursor: on ? 'default' : 'pointer',
+                    fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.1em',
+                    color: on ? '#4ade80' : NEON, border: `1px solid ${on ? '#4ade8040' : `${NEON}35`}`,
+                    background: on ? 'rgba(74,222,128,0.08)' : NEON_DIM }}>{on ? '✓ LOGGED' : '⬇ ADD TO MANIFEST'}</button>
+                </div>
+              )
+            })}
+            <button onClick={() => { items.forEach((m, i) => { if (!accepted.has(i)) onAccept(m) }); onClose() }} style={{
+              padding: '10px', borderRadius: 7, cursor: 'pointer',
+              fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800, letterSpacing: '0.12em',
+              color: SOLAR, border: `1px solid ${SOLAR}40`, background: `${SOLAR}10` }}>⬇ ADD ALL & CLOSE</button>
+            <button onClick={() => { setItems(null); setAccepted(new Set()) }} style={{
+              fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}60`, letterSpacing: '0.1em' }}>↻ LOG SOMETHING ELSE</button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Pantry (shared groceries) + photo scan ────────────────────────────────────
+const PANTRY_SYSTEM = `You read a photo of groceries, a fridge, or a pantry and list the distinct FOOD ingredients you can see.
+Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string, "qty": short string like "2", "500g", or ""}.
+List only foods/ingredients, be specific but concise (e.g. "eggs", "cheddar cheese", "spinach"). No duplicates.`
+
+function PantryScreen({ pantry, onAdd, onAddMany, onRemove, onCook, onClose }: {
+  pantry: PantryItem[]
+  onAdd: (name: string, qty: string) => void
+  onAddMany: (items: { name: string; qty?: string }[]) => void
+  onRemove: (id: string) => void
+  onCook: () => void
+  onClose: () => void
+}) {
+  const [name, setName]   = useState('')
+  const [qty, setQty]     = useState('')
+  const [scanning, setScanning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const submit = () => { if (name.trim()) { onAdd(name, qty); setName(''); setQty('') } }
+
+  const scan = async (file: File | undefined) => {
+    if (!file) return
+    setScanning(true); setError(null)
+    try {
+      const img = await fileToImageInput(file)
+      const settings = loadSettings()
+      const parsed = await aiVisionJson<{ name: string; qty?: string }[]>(
+        PANTRY_SYSTEM, 'List the groceries in this photo.', [img], settings,
+        { model: modelForTask(settings, 'solaris.pantry'), maxTokens: 800, prefill: '[' })
+      const items = (parsed || []).filter(i => i && i.name).map(i => ({ name: String(i.name), qty: i.qty ? String(i.qty) : '' }))
+      if (!items.length) throw new Error('No groceries spotted in that photo.')
+      onAddMany(items)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Scan failed.')
+    } finally {
+      setScanning(false)
+    }
+  }
+
+  const inp: React.CSSProperties = {
+    padding: '7px 10px', borderRadius: 5, background: 'rgba(0,0,0,0.5)',
+    border: `1px solid ${NEON}20`, outline: 'none',
+    fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', color: 'rgba(255,240,220,0.9)',
+  }
+
+  return (
+    <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ padding: '10px 14px', borderBottom: `1px solid ${NEON}18`,
+        display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 11,
+          color: `${NEON}55`, letterSpacing: '0.1em' }}>← BACK</button>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+            color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>SHARED PANTRY</p>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`,
+            letterSpacing: '0.08em' }}>WHAT THE CREW HAS IN STOCK · {pantry.length} ITEMS</p>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* add row */}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Add item…" autoFocus
+            onKeyDown={e => { if (e.key === 'Enter') submit() }} style={{ ...inp, flex: 1 }} />
+          <input value={qty} onChange={e => setQty(e.target.value)} placeholder="qty"
+            onKeyDown={e => { if (e.key === 'Enter') submit() }} style={{ ...inp, width: 56, textAlign: 'center' }} />
+          <button onClick={submit} style={{ ...inp, cursor: 'pointer', color: NEON, borderColor: `${NEON}45`,
+            background: NEON_DIM, fontWeight: 800 }}>ADD</button>
+        </div>
+
+        {/* photo scan */}
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+          onChange={e => { void scan(e.target.files?.[0]); e.target.value = '' }} />
+        <button disabled={scanning} onClick={() => fileRef.current?.click()} style={{
+          padding: '9px', borderRadius: 7, cursor: scanning ? 'default' : 'pointer',
+          fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.1em',
+          color: `${AQUA}d0`, border: `1px solid ${AQUA}35`, background: `${AQUA}0c`, opacity: scanning ? 0.6 : 1 }}>
+          {scanning ? '◌ READING GROCERIES…' : '📷 SCAN GROCERIES FROM A PHOTO'}</button>
+        {error && <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#ff5470', letterSpacing: '0.06em' }}>⚠ {error}</p>}
+
+        {/* list */}
+        {pantry.length === 0 ? (
+          <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: 'rgba(148,163,184,0.4)',
+            textAlign: 'center', padding: '20px 10px', lineHeight: 1.7 }}>
+            The pantry is empty. Add items or snap a photo —<br/>then SOLARIS can suggest dishes from what you have.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {pantry.map(it => (
+              <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 11px',
+                borderRadius: 7, background: 'rgba(18,11,2,0.55)', border: `1px solid ${NEON}10` }}>
+                <span style={{ fontSize: 11 }}>🧺</span>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
+                  color: 'rgba(255,240,220,0.85)', flex: 1 }}>{it.name}</span>
+                {it.qty && <span style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}70` }}>{it.qty}</span>}
+                <button onClick={() => onRemove(it.id)} title="Remove" style={{
+                  fontFamily: 'var(--font)', fontSize: 12, color: 'rgba(255,84,112,0.4)', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#ff5470'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,84,112,0.4)'}
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* cook CTA */}
+      <div style={{ padding: '10px 14px', borderTop: `1px solid ${NEON}14`, flexShrink: 0 }}>
+        <button onClick={onCook} style={{
+          width: '100%', padding: '11px', borderRadius: 8, cursor: 'pointer',
+          fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800, letterSpacing: '0.12em',
+          color: NEON, border: `1px solid ${NEON}40`, background: `linear-gradient(90deg, ${SOLAR}12, ${NEON}10)` }}>
+          🍳 WHAT CAN I COOK?</button>
       </div>
     </div>
   )
@@ -847,6 +1143,14 @@ type Screen =
   | { type: 'edit'; memberId: string }
   | { type: 'add' }
   | { type: 'delivery' }
+  | { type: 'log' }
+  | { type: 'pantry' }
+
+/** Sensible default meal slot for the current time of day. */
+const slotNow = (): MealSlot => {
+  const h = new Date().getHours()
+  return h < 11 ? 'breakfast' : h < 15 ? 'lunch' : h < 21 ? 'dinner' : 'snack'
+}
 
 export default function Solaris() {
   const [state, setState]   = useState<SolarisState>(() => loadSolarisState())
@@ -901,14 +1205,40 @@ export default function Solaris() {
     }
   }
 
-  // ── Delivery ──
+  // ── "What should I eat?" (pantry-aware dish ideas) ──
   if (screen.type === 'delivery' && targets) {
     return (
       <DeliveryPanel
         profile={member.profile}
         targets={targets}
         consumed={totals}
+        pantry={state.pantry}
         onAccept={m => persist(addEntry(state, member.id, today, m))}
+        onClose={() => setScreen({ type: 'dashboard' })}
+      />
+    )
+  }
+
+  // ── AI meal logging (describe / snap) ──
+  if (screen.type === 'log') {
+    return (
+      <MealLogPanel
+        defaultSlot={slotNow()}
+        onAccept={m => persist(addEntry(state, member.id, today, m))}
+        onClose={() => setScreen({ type: 'dashboard' })}
+      />
+    )
+  }
+
+  // ── Shared pantry ──
+  if (screen.type === 'pantry') {
+    return (
+      <PantryScreen
+        pantry={state.pantry}
+        onAdd={(name, qty) => persist(addPantryItem(state, name, qty))}
+        onAddMany={items => persist(addPantryItems(state, items))}
+        onRemove={id => persist(removePantryItem(state, id))}
+        onCook={() => setScreen({ type: 'delivery' })}
         onClose={() => setScreen({ type: 'dashboard' })}
       />
     )
@@ -945,6 +1275,14 @@ export default function Solaris() {
               letterSpacing: '0.1em' }}>DAY STREAK</p>
           </div>
         )}
+        <button onClick={() => setScreen({ type: 'pantry' })} title="Shared pantry" style={{
+          width: 28, height: 28, borderRadius: 7, fontSize: 13,
+          color: `${NEON}70`, border: `1px solid ${NEON}25`, background: 'transparent', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
+        }}
+          onMouseEnter={e => { e.currentTarget.style.color = NEON; e.currentTarget.style.background = NEON_DIM }}
+          onMouseLeave={e => { e.currentTarget.style.color = `${NEON}70`; e.currentTarget.style.background = 'transparent' }}
+        >🧺</button>
         <button onClick={() => setScreen({ type: 'edit', memberId: member.id })} title={`Edit ${member.name}`} style={{
           width: 28, height: 28, borderRadius: 7, fontSize: 13,
           color: `${NEON}70`, border: `1px solid ${NEON}25`, background: 'transparent', cursor: 'pointer',
@@ -979,7 +1317,29 @@ export default function Solaris() {
           onAdd={(kind, ml) => persist(addDrink(state, member.id, today, kind, ml))}
           onRemove={id => persist(removeDrink(state, member.id, today, id))} />
 
-        {/* Delivery CTA */}
+        {/* Log a meal (AI) */}
+        <button onClick={() => setScreen({ type: 'log' })} style={{
+          margin: '0 14px 8px', width: 'calc(100% - 28px)', padding: '11px 14px', borderRadius: 9, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: `linear-gradient(90deg, ${NEON}12, ${SOLAR}0c)`,
+          border: `1px solid ${NEON}35`, transition: 'all 0.15s',
+        }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = `${NEON}60`}
+          onMouseLeave={e => e.currentTarget.style.borderColor = `${NEON}35`}
+        >
+          <span style={{ fontSize: 18, filter: `drop-shadow(0 0 8px ${NEON})` }}>✎</span>
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+              color: NEON, letterSpacing: '0.14em' }}>LOG A MEAL</p>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}55`,
+              letterSpacing: '0.04em', marginTop: 1 }}>
+              Describe it or snap a photo — SOLARIS does the math
+            </p>
+          </div>
+          <span style={{ fontSize: 13 }}>📷</span>
+        </button>
+
+        {/* What should I eat? (pantry-aware dishes) */}
         <button onClick={() => setScreen({ type: 'delivery' })} style={{
           margin: '0 14px 8px', width: 'calc(100% - 28px)', padding: '11px 14px', borderRadius: 9, cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 10,
@@ -989,13 +1349,15 @@ export default function Solaris() {
           onMouseEnter={e => e.currentTarget.style.borderColor = `${NEON}55`}
           onMouseLeave={e => e.currentTarget.style.borderColor = `${NEON}30`}
         >
-          <span style={{ fontSize: 18, filter: `drop-shadow(0 0 8px ${NEON})` }}>🛰️</span>
+          <span style={{ fontSize: 18, filter: `drop-shadow(0 0 8px ${NEON})` }}>🍳</span>
           <div style={{ flex: 1, textAlign: 'left' }}>
             <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
-              color: NEON, letterSpacing: '0.14em' }}>REQUEST TODAY'S DELIVERY</p>
+              color: NEON, letterSpacing: '0.14em' }}>WHAT SHOULD I EAT?</p>
             <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}55`,
               letterSpacing: '0.04em', marginTop: 1 }}>
-              Personalised meals grown for {member.name}'s remaining budget
+              {state.pantry.length
+                ? `Dishes from your pantry for ${member.name}'s budget`
+                : `Meal ideas for ${member.name}'s remaining budget`}
             </p>
           </div>
           <span style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}60` }}>→</span>

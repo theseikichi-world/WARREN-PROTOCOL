@@ -396,6 +396,24 @@ type Settings = {
 ## Changelog
 
 ### 2026-06 (Session 4, hardening pass)
+- **SOLARIS AI suite — meal logging, photos, pantry → dishes**.
+  - **Vision helper**: refactored the shared POST+retry out of `aiChat` into `postWithRetry`;
+    added `aiVision(system, text, images, settings)` and `aiVisionJson<T>` that send base64
+    image content blocks (images-before-text, per Anthropic guidance). New `ImageInput` type;
+    `parseJsonLoose` shared by aiJson/aiVisionJson. New `image.ts` util downscales any photo to
+    ≤1024px JPEG base64 to keep tokens/upload sane. AI_TASKS gained `solaris.mealparse` (Sonnet)
+    and `solaris.pantry` (Haiku); `solaris.delivery` relabelled "dishes".
+  - **Log a meal**: `MealLogPanel` — type *and/or* snap what you ate → AI returns FoodEntry-shaped
+    items → review cards → add individually or all. Text path uses `aiJson`, photo path
+    `aiVisionJson`.
+  - **Shared pantry**: `PantryScreen` — add items by hand (name+qty) or **scan a grocery photo**
+    (vision → bulk add, dedup case-insensitive). Store gained `addPantryItems`. Reached via a 🧺
+    header button.
+  - **"What should I eat?"** (absorbs the old delivery): `DeliveryPanel` is now pantry-aware —
+    when the pantry has items it suggests dishes built mainly from them and tags each dish with the
+    🧺 items it "uses"; empty pantry falls back to budget-only ideas. Accept = "I ate this" → logs it.
+  - +1 pure test (pantry add/bulk/dedupe/remove) → 63 total. tsc/build/lint clean; all three
+    screens verified live in preview (AI calls themselves need the user's key).
 - **SOLARIS hydration → weighted drinks log**. Water is no longer a single ml number;
   each member's `water` is now a per-day `DrinkEntry[]`. New `DRINKS` table gives every
   drink a hydration `factor` (water 100%, tea 90%, juice/milk 85–90%, coffee 80%) and a

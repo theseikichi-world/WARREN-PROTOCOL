@@ -3,6 +3,7 @@ import { computeBmi, recommendedWaterMl, effectiveHydration, type SolarisProfile
 import {
   loadSolarisState, addMember, addEntry, removeEntry, addDrink, removeDrink, getDrinks,
   removeMember, setActiveMember, activeMember, updateMemberProfile,
+  addPantryItem, addPantryItems, removePantryItem,
 } from './store'
 
 const profile: SolarisProfile = {
@@ -92,6 +93,18 @@ describe('member CRUD', () => {
     const id = s.members[0].id
     s = updateMemberProfile(s, id, { ...profile, weightKg: 75 })
     expect(s.members[0].profile.weightKg).toBe(75)
+  })
+})
+
+describe('shared pantry', () => {
+  it('adds, bulk-adds (skipping blanks + case-insensitive dupes), and removes', () => {
+    let s = addPantryItem(empty, 'Eggs', '6')
+    s = addPantryItems(s, [{ name: 'eggs' }, { name: '  ' }, { name: 'Spinach', qty: '1 bag' }, { name: 'Cheddar' }])
+    expect(s.pantry.map(i => i.name).sort()).toEqual(['Cheddar', 'Eggs', 'Spinach']) // "eggs" dupe + blank dropped
+    const spinach = s.pantry.find(i => i.name === 'Spinach')!
+    expect(spinach.qty).toBe('1 bag')
+    s = removePantryItem(s, spinach.id)
+    expect(s.pantry.some(i => i.name === 'Spinach')).toBe(false)
   })
 })
 

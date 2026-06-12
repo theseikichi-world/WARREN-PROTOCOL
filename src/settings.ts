@@ -29,7 +29,9 @@ export interface AiTask {
 
 export const AI_TASKS: AiTask[] = [
   { id: 'scrap7.assistant', label: 'SCRAP-7 chat',     desc: 'Command parsing & quick replies',     defaultModel: 'claude-haiku-4-5'  },
-  { id: 'solaris.delivery', label: 'SOLARIS delivery', desc: 'Personalised meal planning (JSON)',    defaultModel: 'claude-sonnet-4-6' },
+  { id: 'solaris.delivery', label: 'SOLARIS dishes',   desc: 'What-to-eat / pantry dish ideas (JSON)', defaultModel: 'claude-sonnet-4-6' },
+  { id: 'solaris.mealparse', label: 'SOLARIS meal log', desc: 'Parse "what I ate" (text/photo) → entries', defaultModel: 'claude-sonnet-4-6' },
+  { id: 'solaris.pantry',    label: 'SOLARIS pantry',   desc: 'Read groceries from a photo → items',   defaultModel: 'claude-haiku-4-5' },
   { id: 'log.analysis',     label: 'L.O.G analysis',   desc: 'Deep goal breakdown — missions/tasks', defaultModel: 'claude-opus-4-8'   },
   { id: 'infinity8.optimize', label: 'INFINITY-8 optimize', desc: 'Rebalance the week, circadian timing', defaultModel: 'claude-sonnet-4-6' },
   { id: 'pictures.metadata',  label: 'PICTURES metadata',  desc: 'Title details fallback (no TMDB key)', defaultModel: 'claude-haiku-4-5' },
@@ -147,6 +149,55 @@ interface AnthropicResponse {
   error?:   { type?: string; message?: string }
 }
 
+const ANTHROPIC_HEADERS = (apiKey: string) => ({
+  'x-api-key':                                 apiKey,
+  'anthropic-version':                         '2023-06-01',
+  'anthropic-dangerous-direct-browser-access': 'true',
+  'content-type':                              'application/json',
+})
+
+/** POST a prepared request body, surface friendly errors, retry once on transient failures. */
+async function postWithRetry(body: string, apiKey: string): Promise<string> {
+  const attempt = async (): Promise<{ text: string } | { retry: true; reason: string }> => {
+    let res: Response
+    try {
+      res = await fetch(ANTHROPIC_URL, { method: 'POST', headers: ANTHROPIC_HEADERS(apiKey), body })
+    } catch {
+      return { retry: true, reason: 'Could not reach Claude (network error). Check your connection.' }
+    }
+
+    if (!res.ok) {
+      let detail = ''
+      try { detail = ((await res.json()) as AnthropicResponse).error?.message ?? '' } catch { /* non-JSON */ }
+
+      if (res.status === 401) throw new Error('Claude API key rejected (401). Check the key in Settings → AI Assistant.')
+      if (res.status === 400 && /credit|billing/i.test(detail)) {
+        throw new Error('Claude request blocked — your account may be out of credit. Check console.anthropic.com → Billing.')
+      }
+      if (res.status === 429 || res.status === 529 || res.status >= 500) {
+        return { retry: true, reason: res.status === 429
+          ? 'Claude rate limit hit (429). Wait a moment and try again.'
+          : `Claude is overloaded (${res.status}). Try again in a moment.` }
+      }
+      throw new Error(`Claude API error ${res.status}${detail ? `: ${detail}` : ''}`)
+    }
+
+    const data = await res.json() as AnthropicResponse
+    const text = (data.content ?? [])
+      .filter(b => b.type === 'text' && typeof b.text === 'string')
+      .map(b => b.text as string)
+      .join('')
+    return { text }
+  }
+
+  const first = await attempt()
+  if ('text' in first) return first.text || 'No response.'
+  await new Promise(r => setTimeout(r, 2000))   // short backoff, then one retry
+  const second = await attempt()
+  if ('text' in second) return second.text || 'No response.'
+  throw new Error(second.reason)
+}
+
 export async function aiChat(
   messages: AiMessage[],
   settings: Settings,
@@ -180,59 +231,7 @@ export async function aiChat(
     messages: turns,
   })
 
-  const attempt = async (): Promise<{ text: string } | { retry: true; reason: string }> => {
-    let res: Response
-    try {
-      res = await fetch(ANTHROPIC_URL, {
-        method:  'POST',
-        headers: {
-          'x-api-key':                                 apiKey,
-          'anthropic-version':                         '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-          'content-type':                              'application/json',
-        },
-        body,
-      })
-    } catch {
-      return { retry: true, reason: 'Could not reach Claude (network error). Check your connection.' }
-    }
-
-    if (!res.ok) {
-      let detail = ''
-      try {
-        const errBody = await res.json() as AnthropicResponse
-        detail = errBody.error?.message ?? ''
-      } catch { /* non-JSON error body */ }
-
-      if (res.status === 401) throw new Error('Claude API key rejected (401). Check the key in Settings → AI Assistant.')
-      if (res.status === 400 && /credit|billing/i.test(detail)) {
-        throw new Error('Claude request blocked — your account may be out of credit. Check console.anthropic.com → Billing.')
-      }
-      // Transient: rate limit / overloaded / server hiccup → retry once
-      if (res.status === 429 || res.status === 529 || res.status >= 500) {
-        return { retry: true, reason: res.status === 429
-          ? 'Claude rate limit hit (429). Wait a moment and try again.'
-          : `Claude is overloaded (${res.status}). Try again in a moment.` }
-      }
-      throw new Error(`Claude API error ${res.status}${detail ? `: ${detail}` : ''}`)
-    }
-
-    const data = await res.json() as AnthropicResponse
-    const text = (data.content ?? [])
-      .filter(b => b.type === 'text' && typeof b.text === 'string')
-      .map(b => b.text as string)
-      .join('')
-    return { text }
-  }
-
-  const first = await attempt()
-  if ('text' in first) return first.text || 'No response.'
-
-  // One retry with a short backoff for transient failures
-  await new Promise(r => setTimeout(r, 2000))
-  const second = await attempt()
-  if ('text' in second) return second.text || 'No response.'
-  throw new Error(second.reason)
+  return postWithRetry(body, apiKey)
 }
 
 // ─── aiStream — SSE streaming variant ─────────────────────────────────────────
@@ -364,19 +363,85 @@ export async function aiJson<T>(
   const open  = opts.prefill ?? '{'
   const close = open === '{' ? '}' : ']'
 
-  const once = async (): Promise<T> => {
-    const raw = await aiChat(messages, settings, { model: opts.model, maxTokens: opts.maxTokens })
-    const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim()
-    const start = cleaned.indexOf(open)
-    const end   = cleaned.lastIndexOf(close)
-    if (start === -1 || end === -1 || end < start) throw new Error('AI returned no parsable JSON.')
-    return JSON.parse(cleaned.slice(start, end + 1)) as T
-  }
+  const once = async (): Promise<T> => parseJsonLoose<T>(
+    await aiChat(messages, settings, { model: opts.model, maxTokens: opts.maxTokens }), open, close)
 
   try {
     return await once()
   } catch (e) {
     // Auth/billing errors shouldn't be retried — surface immediately
+    if (e instanceof Error && /401|billing|credit/i.test(e.message)) throw e
+    return once()
+  }
+}
+
+/** Strip fences/prose and slice the first JSON object/array out of a raw model reply. */
+function parseJsonLoose<T>(raw: string, open: '{' | '[', close: '}' | ']'): T {
+  const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim()
+  const start = cleaned.indexOf(open)
+  const end   = cleaned.lastIndexOf(close)
+  if (start === -1 || end === -1 || end < start) throw new Error('AI returned no parsable JSON.')
+  return JSON.parse(cleaned.slice(start, end + 1)) as T
+}
+
+// ─── aiVision — image-aware variant ───────────────────────────────────────────
+// Sends one or more base64 images plus a text prompt as a single user turn.
+// All current Claude models (Haiku 4.5 / Sonnet 4.6 / Opus 4.8) accept images.
+
+export interface ImageInput {
+  base64:    string    // raw base64 (no data: URL prefix)
+  mediaType: string    // e.g. 'image/jpeg' | 'image/png' | 'image/webp'
+}
+
+export async function aiVision(
+  system: string,
+  userText: string,
+  images: ImageInput[],
+  settings: Settings,
+  opts: AiChatOptions = {},
+): Promise<string> {
+  const apiKey = settings.aiApiKey.trim()
+  if (!apiKey) {
+    throw new Error('No Claude API key set. Open Settings → AI Assistant and paste your key from console.anthropic.com.')
+  }
+  const model = opts.model && isClaudeModel(opts.model)
+    ? opts.model
+    : (isClaudeModel(settings.aiModel) ? settings.aiModel : DEFAULT_MODEL)
+
+  // Anthropic recommends images BEFORE the text that asks about them.
+  const content = [
+    ...images.map(im => ({
+      type: 'image' as const,
+      source: { type: 'base64' as const, media_type: im.mediaType, data: im.base64 },
+    })),
+    { type: 'text' as const, text: userText },
+  ]
+
+  const body = JSON.stringify({
+    model,
+    max_tokens: opts.maxTokens ?? 1024,
+    ...(system ? { system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }] } : {}),
+    messages: [{ role: 'user', content }],
+  })
+
+  return postWithRetry(body, apiKey)
+}
+
+/** Vision call that expects JSON back (same loose parsing + one retry as aiJson). */
+export async function aiVisionJson<T>(
+  system: string,
+  userText: string,
+  images: ImageInput[],
+  settings: Settings,
+  opts: AiJsonOptions = {},
+): Promise<T> {
+  const open  = opts.prefill ?? '{'
+  const close = open === '{' ? '}' : ']'
+  const once = async (): Promise<T> => parseJsonLoose<T>(
+    await aiVision(system, userText, images, settings, { model: opts.model, maxTokens: opts.maxTokens }), open, close)
+  try {
+    return await once()
+  } catch (e) {
     if (e instanceof Error && /401|billing|credit/i.test(e.message)) throw e
     return once()
   }

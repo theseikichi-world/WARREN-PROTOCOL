@@ -178,6 +178,19 @@ export function addPantryItem(state: SolarisState, name: string, qty: string): S
   return { ...state, pantry: [item, ...state.pantry] }
 }
 
+/** Bulk-add items (e.g. read from a grocery photo), skipping blanks and case-insensitive dupes. */
+export function addPantryItems(state: SolarisState, items: { name: string; qty?: string }[]): SolarisState {
+  const have = new Set(state.pantry.map(i => i.name.toLowerCase()))
+  const fresh: PantryItem[] = []
+  for (const it of items) {
+    const clean = it.name.trim()
+    if (!clean || have.has(clean.toLowerCase())) continue
+    have.add(clean.toLowerCase())
+    fresh.push({ id: crypto.randomUUID(), name: clean, qty: (it.qty ?? '').trim(), addedAt: new Date().toISOString() })
+  }
+  return fresh.length ? { ...state, pantry: [...fresh, ...state.pantry] } : state
+}
+
 export function removePantryItem(state: SolarisState, id: string): SolarisState {
   return { ...state, pantry: state.pantry.filter(i => i.id !== id) }
 }
