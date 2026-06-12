@@ -1418,6 +1418,11 @@ export default function Solaris() {
   const [addSlot, setAddSlot] = useState<MealSlot | null>(null)
 
   const persist = useCallback((s: SolarisState) => { saveSolarisState(s); setState(s) }, [])
+  // Functional variant — safe when called repeatedly in a loop (e.g. "add all"),
+  // where each update must build on the previous one, not a stale snapshot.
+  const persistWith = useCallback((fn: (s: SolarisState) => SolarisState) => {
+    setState(prev => { const next = fn(prev); saveSolarisState(next); return next })
+  }, [])
 
   const today  = todayKey()
   const member = activeMember(state)
@@ -1473,7 +1478,7 @@ export default function Solaris() {
         targets={targets}
         consumed={totals}
         pantry={state.pantry}
-        onAccept={m => persist(addEntry(state, member.id, today, m))}
+        onAccept={m => persistWith(s => addEntry(s, member.id, today, m))}
         onClose={() => setScreen({ type: 'dashboard' })}
       />
     )
@@ -1484,7 +1489,7 @@ export default function Solaris() {
     return (
       <MealLogPanel
         defaultSlot={slotNow()}
-        onAccept={m => persist(addEntry(state, member.id, today, m))}
+        onAccept={m => persistWith(s => addEntry(s, member.id, today, m))}
         onClose={() => setScreen({ type: 'dashboard' })}
       />
     )

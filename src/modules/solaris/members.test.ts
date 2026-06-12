@@ -67,6 +67,17 @@ describe('member CRUD', () => {
     expect(wife.name).toBe('Wife')
   })
 
+  it('chains multiple addEntry calls without dropping any (add-all path)', () => {
+    let s = addMember(empty, 'You', '🧑‍🚀', profile)
+    const id = s.members[0].id
+    const mk = (n: string) => ({ name: n, slot: 'snack' as const, calories: 100, protein: 5, carbs: 10, fat: 2 })
+    // mirrors persistWith(s => addEntry(s, …)) called in a loop for "ADD ALL"
+    s = [mk('Cottage cheese'), mk('Banana'), mk('Almonds'), mk('Dried apricots')]
+      .reduce((acc, d) => addEntry(acc, id, '2026-06-12', d), s)
+    expect(s.members[0].days['2026-06-12'].entries.map(e => e.name))
+      .toEqual(['Cottage cheese', 'Banana', 'Almonds', 'Dried apricots'])
+  })
+
   it('logs drinks and weights hydration by type', () => {
     let s = addMember(empty, 'You', '🧑‍🚀', profile)
     const id = s.members[0].id
