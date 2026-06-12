@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import {
   type SolarisProfile, type Sex, type ActivityLevel, type Goal, type MealSlot,
   type Targets, type Member, type DrinkKind, type DrinkEntry,
-  ACTIVITY_META, GOAL_META, SLOT_META, SLOT_ORDER, MEMBER_EMOJI, CUP_ML, HALF_CUP_ML,
+  ACTIVITY_META, GOAL_META, SLOT_META, SLOT_ORDER, MEMBER_EMOJI, CUP_ML, HALF_LITER_ML,
   DRINKS, DRINK_ORDER, computeTargets, computeBmi, recommendedWaterMl, effectiveHydration,
   sumDay, todayKey,
 } from './types'
@@ -170,8 +170,8 @@ function WaterMeter({ drinks, targetMl, onAdd, onRemove }: {
 
       {/* quick adds: ½-cup water + a chip per drink */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-        <button onClick={() => onAdd('water', HALF_CUP_ML)} title="Add ½ cup of water (125 ml)" style={{
-          ...drinkChip, color: AQUA, borderColor: `${AQUA}45`, fontWeight: 700 }}>+½ 💧</button>
+        <button onClick={() => onAdd('water', HALF_LITER_ML)} title="Add ½ litre of water (500 ml)" style={{
+          ...drinkChip, color: AQUA, borderColor: `${AQUA}45`, fontWeight: 700 }}>+½L 💧</button>
         {DRINK_ORDER.filter(k => k !== 'water').map(k => (
           <button key={k} onClick={() => onAdd(k, DRINKS[k].serveMl)}
             title={`Add ${DRINKS[k].label} (${DRINKS[k].serveMl} ml · ${Math.round(DRINKS[k].factor * 100)}% hydration)`}

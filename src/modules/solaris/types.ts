@@ -165,7 +165,7 @@ export function computeBmi(p: { weightKg: number; heightCm: number }): BmiInfo {
 // to a tidy 50 ml. One cup = 250 ml.
 
 export const CUP_ML = 250
-export const HALF_CUP_ML = 125          // default quick-add (½ cup)
+export const HALF_LITER_ML = 500        // default quick-add (½ litre)
 
 const WATER_PER_KG: Record<ActivityLevel, number> = {
   pod: 31, light: 33, standard: 35, active: 37, pilot: 40,
