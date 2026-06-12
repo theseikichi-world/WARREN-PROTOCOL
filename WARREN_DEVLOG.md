@@ -396,6 +396,18 @@ type Settings = {
 ## Changelog
 
 ### 2026-06 (Session 4, hardening pass)
+- **SOLARIS smart-kitchen upgrades** (on top of the AI suite):
+  - **Servings multiplier** — a "🍽 EATING 1/2/3/4" stepper on the dish panel. The prompt scales
+    recipe ingredient amounts to that many servings while keeping macros per single serving (so
+    logging still records one person's portion).
+  - **Recipe + YouTube** — each suggested dish now returns 3-6 scaled cooking steps (expandable
+    "👨‍🍳 RECIPE") and a "▶ YOUTUBE" search link for a how-to video.
+  - **Pantry analyzer** (`PantryAnalyzer`, new `solaris.analyze` Sonnet task, reached via 🔬 ANALYSE
+    on the pantry screen) — reads the pantry against the active member's targets and returns a plain
+    summary, a **coverage** list (each macro/food-group flagged good/low/missing with a colour dot),
+    and a **cost-tiered shopping list** (CHEAP/MID/PREMIUM badges) honouring a THRIFTY/BALANCED/PREMIUM
+    budget toggle; each suggestion has a "+ PANTRY" to add it. tsc/build/lint clean, 63 tests; all
+    new screens verified live in preview.
 - **SOLARIS AI suite — meal logging, photos, pantry → dishes**.
   - **Vision helper**: refactored the shared POST+retry out of `aiChat` into `postWithRetry`;
     added `aiVision(system, text, images, settings)` and `aiVisionJson<T>` that send base64

@@ -600,17 +600,20 @@ function AddFoodForm({ slot, onSave, onCancel }: {
 // ─── "What should I eat?" — pantry-aware dish ideas ────────────────────────────
 interface DeliveryMeal {
   name: string; slot: MealSlot
-  calories: number; protein: number; carbs: number; fat: number
+  calories: number; protein: number; carbs: number; fat: number   // PER SERVING
   why?: string
-  uses?: string[]   // pantry items this dish draws on
+  uses?: string[]      // pantry items this dish draws on
+  recipe?: string[]    // short cooking steps (scaled to `servings`)
+  search?: string      // a good YouTube search query for this dish
 }
 
 const DELIVERY_SYSTEM = `You are SOLARIS, the AI nutrition chef of an orbital agri-station that plates personalised meals for crew members.
 Suggest dishes that fit the crew member's REMAINING calorie/macro budget for the day and respect their dietary preference.
 If a PANTRY list is given, strongly prefer dishes built mainly from those ingredients, and for each dish list which pantry items it "uses". If the pantry is empty, suggest sensible meals from common staples.
+You will be told how many PEOPLE are eating — scale the recipe ingredient amounts to make that many SERVINGS, but keep the calories/protein/carbs/fat fields PER SINGLE SERVING.
 Respond with ONLY a JSON array, no prose, no markdown fences. Each item:
-{"name": string, "slot": "breakfast"|"lunch"|"dinner"|"snack", "calories": number, "protein": number, "carbs": number, "fat": number, "why": short string (max 8 words), "uses": string[] of pantry item names used (omit or [] if none)}
-Return 2-4 dishes. Keep total close to the remaining budget. Numbers are grams except calories (kcal).`
+{"name": string, "slot": "breakfast"|"lunch"|"dinner"|"snack", "calories": number, "protein": number, "carbs": number, "fat": number, "why": short string (max 8 words), "uses": string[] of pantry item names used (omit or [] if none), "recipe": string[] of 3-6 short cooking steps with quantities scaled for the requested servings, "search": a concise YouTube search query for this dish}
+Return 2-4 dishes. Keep PER-SERVING totals close to the remaining budget. Numbers are grams except calories (kcal).`
 
 function DeliveryPanel({ profile, targets, consumed, pantry, onAccept, onClose }: {
   profile:  SolarisProfile
@@ -624,6 +627,8 @@ function DeliveryPanel({ profile, targets, consumed, pantry, onAccept, onClose }
   const [error, setError]     = useState<string | null>(null)
   const [meals, setMeals]     = useState<DeliveryMeal[] | null>(null)
   const [accepted, setAccepted] = useState<Set<number>>(new Set())
+  const [servings, setServings] = useState(1)
+  const [openRecipe, setOpenRecipe] = useState<number | null>(null)
 
   const remaining = useMemo(() => ({
     calories: Math.max(0, targets.calories - consumed.calories),
@@ -633,7 +638,7 @@ function DeliveryPanel({ profile, targets, consumed, pantry, onAccept, onClose }
   }), [targets, consumed])
 
   const synthesize = useCallback(async () => {
-    setLoading(true); setError(null)
+    setLoading(true); setError(null); setOpenRecipe(null)
     try {
       const settings = loadSettings()
       const pantryLine = pantry.length
@@ -641,13 +646,14 @@ function DeliveryPanel({ profile, targets, consumed, pantry, onAccept, onClose }
         : 'PANTRY: empty — use common staples.'
       const userMsg = `Crew goal: ${GOAL_META[profile.goal].label} (${profile.goal}).
 Dietary preference: ${profile.diet || 'none'}.
+PEOPLE EATING: ${servings} (scale recipe amounts for ${servings} serving${servings > 1 ? 's' : ''}; macros stay per single serving).
 ${pantryLine}
 REMAINING budget for the rest of today: ${remaining.calories} kcal, ${remaining.protein}g protein, ${remaining.carbs}g carbs, ${remaining.fat}g fat.
 Suggest what to eat.`
       const parsed = await aiJson<DeliveryMeal[]>([
         { role: 'system', content: DELIVERY_SYSTEM },
         { role: 'user',   content: userMsg },
-      ], settings, { model: modelForTask(settings, 'solaris.delivery'), maxTokens: 1536, prefill: '[' })
+      ], settings, { model: modelForTask(settings, 'solaris.delivery'), maxTokens: 2200, prefill: '[' })
       const valid = parsed
         .filter(m => m && m.name && typeof m.calories === 'number')
         .map(m => ({
@@ -659,6 +665,8 @@ Suggest what to eat.`
           fat:      Math.round(m.fat)      || 0,
           why: m.why ? String(m.why) : undefined,
           uses: Array.isArray(m.uses) ? m.uses.map(String).filter(Boolean) : undefined,
+          recipe: Array.isArray(m.recipe) ? m.recipe.map(String).filter(Boolean) : undefined,
+          search: m.search ? String(m.search) : undefined,
         }))
       if (valid.length === 0) throw new Error('No dishes came back.')
       setMeals(valid)
@@ -667,7 +675,7 @@ Suggest what to eat.`
     } finally {
       setLoading(false)
     }
-  }, [profile, remaining, pantry])
+  }, [profile, remaining, pantry, servings])
 
   return (
     <div className="fade-in" style={{ position: 'absolute', inset: 0, zIndex: 20,
@@ -714,6 +722,26 @@ Suggest what to eat.`
                 ? <>Dishes you can cook from your pantry,<br/>tuned to your remaining budget.</>
                 : <>Meal ideas tuned to your remaining budget.<br/>Stock the pantry for cook-from-what-you-have.</>}
             </p>
+
+            {/* how many people are eating */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 16,
+              padding: '6px 10px', borderRadius: 8, background: `${NEON}06`, border: `1px solid ${NEON}20` }}>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, color: `${NEON}80`,
+                letterSpacing: '0.1em' }}>🍽 EATING</span>
+              {[1, 2, 3, 4].map(n => (
+                <button key={n} onClick={() => setServings(n)} style={{
+                  width: 24, height: 24, borderRadius: 6, cursor: 'pointer',
+                  fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
+                  color: servings === n ? NEON : 'rgba(148,163,184,0.4)',
+                  border: `1px solid ${servings === n ? `${NEON}55` : 'rgba(255,255,255,0.06)'}`,
+                  background: servings === n ? NEON_DIM : 'transparent' }}>{n}</button>
+              ))}
+              <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.45)' }}>
+                {servings === 1 ? 'just me' : `${servings} people`}
+              </span>
+            </div>
+            <br/>
+
             <button onClick={synthesize} style={{
               padding: '11px 26px', borderRadius: 7, cursor: 'pointer',
               fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800, letterSpacing: '0.12em',
@@ -765,7 +793,9 @@ Suggest what to eat.`
                       color: MACRO[k].color }}>{MACRO[k].label[0]} {v}g</span>
                   ))}
                   <span style={{ fontFamily: 'var(--font)', fontSize: 7, marginLeft: 'auto',
-                    color: 'rgba(148,163,184,0.4)' }}>{SLOT_META[m.slot].label}</span>
+                    color: 'rgba(148,163,184,0.4)' }}>
+                    {SLOT_META[m.slot].label}{servings > 1 ? ` · /serving` : ''}
+                  </span>
                 </div>
                 {m.why && (
                   <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}55`,
@@ -780,6 +810,35 @@ Suggest what to eat.`
                     ))}
                   </div>
                 )}
+
+                {/* recipe + how-to */}
+                {(m.recipe?.length || m.search) && (
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                    {m.recipe && m.recipe.length > 0 && (
+                      <button onClick={() => setOpenRecipe(openRecipe === i ? null : i)} style={{
+                        fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
+                        padding: '4px 8px', borderRadius: 5, cursor: 'pointer', color: `${NEON}b0`,
+                        border: `1px solid ${NEON}28`, background: NEON_DIM }}>
+                        👨‍🍳 RECIPE{servings > 1 ? ` · serves ${servings}` : ''} {openRecipe === i ? '▴' : '▾'}</button>
+                    )}
+                    {m.search && (
+                      <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(m.search)}`}
+                        target="_blank" rel="noreferrer" style={{
+                        fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
+                        padding: '4px 8px', borderRadius: 5, textDecoration: 'none', color: '#ff5470',
+                        border: '1px solid rgba(255,84,112,0.3)', background: 'rgba(255,84,112,0.06)' }}>▶ YOUTUBE</a>
+                    )}
+                  </div>
+                )}
+                {m.recipe && openRecipe === i && (
+                  <ol style={{ margin: '0 0 8px', paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {m.recipe.map((step, j) => (
+                      <li key={j} style={{ fontFamily: 'var(--font)', fontSize: 8, lineHeight: 1.5,
+                        color: 'rgba(255,240,220,0.78)' }}>{step}</li>
+                    ))}
+                  </ol>
+                )}
+
                 <button disabled={isAccepted} onClick={() => { onAccept(m); setAccepted(s => new Set(s).add(i)) }}
                   style={{
                     width: '100%', padding: '6px', borderRadius: 5, cursor: isAccepted ? 'default' : 'pointer',
@@ -966,12 +1025,13 @@ const PANTRY_SYSTEM = `You read a photo of groceries, a fridge, or a pantry and 
 Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string, "qty": short string like "2", "500g", or ""}.
 List only foods/ingredients, be specific but concise (e.g. "eggs", "cheddar cheese", "spinach"). No duplicates.`
 
-function PantryScreen({ pantry, onAdd, onAddMany, onRemove, onCook, onClose }: {
+function PantryScreen({ pantry, onAdd, onAddMany, onRemove, onCook, onAnalyze, onClose }: {
   pantry: PantryItem[]
   onAdd: (name: string, qty: string) => void
   onAddMany: (items: { name: string; qty?: string }[]) => void
   onRemove: (id: string) => void
   onCook: () => void
+  onAnalyze: () => void
   onClose: () => void
 }) {
   const [name, setName]   = useState('')
@@ -1068,13 +1128,212 @@ function PantryScreen({ pantry, onAdd, onAddMany, onRemove, onCook, onClose }: {
         )}
       </div>
 
-      {/* cook CTA */}
-      <div style={{ padding: '10px 14px', borderTop: `1px solid ${NEON}14`, flexShrink: 0 }}>
+      {/* footer CTAs */}
+      <div style={{ padding: '10px 14px', borderTop: `1px solid ${NEON}14`, flexShrink: 0, display: 'flex', gap: 8 }}>
+        <button onClick={onAnalyze} style={{
+          flex: 1, padding: '11px', borderRadius: 8, cursor: 'pointer',
+          fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800, letterSpacing: '0.1em',
+          color: `${AQUA}d0`, border: `1px solid ${AQUA}35`, background: `${AQUA}0c` }}>
+          🔬 ANALYSE</button>
         <button onClick={onCook} style={{
-          width: '100%', padding: '11px', borderRadius: 8, cursor: 'pointer',
-          fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800, letterSpacing: '0.12em',
+          flex: 1.4, padding: '11px', borderRadius: 8, cursor: 'pointer',
+          fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800, letterSpacing: '0.1em',
           color: NEON, border: `1px solid ${NEON}40`, background: `linear-gradient(90deg, ${SOLAR}12, ${NEON}10)` }}>
           🍳 WHAT CAN I COOK?</button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Pantry analyzer — gaps + cost-tiered shopping ─────────────────────────────
+type Budget = 'thrifty' | 'balanced' | 'premium'
+interface Coverage { nutrient: string; status: 'good' | 'low' | 'missing'; note?: string }
+interface ShopItem { item: string; why: string; cost: 'cheap' | 'mid' | 'premium' }
+interface Analysis { summary: string; coverage: Coverage[]; shopping: ShopItem[] }
+
+const COVER_COLOR = { good: '#4ade80', low: '#ffb13c', missing: '#ff5470' }
+const COST_META: Record<ShopItem['cost'], { label: string; color: string }> = {
+  cheap:   { label: 'CHEAP',   color: '#4ade80' },
+  mid:     { label: 'MID',     color: '#ffb13c' },
+  premium: { label: 'PREMIUM', color: '#c084fc' },
+}
+const BUDGET_META: Record<Budget, { label: string; hint: string }> = {
+  thrifty:  { label: 'THRIFTY',  hint: 'cheap staples' },
+  balanced: { label: 'BALANCED', hint: 'good value' },
+  premium:  { label: 'PREMIUM',  hint: 'quality welcome' },
+}
+
+const ANALYZE_SYSTEM = `You are SOLARIS' nutrition analyst. Given a crew member's daily targets and dietary preference, plus the shared PANTRY contents, assess how well the pantry covers their nutrition and what they should buy.
+Judge macro coverage (protein, carbs, fat) AND food-group gaps (vegetables, fruit, fibre, healthy fats, dairy, etc).
+Respect the BUDGET preference for shopping: thrifty = cheapest staples, balanced = good value, premium = quality/specialty welcome.
+Respond with ONLY a JSON object, no prose, no markdown fences:
+{"summary": one or two sentence plain read of the pantry, "coverage": [{"nutrient": string, "status": "good"|"low"|"missing", "note": short string}], "shopping": [{"item": string, "why": short string, "cost": "cheap"|"mid"|"premium"}]}
+Cover the key macros and main food groups in "coverage". Suggest 4-8 "shopping" items matched to the budget.`
+
+function PantryAnalyzer({ profile, targets, pantry, onAddItem, onClose }: {
+  profile: SolarisProfile
+  targets: Targets
+  pantry:  PantryItem[]
+  onAddItem: (name: string) => void
+  onClose: () => void
+}) {
+  const [budget, setBudget]   = useState<Budget>('balanced')
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState<string | null>(null)
+  const [analysis, setAnalysis] = useState<Analysis | null>(null)
+  const [added, setAdded]     = useState<Set<string>>(new Set())
+
+  const run = useCallback(async () => {
+    setLoading(true); setError(null)
+    try {
+      const settings = loadSettings()
+      const pantryLine = pantry.length
+        ? pantry.map(i => i.qty ? `${i.name} (${i.qty})` : i.name).join(', ')
+        : '(empty)'
+      const userMsg = `Daily targets: ${targets.calories} kcal, ${targets.protein}g protein, ${targets.carbs}g carbs, ${targets.fat}g fat.
+Goal: ${GOAL_META[profile.goal].label} (${profile.goal}). Dietary preference: ${profile.diet || 'none'}.
+BUDGET: ${budget}.
+PANTRY: ${pantryLine}.
+Analyse coverage and suggest a shopping list.`
+      const parsed = await aiJson<Analysis>([
+        { role: 'system', content: ANALYZE_SYSTEM },
+        { role: 'user',   content: userMsg },
+      ], settings, { model: modelForTask(settings, 'solaris.analyze'), maxTokens: 1400 })
+      setAnalysis({
+        summary: String(parsed.summary ?? ''),
+        coverage: Array.isArray(parsed.coverage) ? parsed.coverage.filter(c => c && c.nutrient).map(c => ({
+          nutrient: String(c.nutrient),
+          status: (['good', 'low', 'missing'].includes(c.status) ? c.status : 'low') as Coverage['status'],
+          note: c.note ? String(c.note) : undefined,
+        })) : [],
+        shopping: Array.isArray(parsed.shopping) ? parsed.shopping.filter(s => s && s.item).map(s => ({
+          item: String(s.item),
+          why: String(s.why ?? ''),
+          cost: (['cheap', 'mid', 'premium'].includes(s.cost) ? s.cost : 'mid') as ShopItem['cost'],
+        })) : [],
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Analysis failed.')
+    } finally {
+      setLoading(false)
+    }
+  }, [profile, targets, pantry, budget])
+
+  return (
+    <div className="fade-in" style={{ position: 'absolute', inset: 0, zIndex: 20,
+      background: 'rgba(8,4,0,0.96)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '10px 14px', borderBottom: `1px solid ${NEON}18`,
+        display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 11,
+          color: `${NEON}55`, letterSpacing: '0.1em' }}>← BACK</button>
+        <div>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+            color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>PANTRY ANALYSIS</p>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`,
+            letterSpacing: '0.08em' }}>WHAT YOU HAVE · WHAT'S MISSING · WHAT TO BUY</p>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* budget selector */}
+        <div>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}50`,
+            letterSpacing: '0.12em', marginBottom: 6 }}>SHOPPING BUDGET</p>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(Object.keys(BUDGET_META) as Budget[]).map(b => {
+              const on = budget === b
+              return (
+                <button key={b} onClick={() => setBudget(b)} style={{
+                  flex: 1, padding: '7px 6px', borderRadius: 6, cursor: 'pointer',
+                  fontFamily: 'var(--font)', fontWeight: 700, letterSpacing: '0.06em',
+                  color: on ? NEON : 'rgba(148,163,184,0.4)',
+                  border: `1px solid ${on ? `${NEON}50` : 'rgba(255,255,255,0.06)'}`,
+                  background: on ? NEON_DIM : 'transparent',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <span style={{ fontSize: 'var(--fs-xs)' }}>{BUDGET_META[b].label}</span>
+                  <span style={{ fontSize: 6.5, opacity: 0.7 }}>{BUDGET_META[b].hint}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <button disabled={loading} onClick={run} style={{
+          padding: '11px', borderRadius: 7, cursor: loading ? 'default' : 'pointer',
+          fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800, letterSpacing: '0.12em',
+          color: NEON, border: `1px solid ${NEON}45`, background: NEON_DIM, opacity: loading ? 0.6 : 1 }}>
+          {loading ? '◌ ANALYSING…' : analysis ? '↻ RE-ANALYSE' : '🔬 ANALYSE PANTRY'}</button>
+
+        {error && (
+          <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#ff5470', letterSpacing: '0.06em' }}>⚠ {error}</p>
+        )}
+
+        {analysis && (
+          <>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: 'rgba(255,240,220,0.82)',
+              lineHeight: 1.6, padding: '10px 12px', borderRadius: 8,
+              background: `${NEON}06`, border: `1px solid ${NEON}18` }}>{analysis.summary}</p>
+
+            {/* coverage */}
+            {analysis.coverage.length > 0 && (
+              <div>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, color: `${NEON}70`,
+                  letterSpacing: '0.12em', marginBottom: 6 }}>COVERAGE</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {analysis.coverage.map((c, j) => (
+                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 9px',
+                      borderRadius: 6, background: 'rgba(18,11,2,0.5)', border: `1px solid ${COVER_COLOR[c.status]}28` }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                        background: COVER_COLOR[c.status], boxShadow: `0 0 6px ${COVER_COLOR[c.status]}` }} />
+                      <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
+                        color: 'rgba(255,240,220,0.85)', minWidth: 70 }}>{c.nutrient}</span>
+                      {c.note && <span style={{ fontFamily: 'var(--font)', fontSize: 7.5,
+                        color: 'rgba(148,163,184,0.55)', flex: 1 }}>{c.note}</span>}
+                      <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.08em',
+                        color: COVER_COLOR[c.status] }}>{c.status.toUpperCase()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* shopping */}
+            {analysis.shopping.length > 0 && (
+              <div>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, color: `${NEON}70`,
+                  letterSpacing: '0.12em', marginBottom: 6 }}>SHOPPING LIST · {BUDGET_META[budget].label}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {analysis.shopping.map((s, j) => {
+                    const on = added.has(s.item)
+                    return (
+                      <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px',
+                        borderRadius: 7, background: 'rgba(18,11,2,0.55)', border: `1px solid ${NEON}10` }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 700,
+                              color: 'rgba(255,240,220,0.9)' }}>{s.item}</span>
+                            <span style={{ fontFamily: 'var(--font)', fontSize: 6, fontWeight: 800, letterSpacing: '0.06em',
+                              padding: '1px 5px', borderRadius: 3, color: COST_META[s.cost].color,
+                              border: `1px solid ${COST_META[s.cost].color}45` }}>{COST_META[s.cost].label}</span>
+                          </div>
+                          {s.why && <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.55)',
+                            marginTop: 2 }}>{s.why}</p>}
+                        </div>
+                        <button disabled={on} onClick={() => { onAddItem(s.item); setAdded(p => new Set(p).add(s.item)) }}
+                          title="Add to pantry" style={{
+                          fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.06em',
+                          padding: '4px 8px', borderRadius: 5, flexShrink: 0, cursor: on ? 'default' : 'pointer',
+                          color: on ? '#4ade80' : `${NEON}b0`,
+                          border: `1px solid ${on ? '#4ade8040' : `${NEON}30`}`,
+                          background: on ? 'rgba(74,222,128,0.08)' : NEON_DIM }}>{on ? '✓ IN PANTRY' : '+ PANTRY'}</button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   )
@@ -1145,6 +1404,7 @@ type Screen =
   | { type: 'delivery' }
   | { type: 'log' }
   | { type: 'pantry' }
+  | { type: 'analyze' }
 
 /** Sensible default meal slot for the current time of day. */
 const slotNow = (): MealSlot => {
@@ -1239,7 +1499,21 @@ export default function Solaris() {
         onAddMany={items => persist(addPantryItems(state, items))}
         onRemove={id => persist(removePantryItem(state, id))}
         onCook={() => setScreen({ type: 'delivery' })}
+        onAnalyze={() => setScreen({ type: 'analyze' })}
         onClose={() => setScreen({ type: 'dashboard' })}
+      />
+    )
+  }
+
+  // ── Pantry analyzer ──
+  if (screen.type === 'analyze' && targets) {
+    return (
+      <PantryAnalyzer
+        profile={member.profile}
+        targets={targets}
+        pantry={state.pantry}
+        onAddItem={name => persist(addPantryItem(state, name, ''))}
+        onClose={() => setScreen({ type: 'pantry' })}
       />
     )
   }

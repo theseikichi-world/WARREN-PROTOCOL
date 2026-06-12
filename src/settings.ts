@@ -32,6 +32,7 @@ export const AI_TASKS: AiTask[] = [
   { id: 'solaris.delivery', label: 'SOLARIS dishes',   desc: 'What-to-eat / pantry dish ideas (JSON)', defaultModel: 'claude-sonnet-4-6' },
   { id: 'solaris.mealparse', label: 'SOLARIS meal log', desc: 'Parse "what I ate" (text/photo) → entries', defaultModel: 'claude-sonnet-4-6' },
   { id: 'solaris.pantry',    label: 'SOLARIS pantry',   desc: 'Read groceries from a photo → items',   defaultModel: 'claude-haiku-4-5' },
+  { id: 'solaris.analyze',   label: 'SOLARIS analyzer', desc: 'Pantry gaps + cost-tiered shopping list', defaultModel: 'claude-sonnet-4-6' },
   { id: 'log.analysis',     label: 'L.O.G analysis',   desc: 'Deep goal breakdown — missions/tasks', defaultModel: 'claude-opus-4-8'   },
   { id: 'infinity8.optimize', label: 'INFINITY-8 optimize', desc: 'Rebalance the week, circadian timing', defaultModel: 'claude-sonnet-4-6' },
   { id: 'pictures.metadata',  label: 'PICTURES metadata',  desc: 'Title details fallback (no TMDB key)', defaultModel: 'claude-haiku-4-5' },
