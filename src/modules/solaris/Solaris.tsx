@@ -869,10 +869,12 @@ const MEALPARSE_SYSTEM = `You are SOLARIS' meal-logging assistant. The crew memb
 Identify each distinct food/drink item and estimate its nutrition realistically for the portion shown or described.
 Respond with ONLY a JSON array, no prose, no markdown fences. Each item:
 {"name": string, "slot": "breakfast"|"lunch"|"dinner"|"snack", "calories": number, "protein": number, "carbs": number, "fat": number}
-Numbers are grams except calories (kcal). If the meal slot isn't stated, infer a sensible one. Group obvious sub-parts into one dish when natural.`
+Numbers are grams except calories (kcal). Group obvious sub-parts into one dish when natural.
+Choosing the slot: go by MEAL ORDER, not the wall clock. The user tells you which slots are already logged today — if NONE are, this is their first meal of the day, so use "breakfast" even if it's logged late. Otherwise pick the next sensible cycle (or "snack" for light bites). All items in one submission usually share the same slot unless clearly different meals.`
 
-function MealLogPanel({ defaultSlot, onAccept, onClose }: {
+function MealLogPanel({ defaultSlot, loggedSlots, onAccept, onClose }: {
   defaultSlot: MealSlot
+  loggedSlots: MealSlot[]
   onAccept: (d: NewFoodData) => void
   onClose: () => void
 }) {
@@ -898,7 +900,10 @@ function MealLogPanel({ defaultSlot, onAccept, onClose }: {
     try {
       const settings = loadSettings()
       const model = modelForTask(settings, 'solaris.mealparse')
-      const prompt = `${text.trim() || 'Identify the food in the photo.'}\nDefault meal slot if unclear: ${defaultSlot}.`
+      const loggedLine = loggedSlots.length
+        ? `Slots already logged today: ${loggedSlots.join(', ')}.`
+        : 'Nothing logged today yet — this is the first meal of the day.'
+      const prompt = `${text.trim() || 'Identify the food in the photo.'}\n${loggedLine}\nIf still unclear, default to: ${defaultSlot}.`
       const parsed = image
         ? await aiVisionJson<NewFoodData[]>(MEALPARSE_SYSTEM, prompt, [image], settings, { model, maxTokens: 1200, prefill: '[' })
         : await aiJson<NewFoodData[]>(
@@ -921,7 +926,7 @@ function MealLogPanel({ defaultSlot, onAccept, onClose }: {
     } finally {
       setLoading(false)
     }
-  }, [text, image, defaultSlot])
+  }, [text, image, defaultSlot, loggedSlots])
 
   return (
     <div className="fade-in" style={{ position: 'absolute', inset: 0, zIndex: 20,
@@ -1486,9 +1491,13 @@ export default function Solaris() {
 
   // ── AI meal logging (describe / snap) ──
   if (screen.type === 'log') {
+    const loggedSlots = [...new Set(day.entries.map(e => e.slot))]
+    // Slot follows meal ORDER, not the clock: your first meal of the day is breakfast.
+    const defaultSlot: MealSlot = day.entries.length === 0 ? 'breakfast' : slotNow()
     return (
       <MealLogPanel
-        defaultSlot={slotNow()}
+        defaultSlot={defaultSlot}
+        loggedSlots={loggedSlots}
         onAccept={m => persistWith(s => addEntry(s, member.id, today, m))}
         onClose={() => setScreen({ type: 'dashboard' })}
       />
