@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
 import {
   type SolarisProfile, type Sex, type ActivityLevel, type Goal, type MealSlot,
-  type Targets, type Member, type DrinkKind, type DrinkEntry, type PantryItem,
+  type Targets, type Member, type DrinkKind, type DrinkEntry, type PantryItem, type SavedDish,
   ACTIVITY_META, GOAL_META, SLOT_META, SLOT_ORDER, MEMBER_EMOJI, CUP_ML, HALF_LITER_ML,
   DRINKS, DRINK_ORDER, computeTargets, computeBmi, recommendedWaterMl, effectiveHydration,
   sumDay, todayKey,
@@ -10,7 +10,7 @@ import {
   loadSolarisState, saveSolarisState, type SolarisState,
   activeMember, addMember, updateMemberProfile, renameMember, removeMember, setActiveMember,
   getDay, addEntry, removeEntry, getStreak, getDrinks, addDrink, removeDrink,
-  addPantryItem, addPantryItems, removePantryItem, type NewFoodData,
+  addPantryItem, addPantryItems, removePantryItem, saveFavorite, removeFavorite, type NewFoodData,
 } from './store'
 import { loadSettings, aiJson, aiVisionJson, modelForTask, type ImageInput } from '../../settings'
 import { fileToImageInput } from './image'
@@ -615,12 +615,15 @@ Respond with ONLY a JSON array, no prose, no markdown fences. Each item:
 {"name": string, "slot": "breakfast"|"lunch"|"dinner"|"snack", "calories": number, "protein": number, "carbs": number, "fat": number, "why": short string (max 8 words), "uses": string[] of pantry item names used (omit or [] if none), "recipe": string[] of 3-6 short cooking steps with quantities scaled for the requested servings, "search": a concise YouTube search query for this dish}
 Return 2-4 dishes. Keep PER-SERVING totals close to the remaining budget. Numbers are grams except calories (kcal).`
 
-function DeliveryPanel({ profile, targets, consumed, pantry, onAccept, onClose }: {
+function DeliveryPanel({ profile, targets, consumed, pantry, favoriteNames, onAccept, onToggleFavorite, onOpenFavorites, onClose }: {
   profile:  SolarisProfile
   targets:  Targets
   consumed: { calories: number; protein: number; carbs: number; fat: number }
   pantry:   PantryItem[]
+  favoriteNames: Set<string>
   onAccept: (m: DeliveryMeal) => void
+  onToggleFavorite: (m: DeliveryMeal) => void
+  onOpenFavorites: () => void
   onClose:  () => void
 }) {
   const [loading, setLoading] = useState(false)
@@ -750,6 +753,16 @@ Suggest what to eat.`
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,177,60,0.2)'}
               onMouseLeave={e => e.currentTarget.style.background = NEON_DIM}
             >🍳 SUGGEST DISHES</button>
+
+            {favoriteNames.size > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <button onClick={onOpenFavorites} style={{
+                  fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.1em',
+                  padding: '8px 18px', borderRadius: 7, cursor: 'pointer', color: '#ffd700',
+                  border: '1px solid rgba(255,215,0,0.3)', background: 'rgba(255,215,0,0.06)' }}>
+                  ★ SAVED DISHES ({favoriteNames.size})</button>
+              </div>
+            )}
           </div>
         )}
 
@@ -811,25 +824,33 @@ Suggest what to eat.`
                   </div>
                 )}
 
-                {/* recipe + how-to */}
-                {(m.recipe?.length || m.search) && (
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-                    {m.recipe && m.recipe.length > 0 && (
-                      <button onClick={() => setOpenRecipe(openRecipe === i ? null : i)} style={{
-                        fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
-                        padding: '4px 8px', borderRadius: 5, cursor: 'pointer', color: `${NEON}b0`,
-                        border: `1px solid ${NEON}28`, background: NEON_DIM }}>
-                        👨‍🍳 RECIPE{servings > 1 ? ` · serves ${servings}` : ''} {openRecipe === i ? '▴' : '▾'}</button>
-                    )}
-                    {m.search && (
-                      <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(m.search)}`}
-                        target="_blank" rel="noreferrer" style={{
-                        fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
-                        padding: '4px 8px', borderRadius: 5, textDecoration: 'none', color: '#ff5470',
-                        border: '1px solid rgba(255,84,112,0.3)', background: 'rgba(255,84,112,0.06)' }}>▶ YOUTUBE</a>
-                    )}
-                  </div>
-                )}
+                {/* recipe + how-to + save */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
+                  {m.recipe && m.recipe.length > 0 && (
+                    <button onClick={() => setOpenRecipe(openRecipe === i ? null : i)} style={{
+                      fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
+                      padding: '4px 8px', borderRadius: 5, cursor: 'pointer', color: `${NEON}b0`,
+                      border: `1px solid ${NEON}28`, background: NEON_DIM }}>
+                      👨‍🍳 RECIPE{servings > 1 ? ` · serves ${servings}` : ''} {openRecipe === i ? '▴' : '▾'}</button>
+                  )}
+                  {m.search && (
+                    <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(m.search)}`}
+                      target="_blank" rel="noreferrer" style={{
+                      fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
+                      padding: '4px 8px', borderRadius: 5, textDecoration: 'none', color: '#ff5470',
+                      border: '1px solid rgba(255,84,112,0.3)', background: 'rgba(255,84,112,0.06)' }}>▶ YOUTUBE</a>
+                  )}
+                  {(() => {
+                    const fav = favoriteNames.has(m.name.toLowerCase())
+                    return (
+                      <button onClick={() => onToggleFavorite(m)} title={fav ? 'Remove from favourites' : 'Save to favourites'}
+                        style={{ marginLeft: 'auto', fontFamily: 'var(--font)', fontSize: 12, cursor: 'pointer',
+                          padding: '2px 6px', borderRadius: 5, color: fav ? '#ffd700' : `${NEON}70`,
+                          border: `1px solid ${fav ? 'rgba(255,215,0,0.4)' : `${NEON}22`}`,
+                          background: fav ? 'rgba(255,215,0,0.08)' : 'transparent' }}>{fav ? '★' : '☆'}</button>
+                    )
+                  })()}
+                </div>
                 {m.recipe && openRecipe === i && (
                   <ol style={{ margin: '0 0 8px', paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {m.recipe.map((step, j) => (
@@ -859,6 +880,111 @@ Suggest what to eat.`
               color: SOLAR, border: `1px solid ${SOLAR}40`, background: `${SOLAR}10`, transition: 'all 0.15s' }}
           >⬇ ACCEPT ALL & CLOSE</button>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Saved / favourite dishes ──────────────────────────────────────────────────
+function FavoritesScreen({ favorites, onLog, onRemove, onClose }: {
+  favorites: SavedDish[]
+  onLog: (d: SavedDish) => void
+  onRemove: (id: string) => void
+  onClose: () => void
+}) {
+  const [openRecipe, setOpenRecipe] = useState<string | null>(null)
+  const [logged, setLogged] = useState<Set<string>>(new Set())
+
+  return (
+    <div className="fade-in" style={{ position: 'absolute', inset: 0, zIndex: 20,
+      background: 'rgba(8,4,0,0.96)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '10px 14px', borderBottom: `1px solid ${NEON}18`,
+        display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 11,
+          color: `${NEON}55`, letterSpacing: '0.1em' }}>← BACK</button>
+        <div>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+            color: '#ffd700', letterSpacing: '0.18em', textShadow: '0 0 8px rgba(255,215,0,0.5)' }}>★ SAVED DISHES</p>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`,
+            letterSpacing: '0.08em' }}>YOUR FAVOURITE MEALS · {favorites.length}</p>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px' }}>
+        {favorites.length === 0 ? (
+          <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: 'rgba(148,163,184,0.4)',
+            textAlign: 'center', padding: '24px 10px', lineHeight: 1.7 }}>
+            No saved dishes yet. Tap the ☆ on any<br/>suggested dish to keep it here for later.
+          </p>
+        ) : favorites.map(m => {
+          const on = logged.has(m.id)
+          return (
+            <div key={m.id} style={{ marginBottom: 8, borderRadius: 9, overflow: 'hidden',
+              background: 'rgba(20,12,2,0.6)', border: `1px solid ${NEON}18` }}>
+              <div style={{ padding: '10px 12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 13 }}>{SLOT_META[m.slot].icon}</span>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
+                    color: 'rgba(255,240,220,0.92)', flex: 1 }}>{m.name}</p>
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 900, color: NEON }}>{m.calories}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
+                  {([['protein', m.protein], ['carbs', m.carbs], ['fat', m.fat]] as const).map(([k, v]) => (
+                    <span key={k} style={{ fontFamily: 'var(--font)', fontSize: 8, color: MACRO[k].color }}>{MACRO[k].label[0]} {v}g</span>
+                  ))}
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 7, marginLeft: 'auto',
+                    color: 'rgba(148,163,184,0.4)' }}>{SLOT_META[m.slot].label}</span>
+                </div>
+                {m.why && (
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}55`,
+                    fontStyle: 'italic', marginBottom: 8 }}>“{m.why}”</p>
+                )}
+                {m.uses && m.uses.length > 0 && (
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+                    {m.uses.map((u, j) => (
+                      <span key={j} style={{ fontFamily: 'var(--font)', fontSize: 7, color: '#4ade80',
+                        padding: '2px 6px', borderRadius: 4, background: 'rgba(74,222,128,0.08)',
+                        border: '1px solid rgba(74,222,128,0.25)' }}>🧺 {u}</span>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
+                  {m.recipe && m.recipe.length > 0 && (
+                    <button onClick={() => setOpenRecipe(openRecipe === m.id ? null : m.id)} style={{
+                      fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
+                      padding: '4px 8px', borderRadius: 5, cursor: 'pointer', color: `${NEON}b0`,
+                      border: `1px solid ${NEON}28`, background: NEON_DIM }}>
+                      👨‍🍳 RECIPE {openRecipe === m.id ? '▴' : '▾'}</button>
+                  )}
+                  {m.search && (
+                    <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(m.search)}`}
+                      target="_blank" rel="noreferrer" style={{
+                      fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
+                      padding: '4px 8px', borderRadius: 5, textDecoration: 'none', color: '#ff5470',
+                      border: '1px solid rgba(255,84,112,0.3)', background: 'rgba(255,84,112,0.06)' }}>▶ YOUTUBE</a>
+                  )}
+                  <button onClick={() => onRemove(m.id)} title="Remove from favourites"
+                    style={{ marginLeft: 'auto', fontFamily: 'var(--font)', fontSize: 12, cursor: 'pointer',
+                      padding: '2px 6px', borderRadius: 5, color: '#ffd700',
+                      border: '1px solid rgba(255,215,0,0.4)', background: 'rgba(255,215,0,0.08)' }}>★</button>
+                </div>
+                {m.recipe && openRecipe === m.id && (
+                  <ol style={{ margin: '0 0 8px', paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {m.recipe.map((step, j) => (
+                      <li key={j} style={{ fontFamily: 'var(--font)', fontSize: 8, lineHeight: 1.5,
+                        color: 'rgba(255,240,220,0.78)' }}>{step}</li>
+                    ))}
+                  </ol>
+                )}
+                <button disabled={on} onClick={() => { onLog(m); setLogged(s => new Set(s).add(m.id)) }} style={{
+                  width: '100%', padding: '6px', borderRadius: 5, cursor: on ? 'default' : 'pointer',
+                  fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.1em',
+                  color: on ? '#4ade80' : NEON, border: `1px solid ${on ? '#4ade8040' : `${NEON}35`}`,
+                  background: on ? 'rgba(74,222,128,0.08)' : NEON_DIM }}>{on ? '✓ LOGGED' : '⬇ I ATE THIS'}</button>
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -1410,6 +1536,7 @@ type Screen =
   | { type: 'log' }
   | { type: 'pantry' }
   | { type: 'analyze' }
+  | { type: 'favorites' }
 
 /** Sensible default meal slot for the current time of day. */
 const slotNow = (): MealSlot => {
@@ -1483,8 +1610,26 @@ export default function Solaris() {
         targets={targets}
         consumed={totals}
         pantry={state.pantry}
+        favoriteNames={new Set(state.favorites.map(f => f.name.toLowerCase()))}
         onAccept={m => persistWith(s => addEntry(s, member.id, today, m))}
+        onToggleFavorite={m => {
+          const existing = state.favorites.find(f => f.name.toLowerCase() === m.name.toLowerCase())
+          persist(existing ? removeFavorite(state, existing.id) : saveFavorite(state, m))
+        }}
+        onOpenFavorites={() => setScreen({ type: 'favorites' })}
         onClose={() => setScreen({ type: 'dashboard' })}
+      />
+    )
+  }
+
+  // ── Saved / favourite dishes ──
+  if (screen.type === 'favorites') {
+    return (
+      <FavoritesScreen
+        favorites={state.favorites}
+        onLog={d => persistWith(s => addEntry(s, member.id, today, d))}
+        onRemove={id => persist(removeFavorite(state, id))}
+        onClose={() => setScreen({ type: 'delivery' })}
       />
     )
   }

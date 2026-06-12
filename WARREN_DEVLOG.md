@@ -396,6 +396,12 @@ type Settings = {
 ## Changelog
 
 ### 2026-06 (Session 4, hardening pass)
+- **SOLARIS favourite dishes**. New shared `favorites: SavedDish[]` on state (migrated in as `[]`).
+  Each AI-suggested dish now has a ☆/★ toggle to save it; `saveFavorite` (dedupes by name) /
+  `removeFavorite` store helpers. New `FavoritesScreen` (reached via a "★ SAVED DISHES (N)" button
+  on the dish panel's empty state) lists saved dishes with full macros, pantry chips, expandable
+  recipe and YouTube link, and "⬇ I ATE THIS" to re-log straight to the manifest (via the
+  loop-safe `persistWith`). +1 test (save/dedupe/remove) → 65 total; verified live in preview.
 - **SOLARIS smart-kitchen upgrades** (on top of the AI suite):
   - **Servings multiplier** — a "🍽 EATING 1/2/3/4" stepper on the dish panel. The prompt scales
     recipe ingredient amounts to that many servings while keeping macros per single serving (so

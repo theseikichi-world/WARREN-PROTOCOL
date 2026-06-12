@@ -3,14 +3,14 @@ import { computeBmi, recommendedWaterMl, effectiveHydration, type SolarisProfile
 import {
   loadSolarisState, addMember, addEntry, removeEntry, addDrink, removeDrink, getDrinks,
   removeMember, setActiveMember, activeMember, updateMemberProfile,
-  addPantryItem, addPantryItems, removePantryItem,
+  addPantryItem, addPantryItems, removePantryItem, saveFavorite, removeFavorite,
 } from './store'
 
 const profile: SolarisProfile = {
   weightKg: 80, heightCm: 180, age: 30, sex: 'male',
   activity: 'standard', goal: 'maintain', diet: '',
 }
-const empty: SolarisState = { members: [], activeMemberId: null, pantry: [] }
+const empty: SolarisState = { members: [], activeMemberId: null, pantry: [], favorites: [] }
 
 describe('computeBmi', () => {
   it('classifies a healthy BMI with a sensible range', () => {
@@ -116,6 +116,20 @@ describe('shared pantry', () => {
     expect(spinach.qty).toBe('1 bag')
     s = removePantryItem(s, spinach.id)
     expect(s.pantry.some(i => i.name === 'Spinach')).toBe(false)
+  })
+})
+
+describe('favourite dishes', () => {
+  const dish = { name: 'Chicken & Rice', slot: 'lunch' as const, calories: 480, protein: 52, carbs: 42, fat: 8 }
+  it('saves, dedupes by name, and removes', () => {
+    let s = saveFavorite(empty, dish)
+    expect(s.favorites).toHaveLength(1)
+    s = saveFavorite(s, { ...dish, calories: 999 })   // same name → ignored
+    expect(s.favorites).toHaveLength(1)
+    s = saveFavorite(s, { ...dish, name: 'Tuna Bowl' })
+    expect(s.favorites.map(f => f.name)).toEqual(['Tuna Bowl', 'Chicken & Rice'])
+    s = removeFavorite(s, s.favorites[0].id)
+    expect(s.favorites.map(f => f.name)).toEqual(['Chicken & Rice'])
   })
 })
 

@@ -68,10 +68,24 @@ export interface PantryItem {
   addedAt: string
 }
 
+// ─── Saved dishes (favourites from the AI suggester) ──────────────────────────
+export interface SavedDish {
+  id:       string
+  name:     string
+  slot:     MealSlot
+  calories: number; protein: number; carbs: number; fat: number   // per serving
+  why?:     string
+  uses?:    string[]
+  recipe?:  string[]
+  search?:  string
+  savedAt:  string
+}
+
 export interface SolarisState {
   members:        Member[]
   activeMemberId: string | null
   pantry:         PantryItem[]        // shared across the crew
+  favorites:      SavedDish[]         // shared saved dishes
 }
 
 // ─── Computed nutrition targets ───────────────────────────────────────────────

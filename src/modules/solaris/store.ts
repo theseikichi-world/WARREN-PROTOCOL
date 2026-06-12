@@ -1,13 +1,13 @@
 import {
   type SolarisState, type SolarisProfile, type FoodEntry, type DayLog,
-  type MealSlot, type Member, type PantryItem, type DrinkEntry, type DrinkKind,
+  type MealSlot, type Member, type PantryItem, type DrinkEntry, type DrinkKind, type SavedDish,
   todayKey,
 } from './types'
 
 export type { SolarisState }
 
 const KEY = 'solaris_v1'
-const INITIAL: SolarisState = { members: [], activeMemberId: null, pantry: [] }
+const INITIAL: SolarisState = { members: [], activeMemberId: null, pantry: [], favorites: [] }
 
 // ─── Persistence (+ migration from the old single-profile shape) ──────────────
 
@@ -26,6 +26,7 @@ export function loadSolarisState(): SolarisState {
         })),
         activeMemberId: p.activeMemberId ?? p.members[0]?.id ?? null,
         pantry: Array.isArray(p.pantry) ? p.pantry : [],
+        favorites: Array.isArray(p.favorites) ? p.favorites : [],
       }
     }
 
@@ -35,7 +36,7 @@ export function loadSolarisState(): SolarisState {
         id: crypto.randomUUID(), name: 'You', emoji: '🧑‍🚀',
         profile: p.profile, days: p.days ?? {}, water: {},
       }
-      return { members: [member], activeMemberId: member.id, pantry: [] }
+      return { members: [member], activeMemberId: member.id, pantry: [], favorites: [] }
     }
 
     return structuredClone(INITIAL)
@@ -193,6 +194,26 @@ export function addPantryItems(state: SolarisState, items: { name: string; qty?:
 
 export function removePantryItem(state: SolarisState, id: string): SolarisState {
   return { ...state, pantry: state.pantry.filter(i => i.id !== id) }
+}
+
+// ─── Favourite dishes (shared) ─────────────────────────────────────────────────
+
+export interface NewSavedDish {
+  name: string; slot: MealSlot
+  calories: number; protein: number; carbs: number; fat: number
+  why?: string; uses?: string[]; recipe?: string[]; search?: string
+}
+
+/** Save a dish to favourites, skipping a case-insensitive name dupe. */
+export function saveFavorite(state: SolarisState, dish: NewSavedDish): SolarisState {
+  const name = dish.name.trim()
+  if (!name || state.favorites.some(f => f.name.toLowerCase() === name.toLowerCase())) return state
+  const saved: SavedDish = { ...dish, name, id: crypto.randomUUID(), savedAt: new Date().toISOString() }
+  return { ...state, favorites: [saved, ...state.favorites] }
+}
+
+export function removeFavorite(state: SolarisState, id: string): SolarisState {
+  return { ...state, favorites: state.favorites.filter(f => f.id !== id) }
 }
 
 // ─── Streak (consecutive days with ≥1 logged entry for this member, ending today) ─
