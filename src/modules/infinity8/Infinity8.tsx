@@ -10,7 +10,7 @@ import {
 } from './store'
 import {
   loadState as loadScrap7, saveState as saveScrap7,
-  completeTask, uncompleteTask, trackHabit, updateTask, createTask,
+  updateTask, createTask,
 } from '../scrap7/store'
 import { aiJson, loadSettings, modelForTask } from '../../settings'
 
@@ -318,20 +318,8 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
     setOptResult(prev => prev ? { ...prev, additions: prev.additions.filter((_, i) => i !== idx) } : prev)
   }
 
-  // Toggle a commitment's done state directly in SCRAP-7
-  const toggleCommitment = (b: Block) => {
-    if (!b.taskId) return
-    let s7 = loadScrap7()
-    if (b.commitKind === 'daily') {
-      s7 = b.done ? uncompleteTask(s7, b.taskId) : completeTask(s7, b.taskId)
-    } else {
-      if (b.done) return            // habits only increment from here
-      s7 = trackHabit(s7, b.taskId).state
-    }
-    saveScrap7(s7)
-    window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'infinity8' } }))
-    setRefresh(r => r + 1)
-  }
+  // INFINITY-8 is a tracking VIEW — completion is owned by SCRAP-7 (and shown here
+  // read-only), so you never mark the same thing done in two places.
 
   const pct = plan.committedCount > 0 ? Math.round(plan.doneCount / plan.committedCount * 100) : 100
   const allDone = plan.committedCount > 0 && plan.doneCount === plan.committedCount
@@ -448,7 +436,6 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
         sleepMin={toMin(eff.sleep)}
         nowMin={nowMin}
         suggestions={freeSuggestions}
-        onToggle={toggleCommitment}
         onRemoveEvent={id => persist(removeEvent(state, today, id))}
         onGo={path => navigate(path)}
       />
@@ -567,11 +554,10 @@ const PPM    = 1.75           // pixels per minute (1 hour ≈ 105px; 20 min ≈
 const GUTTER = 42             // left hour-label column
 const TOP_PAD = 18           // room above for the WAKE cap
 
-function Timeline({ blocks, wakeMin, sleepMin, nowMin, suggestions, onToggle, onRemoveEvent, onGo }: {
+function Timeline({ blocks, wakeMin, sleepMin, nowMin, suggestions, onRemoveEvent, onGo }: {
   blocks: Block[]
   wakeMin: number; sleepMin: number; nowMin: number
   suggestions: Record<string, Suggestion[]>
-  onToggle: (b: Block) => void
   onRemoveEvent: (id: string) => void
   onGo: (path: string) => void
 }) {
@@ -622,7 +608,6 @@ function Timeline({ blocks, wakeMin, sleepMin, nowMin, suggestions, onToggle, on
           <TimelineBlock key={b.id} b={b} top={y(b.start)} height={(b.end - b.start) * PPM}
             isNow={nowMin >= b.start && nowMin < b.end}
             suggestions={suggestions[b.id]}
-            onToggle={() => onToggle(b)}
             onRemoveEvent={b.kind === 'event' ? () => onRemoveEvent(b.id) : undefined}
             onGo={onGo} />
         ))}
@@ -641,10 +626,10 @@ function Timeline({ blocks, wakeMin, sleepMin, nowMin, suggestions, onToggle, on
   )
 }
 
-function TimelineBlock({ b, top, height, isNow, suggestions, onToggle, onRemoveEvent, onGo }: {
+function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo }: {
   b: Block; top: number; height: number; isNow: boolean
   suggestions?: Suggestion[]
-  onToggle: () => void; onRemoveEvent?: () => void; onGo?: (path: string) => void
+  onRemoveEvent?: () => void; onGo?: (path: string) => void
 }) {
   const [hov, setHov] = useState(false)
   const color = BLOCK_COLOR[b.kind]
@@ -724,12 +709,13 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onToggle, onRemoveE
         zIndex: isNow ? 6 : 1,
       }}>
       {isCommit ? (
-        <button onClick={onToggle} title={b.done ? 'Done' : 'Mark done'} style={{
-          width: 16, height: 16, borderRadius: 4, flexShrink: 0, cursor: 'pointer',
+        /* Read-only status — completion is owned by SCRAP-7, shown here for tracking only */
+        <span title={b.done ? 'Done (tracked in SCRAP-7)' : 'Open — mark it in SCRAP-7'} style={{
+          width: 16, height: 16, borderRadius: 4, flexShrink: 0,
           border: `1.5px solid ${b.done ? color : `${color}55`}`,
           background: b.done ? `${color}22` : 'transparent',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color,
-        }}>{b.done ? '✓' : ''}</button>
+        }}>{b.done ? '✓' : ''}</span>
       ) : (
         <span style={{ fontSize: 12, flexShrink: 0, opacity: isFree ? 0.6 : 1 }}>{BLOCK_ICON[b.kind]}</span>
       )}
