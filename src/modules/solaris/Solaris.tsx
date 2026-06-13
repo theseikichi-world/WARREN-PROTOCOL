@@ -242,9 +242,9 @@ const drinkChip: React.CSSProperties = {
 }
 
 // ─── Member switcher ───────────────────────────────────────────────────────────
-function MemberSwitcher({ members, activeId, onSwitch, onAdd }: {
+function MemberSwitcher({ members, activeId, onSwitch, onAdd, onRemove }: {
   members: Member[]; activeId: string | null
-  onSwitch: (id: string) => void; onAdd: () => void
+  onSwitch: (id: string) => void; onAdd: () => void; onRemove: (id: string) => void
 }) {
   return (
     <div style={{ display: 'flex', gap: 6, padding: '8px 14px', overflowX: 'auto',
@@ -268,6 +268,12 @@ function MemberSwitcher({ members, activeId, onSwitch, onAdd }: {
               <p style={{ fontFamily: 'var(--font)', fontSize: 6.5,
                 color: on ? `${NEON}70` : 'rgba(148,163,184,0.4)', letterSpacing: '0.04em' }}>{left} kcal left</p>
             </div>
+            {on && members.length > 1 && (
+              <span role="button" title={`Remove ${m.name}`}
+                onClick={e => { e.stopPropagation(); if (confirm(`Remove ${m.name} from the crew? Their food log and water are deleted.`)) onRemove(m.id) }}
+                style={{ fontFamily: 'var(--font)', fontSize: 11, lineHeight: 1, marginLeft: 2,
+                  color: 'rgba(255,84,112,0.55)', cursor: 'pointer', padding: '0 2px' }}>✕</span>
+            )}
           </button>
         )
       })}
@@ -1729,6 +1735,7 @@ export default function Solaris() {
       {/* Crew switcher */}
       <MemberSwitcher members={state.members} activeId={member.id}
         onSwitch={id => persist(setActiveMember(state, id))}
+        onRemove={id => persist(removeMember(state, id))}
         onAdd={() => setScreen({ type: 'add' })} />
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
