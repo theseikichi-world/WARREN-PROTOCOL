@@ -393,6 +393,20 @@ type Settings = {
 
 ---
 
+## Backlog (requested, not yet built)
+
+- **SOLARIS — kitchen equipment & cooking prefs**: declare appliances (oven, air grill/air fryer,
+  stovetop…) and prefs ("no fried", "keep it simple"); thread into the dish suggester + analyzer prompts.
+- **ARDO — articulation training**: tongue twisters (скороговорки), reading aloud with a wine cork
+  (винная пробка), articulation exercises (упражнения для артикуляции).
+- **ARDO — sing-along backing tracks (минусовки)** for song texts, sourced from YouTube / other
+  platforms / local files.
+- **New module — Physical Training**: a flexible set of liked/suggested workouts; completing one
+  feeds back into INFINITY-8 + SCRAP-7 (the `/otty` "SWIFT OTTY · Exercise" guild slot is likely this).
+- **INFINITY-8 — read-only completion**: stop letting commitments be marked done inside INFINITY-8
+  (it's a tracking view); completion lives in SCRAP-7, INFINITY-8 just reflects it. Today
+  `toggleCommitment` writes back to SCRAP-7 → remove/disable the `TimelineBlock` checkbox toggle.
+
 ## Changelog
 
 ### 2026-06 (Session 4, hardening pass)
