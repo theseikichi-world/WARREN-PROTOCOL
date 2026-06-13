@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart'
-import { type Settings, ACCENT_PRESETS, CLAUDE_MODELS, DEFAULT_MODEL, AI_TASKS, modelForTask, saveSettings, applySettings } from './settings'
+import { type Settings, ACCENT_PRESETS, CLAUDE_MODELS, DEFAULT_MODEL, AI_TASKS, modelForTask, saveSettings, applySettings, isTauri } from './settings'
 import { downloadBackup, exportAllJson, importBackup } from './backup'
 
 // ─── Toggle switch ────────────────────────────────────────────────────────────
@@ -104,8 +104,9 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
     }
   }
 
-  // Sync autostart state from OS on mount
+  // Sync autostart state from OS on mount (desktop only)
   useEffect(() => {
+    if (!isTauri()) return
     isEnabled().then(enabled => {
       if (enabled !== settings.startOnStartup) update({ startOnStartup: enabled })
     }).catch(() => {})
@@ -232,7 +233,8 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
             </div>
           </div>
 
-          {/* ── Behavior ── */}
+          {/* ── Behavior (desktop-only window controls) ── */}
+          {isTauri() && <>
           <Section label="Behavior" />
 
           <Row label="Always on top" sub="Keep Warren above other windows">
@@ -246,6 +248,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
               accent={acc}
             />
           </Row>
+          </>}
 
           <Row label="Show intro animation" sub="Matrix boot screen on launch">
             <Toggle on={settings.showIntro} onChange={v => update({ showIntro: v })} accent={acc} />

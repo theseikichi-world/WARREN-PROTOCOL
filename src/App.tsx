@@ -4,7 +4,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import { GUILD, type GuildMember } from './guild'
 import { hasAccess, type Entitlements } from './entitlements'
-import { loadSettings, saveSettings, applySettings, type Settings } from './settings'
+import { loadSettings, saveSettings, applySettings, isTauri, type Settings } from './settings'
 import SettingsPanel from './SettingsPanel'
 import Scrap7    from './modules/scrap7/Scrap7'
 import Log       from './modules/log/Log'
@@ -185,6 +185,7 @@ function TitleBar() {
       {/* Right: clock + controls */}
       <div data-tauri-drag-region style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <Clock />
+        {isTauri() && (
         <div style={{ display: 'flex', gap: 5, marginLeft: 4 }}>
           {[
             { label: '−', action: () => getCurrentWindow().minimize(), color: '#ffd700' },
@@ -214,6 +215,7 @@ function TitleBar() {
             >{label}</button>
           ))}
         </div>
+        )}
       </div>
     </div>
   )
@@ -589,8 +591,10 @@ export default function App() {
 
           <div style={{ flex: 1 }} />
           <SidebarBtn iconId="set" neon="var(--accent)" active={settingsOpen} title="Settings" onClick={() => setSettingsOpen(o => !o)} />
-          <div style={{ width: 28, height: 1, background: 'rgba(255,0,51,0.1)', margin: '2px 0' }} />
-          <SidebarBtn iconId="pwr" neon="#ff0033" active={false} title="Disconnect" onClick={() => getCurrentWindow().close()} />
+          {isTauri() && <>
+            <div style={{ width: 28, height: 1, background: 'rgba(255,0,51,0.1)', margin: '2px 0' }} />
+            <SidebarBtn iconId="pwr" neon="#ff0033" active={false} title="Disconnect" onClick={() => getCurrentWindow().close()} />
+          </>}
         </aside>
       </div>
 

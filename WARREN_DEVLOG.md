@@ -393,6 +393,18 @@ type Settings = {
 
 ---
 
+## Web / iOS testing build (branch `ios-web-testing`)
+
+Warren is a static Vite SPA at heart (localStorage + direct browser fetch to Anthropic, HashRouter),
+so it runs in a plain browser / iOS Safari with no backend. `isTauri()` (in settings.ts, checks
+`window.__TAURI_INTERNALS__`) guards the only native calls — window minimize/close, the Disconnect
+button, and the Behavior settings (always-on-top, autostart) — so they hide on web instead of erroring.
+Added a web manifest + apple-touch-icon (`public/`) and PWA `<meta>` tags so iOS "Add to Home Screen"
+installs it full-screen. `vite build` → `dist/` is deployable to any static host (Netlify/Vercel/
+Cloudflare Pages). `main` stays the desktop version (tag `desktop-stable` = return point).
+Caveats: deep phone-width responsive polish still TODO; use Backup export to preserve test data
+(iOS Safari can evict localStorage).
+
 ## Backlog (requested, not yet built)
 
 - **ARDO — articulation training**: tongue twisters (скороговорки), reading aloud with a wine cork

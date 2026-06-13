@@ -114,6 +114,11 @@ export function saveSettings(s: Settings): void {
   localStorage.setItem(KEY, JSON.stringify(s))
 }
 
+/** True only inside the Tauri desktop shell — false in a plain browser / iOS web build. */
+export function isTauri(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+}
+
 export function applySettings(s: Settings): void {
   const root = document.documentElement
   root.style.setProperty('--accent', s.accentColor)
