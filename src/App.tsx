@@ -15,6 +15,7 @@ import Pictures  from './modules/pictures/Pictures'
 import Journal   from './modules/journal/Journal'
 import { getNowSnapshot, fmtClock, fmtDur } from './modules/infinity8/store'
 import { gatherSuggestions, topSuggestion, type Suggestion } from './modules/infinity8/suggestions'
+import { getHubStats, type HubStats } from './hubStats'
 import { CyberIcon } from './components/CyberIcon'
 
 // ─── Matrix intro ─────────────────────────────────────────────────────────────
@@ -367,6 +368,24 @@ function Dashboard({ displayName }: { displayName: string }) {
   const hour = now.getHours()
   const greeting = hour < 5 ? 'still up?' : hour < 12 ? 'good morning' : hour < 17 ? 'good afternoon' : 'good evening'
   const name = displayName || null
+  const navigate = useNavigate()
+
+  // Live guild stats — refresh when any module syncs or the window regains focus
+  const [stats, setStats] = useState<HubStats>(() => getHubStats())
+  useEffect(() => {
+    const refresh = () => setStats(getHubStats())
+    refresh()
+    window.addEventListener('warren:sync', refresh)
+    window.addEventListener('focus', refresh)
+    return () => { window.removeEventListener('warren:sync', refresh); window.removeEventListener('focus', refresh) }
+  }, [])
+
+  const tiles = [
+    { label: 'Tasks due',    value: String(stats.tasksDue),    neon: '#00b4ff', emoji: '🦝', path: '/scrap7' },
+    { label: 'Active goals', value: String(stats.activeGoals), neon: '#c084fc', emoji: '🦫', path: '/log' },
+    { label: 'Kcal left',    value: stats.caloriesLeft === null ? '—' : String(stats.caloriesLeft), neon: '#ff006e', emoji: '🐼', path: '/solaris' },
+    { label: 'Best streak',  value: stats.streak > 0 ? `${stats.streak}🔥` : '0', neon: '#39ff14', emoji: '🔥', path: '/scrap7' },
+  ]
 
   return (
     <div className="fade-in" style={{ height: '100%', overflowY: 'auto', padding: '20px 18px' }}>
@@ -384,19 +403,17 @@ function Dashboard({ displayName }: { displayName: string }) {
       {/* Live now card (INFINITY-8) */}
       <NowCard />
 
-      {/* Quick stats row */}
+      {/* Quick stats row — live, tap to open the module */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
-        {[
-          { label: 'Tasks due',   value: '—',  neon: '#00b4ff', emoji: '🦝' },
-          { label: 'Active goals',value: '—',  neon: '#c084fc', emoji: '🦫' },
-          { label: 'Calories',    value: '—',  neon: '#ff006e', emoji: '🐼' },
-          { label: 'Streak',      value: '—',  neon: '#39ff14', emoji: '🔥' },
-        ].map(({ label, value, neon, emoji }) => (
-          <div key={label} style={{
-            padding: '10px 12px', borderRadius: 8,
+        {tiles.map(({ label, value, neon, emoji, path }) => (
+          <button key={label} onClick={() => navigate(path)} style={{
+            padding: '10px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
             background: 'rgba(13,24,48,0.5)',
-            border: '1px solid rgba(255,255,255,0.05)',
-          }}>
+            border: '1px solid rgba(255,255,255,0.05)', transition: 'border-color 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = `${neon}55`}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
+          >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <span style={{ fontSize: 13 }}>{emoji}</span>
               <span style={{ fontSize: 15, fontWeight: 800, color: neon, textShadow: `0 0 8px ${neon}50` }}>
@@ -406,7 +423,7 @@ function Dashboard({ displayName }: { displayName: string }) {
             <p style={{ fontSize: 8, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               {label}
             </p>
-          </div>
+          </button>
         ))}
       </div>
 
