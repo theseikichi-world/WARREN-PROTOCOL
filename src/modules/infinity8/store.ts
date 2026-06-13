@@ -194,14 +194,23 @@ interface Busy { start: number; end: number; block: Block }
 export function buildDay(anchors: Anchors, commitments: Commitment[], events: DayEvent[]): DayPlan {
   const wake  = toMin(anchors.wake)
   let   sleep = toMin(anchors.sleep)
-  if (sleep <= wake) sleep = wake + 60 // guard against bad input
+  // Overnight schedules: a bedtime at/before wake-up means it's the NEXT day
+  // (e.g. wake 11:00, sleep 03:00 → awake window 11:00 → 27:00). Roll past midnight.
+  if (sleep <= wake) sleep += 1440
+  const overnight = sleep > 1440
+  // Map a clock time into the awake window — early-morning times (before wake) on
+  // an overnight day belong to the post-midnight tail, so push them +24h.
+  const within = (t: number) => (overnight && t < wake ? t + 1440 : t)
   const brk   = Math.max(0, anchors.breakMin ?? 0)
 
   const fixed: Busy[] = []
-  const addFixed = (kind: BlockKind, label: string, start: number, end: number, extra: Partial<Block> = {}) => {
+  const addFixed = (kind: BlockKind, label: string, startRaw: number, endRaw: number, extra: Partial<Block> = {}) => {
+    const start = within(startRaw)
+    let   end   = within(endRaw)
+    if (end <= start) end += 1440   // block runs across the midnight wrap
     const s = Math.max(wake, start), e = Math.min(sleep, end)
     if (e <= s) return
-    fixed.push({ start: s, end: e, block: { id: `${kind}-${start}`, kind, label, start: s, end: e, ...extra } })
+    fixed.push({ start: s, end: e, block: { id: `${kind}-${startRaw}`, kind, label, start: s, end: e, ...extra } })
   }
 
   if (anchors.breakfast) addFixed('meal', 'Breakfast', toMin(anchors.breakfast), toMin(anchors.breakfast) + 30)
@@ -313,8 +322,13 @@ export function getNowSnapshot(): NowSnapshot {
   const anchors = effectiveAnchors(state, today)
   const commitments = getTodayCommitments(state.durations, state.prefTime)
   const plan = buildDay(anchors, commitments, state.events[today] ?? [])
+
+  const wake = toMin(anchors.wake)
+  let sleep  = toMin(anchors.sleep)
+  if (sleep <= wake) sleep += 1440                 // overnight (bedtime past midnight)
   const d = new Date()
-  const now = d.getHours() * 60 + d.getMinutes()
+  let now = d.getHours() * 60 + d.getMinutes()
+  if (sleep > 1440 && now < wake) now += 1440      // map small-hours "now" into the window
 
   const current = plan.blocks.find(b => now >= b.start && now < b.end) ?? null
   const next = plan.blocks.find(b => b.start >= now &&
@@ -325,6 +339,6 @@ export function getNowSnapshot(): NowSnapshot {
     freeMinutes: plan.freeMinutes,
     committedCount: plan.committedCount,
     doneCount: plan.doneCount,
-    awake: now >= toMin(anchors.wake) && now < toMin(anchors.sleep),
+    awake: now >= wake && now < sleep,
   }
 }

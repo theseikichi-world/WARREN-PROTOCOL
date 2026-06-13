@@ -93,4 +93,20 @@ describe('buildDay scheduler', () => {
     const starts = plan.blocks.map(b => b.start)
     expect(starts).toEqual([...starts].sort((x, y) => x - y))
   })
+
+  it('handles an overnight schedule (wake 11:00, sleep 03:00) — 16h awake, not collapsed', () => {
+    const night: Anchors = { ...anchors, wake: '11:00', sleep: '03:00', lunch: '13:00', dinner: '19:00' }
+    const plan = buildDay(night, [mk('a', 'Task', 30)], [])
+    expect(plan.awakeMinutes).toBe(16 * 60)                 // 11:00 → 27:00
+    expect(plan.freeMinutes).toBeGreaterThan(12 * 60)       // lots of free time, not ~30 min
+    // lunch (13:00) and dinner (19:00) land inside the window
+    expect(plan.blocks.some(b => b.kind === 'meal' && b.start === toMin('13:00'))).toBe(true)
+    expect(plan.blocks.some(b => b.kind === 'meal' && b.start === toMin('19:00'))).toBe(true)
+  })
+
+  it('places a post-midnight meal in the overnight tail', () => {
+    const night: Anchors = { ...anchors, wake: '11:00', sleep: '03:00', dinner: '01:00' } // 1 AM supper
+    const plan = buildDay(night, [], [])
+    expect(plan.blocks.some(b => b.kind === 'meal' && b.start === toMin('01:00') + 1440)).toBe(true)
+  })
 })

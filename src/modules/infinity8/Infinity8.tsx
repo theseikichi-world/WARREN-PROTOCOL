@@ -241,14 +241,21 @@ export default function Infinity8() {
   const plan = useMemo(() => buildDay(eff, commitments, state.events[today] ?? []),
     [eff, commitments, state.events, today])
 
+  // Overnight schedules (bedtime past midnight): roll sleep + the "now" marker
+  // past 24:00 so they land in the same awake window the timeline draws.
+  const wakeRaw = toMin(eff.wake)
+  const overnight = toMin(eff.sleep) <= wakeRaw
+  const sleepAdj = overnight ? toMin(eff.sleep) + 1440 : toMin(eff.sleep)
+  const nowAdj = overnight && nowMin < wakeRaw ? nowMin + 1440 : nowMin
+
   // GUILD SUGGESTS — natural invitations spread across the day's free blocks
   const suggestions = useMemo(() => gatherSuggestions(), [refresh])
   const freeSuggestions = useMemo(() => {
     const free = plan.blocks
-      .filter(b => b.kind === 'free' && b.end > nowMin && (b.end - b.start) >= 25)
+      .filter(b => b.kind === 'free' && b.end > nowAdj && (b.end - b.start) >= 25)
       .map(b => ({ id: b.id, minutes: b.end - b.start }))
     return assignToFreeBlocks(free, suggestions)
-  }, [plan, suggestions, nowMin])
+  }, [plan, suggestions, nowAdj])
 
   // ── Smart weekly optimize (AI rewrites SCRAP-7 schedules) ──
   const runOptimize = async () => {
@@ -432,9 +439,9 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
       {/* Proportional timeline */}
       <Timeline
         blocks={plan.blocks}
-        wakeMin={toMin(eff.wake)}
-        sleepMin={toMin(eff.sleep)}
-        nowMin={nowMin}
+        wakeMin={wakeRaw}
+        sleepMin={sleepAdj}
+        nowMin={nowAdj}
         suggestions={freeSuggestions}
         onRemoveEvent={id => persist(removeEvent(state, today, id))}
         onGo={path => navigate(path)}
