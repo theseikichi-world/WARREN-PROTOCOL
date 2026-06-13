@@ -1,13 +1,19 @@
 import {
   type SolarisState, type SolarisProfile, type FoodEntry, type DayLog,
   type MealSlot, type Member, type PantryItem, type DrinkEntry, type DrinkKind, type SavedDish,
-  todayKey,
+  type KitchenConfig, todayKey,
 } from './types'
 
 export type { SolarisState }
 
 const KEY = 'solaris_v1'
-const INITIAL: SolarisState = { members: [], activeMemberId: null, pantry: [], favorites: [] }
+const EMPTY_KITCHEN: KitchenConfig = { equipment: [], prefs: '' }
+const INITIAL: SolarisState = { members: [], activeMemberId: null, pantry: [], favorites: [], kitchen: EMPTY_KITCHEN }
+
+function normalizeKitchen(k: unknown): KitchenConfig {
+  const o = (k ?? {}) as Partial<KitchenConfig>
+  return { equipment: Array.isArray(o.equipment) ? o.equipment.map(String) : [], prefs: typeof o.prefs === 'string' ? o.prefs : '' }
+}
 
 // ─── Persistence (+ migration from the old single-profile shape) ──────────────
 
@@ -27,6 +33,7 @@ export function loadSolarisState(): SolarisState {
         activeMemberId: p.activeMemberId ?? p.members[0]?.id ?? null,
         pantry: Array.isArray(p.pantry) ? p.pantry : [],
         favorites: Array.isArray(p.favorites) ? p.favorites : [],
+        kitchen: normalizeKitchen(p.kitchen),
       }
     }
 
@@ -36,7 +43,7 @@ export function loadSolarisState(): SolarisState {
         id: crypto.randomUUID(), name: 'You', emoji: '🧑‍🚀',
         profile: p.profile, days: p.days ?? {}, water: {},
       }
-      return { members: [member], activeMemberId: member.id, pantry: [], favorites: [] }
+      return { members: [member], activeMemberId: member.id, pantry: [], favorites: [], kitchen: EMPTY_KITCHEN }
     }
 
     return structuredClone(INITIAL)
@@ -214,6 +221,18 @@ export function saveFavorite(state: SolarisState, dish: NewSavedDish): SolarisSt
 
 export function removeFavorite(state: SolarisState, id: string): SolarisState {
   return { ...state, favorites: state.favorites.filter(f => f.id !== id) }
+}
+
+// ─── Kitchen config (shared) ───────────────────────────────────────────────────
+
+export function setKitchen(state: SolarisState, patch: Partial<KitchenConfig>): SolarisState {
+  return { ...state, kitchen: { ...state.kitchen, ...patch } }
+}
+
+export function toggleEquipment(state: SolarisState, item: string): SolarisState {
+  const has = state.kitchen.equipment.includes(item)
+  const equipment = has ? state.kitchen.equipment.filter(e => e !== item) : [...state.kitchen.equipment, item]
+  return { ...state, kitchen: { ...state.kitchen, equipment } }
 }
 
 // ─── Streak (consecutive days with ≥1 logged entry for this member, ending today) ─

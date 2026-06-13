@@ -395,8 +395,6 @@ type Settings = {
 
 ## Backlog (requested, not yet built)
 
-- **SOLARIS — kitchen equipment & cooking prefs**: declare appliances (oven, air grill/air fryer,
-  stovetop…) and prefs ("no fried", "keep it simple"); thread into the dish suggester + analyzer prompts.
 - **ARDO — articulation training**: tongue twisters (скороговорки), reading aloud with a wine cork
   (винная пробка), articulation exercises (упражнения для артикуляции).
 - **ARDO — sing-along backing tracks (минусовки)** for song texts, sourced from YouTube / other
@@ -410,6 +408,13 @@ type Settings = {
 ## Changelog
 
 ### 2026-06 (Session 4, hardening pass)
+- **Quick wins**: (1) **INFINITY-8 completion is read-only** — removed `toggleCommitment` and the
+  onToggle plumbing; the commitment checkbox is now a non-interactive status dot driven by SCRAP-7,
+  so nothing is double-marked. (2) **SOLARIS one-click member delete** — a red ✕ on the active crew
+  chip (when >1 member) removes that member after a confirm. (3) **SOLARIS kitchen equipment & prefs**
+  — new shared `kitchen: { equipment[], prefs }` on state (migrated in), edited via a section on the
+  pantry screen (appliance chips + a cooking-style field); threaded into the dish-suggester prompt so
+  it only proposes recipes you can actually cook ("no fried, keep it simple"). +2 tests → 66 total.
 - **SOLARIS favourite dishes**. New shared `favorites: SavedDish[]` on state (migrated in as `[]`).
   Each AI-suggested dish now has a ☆/★ toggle to save it; `saveFavorite` (dedupes by name) /
   `removeFavorite` store helpers. New `FavoritesScreen` (reached via a "★ SAVED DISHES (N)" button

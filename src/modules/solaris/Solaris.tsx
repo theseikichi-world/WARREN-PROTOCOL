@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback, useRef } from 'react'
 import {
   type SolarisProfile, type Sex, type ActivityLevel, type Goal, type MealSlot,
   type Targets, type Member, type DrinkKind, type DrinkEntry, type PantryItem, type SavedDish,
-  ACTIVITY_META, GOAL_META, SLOT_META, SLOT_ORDER, MEMBER_EMOJI, CUP_ML, HALF_LITER_ML,
+  type KitchenConfig,
+  ACTIVITY_META, GOAL_META, SLOT_META, SLOT_ORDER, MEMBER_EMOJI, KITCHEN_EQUIPMENT, CUP_ML, HALF_LITER_ML,
   DRINKS, DRINK_ORDER, computeTargets, computeBmi, recommendedWaterMl, effectiveHydration,
   sumDay, todayKey,
 } from './types'
@@ -10,7 +11,8 @@ import {
   loadSolarisState, saveSolarisState, type SolarisState,
   activeMember, addMember, updateMemberProfile, renameMember, removeMember, setActiveMember,
   getDay, addEntry, removeEntry, getStreak, getDrinks, addDrink, removeDrink,
-  addPantryItem, addPantryItems, removePantryItem, saveFavorite, removeFavorite, type NewFoodData,
+  addPantryItem, addPantryItems, removePantryItem, saveFavorite, removeFavorite,
+  setKitchen, toggleEquipment, type NewFoodData,
 } from './store'
 import { loadSettings, aiJson, aiVisionJson, modelForTask, type ImageInput } from '../../settings'
 import { fileToImageInput } from './image'
@@ -621,11 +623,12 @@ Respond with ONLY a JSON array, no prose, no markdown fences. Each item:
 {"name": string, "slot": "breakfast"|"lunch"|"dinner"|"snack", "calories": number, "protein": number, "carbs": number, "fat": number, "why": short string (max 8 words), "uses": string[] of pantry item names used (omit or [] if none), "recipe": string[] of 3-6 short cooking steps with quantities scaled for the requested servings, "search": a concise YouTube search query for this dish}
 Return 2-4 dishes. Keep PER-SERVING totals close to the remaining budget. Numbers are grams except calories (kcal).`
 
-function DeliveryPanel({ profile, targets, consumed, pantry, favoriteNames, onAccept, onToggleFavorite, onOpenFavorites, onClose }: {
+function DeliveryPanel({ profile, targets, consumed, pantry, kitchen, favoriteNames, onAccept, onToggleFavorite, onOpenFavorites, onClose }: {
   profile:  SolarisProfile
   targets:  Targets
   consumed: { calories: number; protein: number; carbs: number; fat: number }
   pantry:   PantryItem[]
+  kitchen:  KitchenConfig
   favoriteNames: Set<string>
   onAccept: (m: DeliveryMeal) => void
   onToggleFavorite: (m: DeliveryMeal) => void
@@ -653,10 +656,12 @@ function DeliveryPanel({ profile, targets, consumed, pantry, favoriteNames, onAc
       const pantryLine = pantry.length
         ? `PANTRY (prefer these): ${pantry.map(i => i.qty ? `${i.name} (${i.qty})` : i.name).join(', ')}.`
         : 'PANTRY: empty — use common staples.'
+      const kitchenLine = `KITCHEN: ${kitchen.equipment.length ? `available equipment — ${kitchen.equipment.join(', ')}; only suggest recipes cookable with these.` : 'equipment unspecified.'}${kitchen.prefs ? ` Cooking preferences: ${kitchen.prefs}.` : ''}`
       const userMsg = `Crew goal: ${GOAL_META[profile.goal].label} (${profile.goal}).
 Dietary preference: ${profile.diet || 'none'}.
 PEOPLE EATING: ${servings} (scale recipe amounts for ${servings} serving${servings > 1 ? 's' : ''}; macros stay per single serving).
 ${pantryLine}
+${kitchenLine}
 REMAINING budget for the rest of today: ${remaining.calories} kcal, ${remaining.protein}g protein, ${remaining.carbs}g carbs, ${remaining.fat}g fat.
 Suggest what to eat.`
       const parsed = await aiJson<DeliveryMeal[]>([
@@ -684,7 +689,7 @@ Suggest what to eat.`
     } finally {
       setLoading(false)
     }
-  }, [profile, remaining, pantry, servings])
+  }, [profile, remaining, pantry, kitchen, servings])
 
   return (
     <div className="fade-in" style={{ position: 'absolute', inset: 0, zIndex: 20,
@@ -1162,11 +1167,14 @@ const PANTRY_SYSTEM = `You read a photo of groceries, a fridge, or a pantry and 
 Respond with ONLY a JSON array, no prose, no markdown fences. Each item: {"name": string, "qty": short string like "2", "500g", or ""}.
 List only foods/ingredients, be specific but concise (e.g. "eggs", "cheddar cheese", "spinach"). No duplicates.`
 
-function PantryScreen({ pantry, onAdd, onAddMany, onRemove, onCook, onAnalyze, onClose }: {
+function PantryScreen({ pantry, kitchen, onAdd, onAddMany, onRemove, onToggleEquip, onSetPrefs, onCook, onAnalyze, onClose }: {
   pantry: PantryItem[]
+  kitchen: KitchenConfig
   onAdd: (name: string, qty: string) => void
   onAddMany: (items: { name: string; qty?: string }[]) => void
   onRemove: (id: string) => void
+  onToggleEquip: (item: string) => void
+  onSetPrefs: (prefs: string) => void
   onCook: () => void
   onAnalyze: () => void
   onClose: () => void
@@ -1238,6 +1246,28 @@ function PantryScreen({ pantry, onAdd, onAddMany, onRemove, onCook, onAnalyze, o
           color: `${AQUA}d0`, border: `1px solid ${AQUA}35`, background: `${AQUA}0c`, opacity: scanning ? 0.6 : 1 }}>
           {scanning ? '◌ READING GROCERIES…' : '📷 SCAN GROCERIES FROM A PHOTO'}</button>
         {error && <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#ff5470', letterSpacing: '0.06em' }}>⚠ {error}</p>}
+
+        {/* kitchen setup — what we can cook with */}
+        <div style={{ padding: '10px 12px', borderRadius: 8, background: `${NEON}05`, border: `1px solid ${NEON}16` }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}60`,
+            letterSpacing: '0.12em', marginBottom: 7 }}>🍳 KITCHEN — DISHES ARE TAILORED TO THIS</p>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 8 }}>
+            {KITCHEN_EQUIPMENT.map(eq => {
+              const on = kitchen.equipment.includes(eq)
+              return (
+                <button key={eq} onClick={() => onToggleEquip(eq)} style={{
+                  padding: '4px 9px', borderRadius: 5, cursor: 'pointer',
+                  fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.04em',
+                  color: on ? NEON : 'rgba(148,163,184,0.45)',
+                  border: `1px solid ${on ? `${NEON}50` : 'rgba(255,255,255,0.07)'}`,
+                  background: on ? NEON_DIM : 'transparent' }}>{on ? '✓ ' : ''}{eq}</button>
+              )
+            })}
+          </div>
+          <input value={kitchen.prefs} onChange={e => onSetPrefs(e.target.value)}
+            placeholder="Cooking style — e.g. no fried, keep it simple, quick meals"
+            style={{ ...inp, width: '100%' }} />
+        </div>
 
         {/* list */}
         {pantry.length === 0 ? (
@@ -1616,6 +1646,7 @@ export default function Solaris() {
         targets={targets}
         consumed={totals}
         pantry={state.pantry}
+        kitchen={state.kitchen}
         favoriteNames={new Set(state.favorites.map(f => f.name.toLowerCase()))}
         onAccept={m => persistWith(s => addEntry(s, member.id, today, m))}
         onToggleFavorite={m => {
@@ -1660,9 +1691,12 @@ export default function Solaris() {
     return (
       <PantryScreen
         pantry={state.pantry}
+        kitchen={state.kitchen}
         onAdd={(name, qty) => persist(addPantryItem(state, name, qty))}
         onAddMany={items => persist(addPantryItems(state, items))}
         onRemove={id => persist(removePantryItem(state, id))}
+        onToggleEquip={item => persist(toggleEquipment(state, item))}
+        onSetPrefs={prefs => persist(setKitchen(state, { prefs }))}
         onCook={() => setScreen({ type: 'delivery' })}
         onAnalyze={() => setScreen({ type: 'analyze' })}
         onClose={() => setScreen({ type: 'dashboard' })}

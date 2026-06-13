@@ -4,13 +4,14 @@ import {
   loadSolarisState, addMember, addEntry, removeEntry, addDrink, removeDrink, getDrinks,
   removeMember, setActiveMember, activeMember, updateMemberProfile,
   addPantryItem, addPantryItems, removePantryItem, saveFavorite, removeFavorite,
+  setKitchen, toggleEquipment,
 } from './store'
 
 const profile: SolarisProfile = {
   weightKg: 80, heightCm: 180, age: 30, sex: 'male',
   activity: 'standard', goal: 'maintain', diet: '',
 }
-const empty: SolarisState = { members: [], activeMemberId: null, pantry: [], favorites: [] }
+const empty: SolarisState = { members: [], activeMemberId: null, pantry: [], favorites: [], kitchen: { equipment: [], prefs: '' } }
 
 describe('computeBmi', () => {
   it('classifies a healthy BMI with a sensible range', () => {
@@ -130,6 +131,19 @@ describe('favourite dishes', () => {
     expect(s.favorites.map(f => f.name)).toEqual(['Tuna Bowl', 'Chicken & Rice'])
     s = removeFavorite(s, s.favorites[0].id)
     expect(s.favorites.map(f => f.name)).toEqual(['Chicken & Rice'])
+  })
+})
+
+describe('kitchen config', () => {
+  it('toggles equipment on and off and sets prefs', () => {
+    let s = toggleEquipment(empty, 'Oven')
+    s = toggleEquipment(s, 'Air fryer')
+    expect(s.kitchen.equipment).toEqual(['Oven', 'Air fryer'])
+    s = toggleEquipment(s, 'Oven')   // off
+    expect(s.kitchen.equipment).toEqual(['Air fryer'])
+    s = setKitchen(s, { prefs: 'no fried, keep it simple' })
+    expect(s.kitchen.prefs).toBe('no fried, keep it simple')
+    expect(s.kitchen.equipment).toEqual(['Air fryer']) // prefs patch leaves equipment intact
   })
 })
 

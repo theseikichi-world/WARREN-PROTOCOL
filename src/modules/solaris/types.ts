@@ -81,11 +81,22 @@ export interface SavedDish {
   savedAt:  string
 }
 
+// ─── Kitchen (shared) — what the crew can cook with ───────────────────────────
+export interface KitchenConfig {
+  equipment: string[]   // appliances on hand (from KITCHEN_EQUIPMENT)
+  prefs:     string     // free-text cooking style — "no fried, keep it simple, quick"
+}
+
+export const KITCHEN_EQUIPMENT = [
+  'Stovetop', 'Oven', 'Air fryer', 'Grill', 'Microwave', 'Blender', 'Slow cooker', 'Rice cooker',
+]
+
 export interface SolarisState {
   members:        Member[]
   activeMemberId: string | null
   pantry:         PantryItem[]        // shared across the crew
   favorites:      SavedDish[]         // shared saved dishes
+  kitchen:        KitchenConfig       // shared appliances + cooking prefs
 }
 
 // ─── Computed nutrition targets ───────────────────────────────────────────────
