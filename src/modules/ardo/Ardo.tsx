@@ -14,6 +14,7 @@ import {
   getTextStats, getTotalDue, autoChunk,
 } from './store'
 import { SPRINT_STAGE_LABELS } from './types'
+import ArticulationWorkout from './ArticulationWorkout'
 
 const NEON    = '#00e4a0'
 const NEON_DIM = 'rgba(0,228,160,0.1)'
@@ -1650,6 +1651,7 @@ type Screen =
   | { type: 'session';  textId: string | null; mode: SessionType; items: SessionItem[]; language: Language }
   | { type: 'fullrun';  text: ArdoText }
   | { type: 'karaoke';  text: ArdoText }
+  | { type: 'warmup';   language: Language; next: { textId: string } | null }
 
 export default function Ardo() {
   const [state, setState]     = useState<ArdoState>(() => loadArdoState())
@@ -1674,6 +1676,16 @@ export default function Ardo() {
     if (items.length === 0) return
     setScreen({ type: 'session', textId, mode, items, language: text.language })
   }
+
+  // Always warm up the voice before learning a fresh text.
+  const startLearn = (textId: string) => {
+    const text = state.texts.find(t => t.id === textId)
+    if (!text) return
+    setScreen({ type: 'warmup', language: text.language, next: { textId } })
+  }
+
+  // Standalone warm-up: default to the language you're working in most.
+  const defaultWarmupLang = (): Language => activeTexts[0]?.language ?? 'RU'
 
   const handleSprintStart = (textId: string) => {
     // Sprint starts with a full Learn session — schedules recall in 20min after
@@ -1727,6 +1739,18 @@ export default function Ardo() {
   // ── Karaoke screen ──
   if (screen.type === 'karaoke') {
     return <KaraokeView text={screen.text} onDone={() => setScreen({ type: 'dashboard' })} />
+  }
+
+  // ── Articulation warm-up screen ──
+  if (screen.type === 'warmup') {
+    const next = screen.next
+    return (
+      <ArticulationWorkout
+        initialLang={screen.language}
+        onStartLearn={next ? () => startSession(next.textId, 'learn') : undefined}
+        onClose={() => setScreen({ type: 'dashboard' })}
+      />
+    )
   }
 
   // ── Session screen ──
@@ -1816,6 +1840,25 @@ export default function Ardo() {
         </button>
       )}
 
+      {/* Articulation warm-up CTA */}
+      <button onClick={() => setScreen({ type: 'warmup', language: defaultWarmupLang(), next: null })} style={{
+        margin: '8px 10px 2px', padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
+        background: NEON_DIM, border: `1px solid ${NEON}30`, transition: 'border-color 0.15s',
+      }}
+        onMouseEnter={e => e.currentTarget.style.borderColor = `${NEON}60`}
+        onMouseLeave={e => e.currentTarget.style.borderColor = `${NEON}30`}
+      >
+        <span style={{ fontSize: 16 }}>🗣</span>
+        <div style={{ flex: 1, textAlign: 'left' }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+            color: NEON, letterSpacing: '0.15em' }}>ARTICULATION WARM-UP</p>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}55`,
+            letterSpacing: '0.06em', marginTop: 1 }}>Tongue twisters & drills — loosen up before you learn</p>
+        </div>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 9, color: `${NEON}55` }}>→</span>
+      </button>
+
       {/* Tab bar */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${NEON}12`, flexShrink: 0,
         background: 'rgba(0,8,5,0.3)' }}>
@@ -1862,7 +1905,7 @@ export default function Ardo() {
             )}
             {activeTexts.map(text => (
               <TextCard key={text.id} text={text} state={state}
-                onStudy={mode => startSession(text.id, mode)}
+                onStudy={mode => mode === 'learn' ? startLearn(text.id) : startSession(text.id, mode)}
                 onMarkLearned={() => persist(markTextLearned(state, text.id))}
                 onSprintStart={() => handleSprintStart(text.id)}
                 onFullRun={() => setScreen({ type: 'fullrun', text })}

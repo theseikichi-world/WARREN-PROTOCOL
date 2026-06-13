@@ -407,8 +407,6 @@ Caveats: deep phone-width responsive polish still TODO; use Backup export to pre
 
 ## Backlog (requested, not yet built)
 
-- **ARDO — articulation training**: tongue twisters (скороговорки), reading aloud with a wine cork
-  (винная пробка), articulation exercises (упражнения для артикуляции).
 - **ARDO — sing-along backing tracks (минусовки)** for song texts, sourced from YouTube / other
   platforms / local files.
 - **New module — Physical Training**: a flexible set of liked/suggested workouts; completing one
@@ -420,6 +418,17 @@ Caveats: deep phone-width responsive polish still TODO; use Backup export to pre
 ## Changelog
 
 ### 2026-06 (Session 4, hardening pass)
+- **ARDO articulation warm-up**. New `articulation.ts` (language-specific tongue twisters — Russian
+  скороговорки vs English drills, `suggestTwisters(lang)`; six loosen-up exercises; the wine-cork
+  drill) + `ArticulationWorkout.tsx` screen: RU/EN toggle, tap-through exercises, twister card with
+  focus/level, 🔊 TTS (`speechSynthesis`), 🔀 shuffle, and a 🍷 cork-mode banner. New `warmup` screen
+  in ARDO reached from a dashboard CTA, and the per-text **Learn** button now routes through the
+  warm-up first ("warm up before you drill"). +4 tests (74 total). Note: a file-casing clash
+  (`Articulation.tsx` vs `articulation.ts`) broke the dev HMR graph until the component was renamed
+  to `ArticulationWorkout.tsx` — keep component/content filenames distinct beyond case.
+- **Hub live stats**. `src/hubStats.ts` wires the four dashboard tiles (were "—") to real data:
+  Tasks due (SCRAP-7), Active goals (L.O.G), Kcal left (SOLARIS active member), Best streak; tiles
+  refresh on `warren:sync`/focus and link to their module. +2 tests.
 - **Quick wins**: (1) **INFINITY-8 completion is read-only** — removed `toggleCommitment` and the
   onToggle plumbing; the commitment checkbox is now a non-interactive status dot driven by SCRAP-7,
   so nothing is double-marked. (2) **SOLARIS kitchen equipment & prefs**
