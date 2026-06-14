@@ -405,6 +405,18 @@ Cloudflare Pages). `main` stays the desktop version (tag `desktop-stable` = retu
 Caveats: deep phone-width responsive polish still TODO; use Backup export to preserve test data
 (iOS Safari can evict localStorage).
 
+## i18n / Russian localisation (foundation laid)
+
+`src/i18n.ts` — inline-pair localisation: `t('English', 'Русский')`, `getLocale`/`setLocale`
+(persisted in `warren_locale`, fires `warren:locale`), and a `useLocale()` hook that re-renders on
+change (called in top-level `App`). `aiLangSuffix()` is appended to every AI system prompt in
+settings.ts (aiChat/aiStream/aiVision) so responses come back in Russian when RU is active (JSON
+keys stay English). Settings has a **Language EN/RU** toggle; the shell + Hub + Settings section
+headers are translated. **Done so far:** shell chrome, Hub/Dashboard, Settings sections + language
+row, AI output language. **TODO (per-module passes):** all 8 modules' strings, deep Settings rows,
+NowCard sub-lines, intro. Proper names (Warren, SOLARIS, A.R.D.O, guild codenames) stay untranslated
+by design.
+
 ## Backlog (requested, not yet built)
 
 - **ARDO — sing-along backing tracks (минусовки)** for song texts, sourced from YouTube / other

@@ -16,6 +16,7 @@ import Journal   from './modules/journal/Journal'
 import { getNowSnapshot, fmtClock, fmtDur } from './modules/infinity8/store'
 import { gatherSuggestions, topSuggestion, type Suggestion } from './modules/infinity8/suggestions'
 import { getHubStats, type HubStats } from './hubStats'
+import { useLocale, t } from './i18n'
 import { CyberIcon } from './components/CyberIcon'
 
 // ─── Matrix intro ─────────────────────────────────────────────────────────────
@@ -178,7 +179,7 @@ function TitleBar() {
           </p>
           <p style={{ fontSize: 7.5, color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: 1 }}>
             <span className="pulse" style={{ color: '#39ff14', marginRight: 4 }}>●</span>
-            all systems nominal
+            {t('all systems nominal', 'все системы в норме')}
           </p>
         </div>
       </div>
@@ -289,8 +290,8 @@ function NowCard() {
 
   const cur = snap.current
   const isFreeNow = !snap.awake || !cur || cur.kind === 'free' || cur.kind === 'break'
-  const headline = !snap.awake ? 'Off the clock'
-    : isFreeNow ? 'Free time'
+  const headline = !snap.awake ? t('Off the clock', 'Вне графика')
+    : isFreeNow ? t('Free time', 'Свободное время')
     : cur!.label
   const sub = !snap.awake
     ? `${fmtDur(snap.freeMinutes)} of free time today`
@@ -315,7 +316,7 @@ function NowCard() {
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: 7.5, fontWeight: 700, letterSpacing: '0.18em',
           color: isFreeNow ? 'rgba(57,255,20,0.7)' : INF }}>
-          {isFreeNow ? '● FREE NOW' : '● HAPPENING NOW'}
+          {isFreeNow ? t('● FREE NOW', '● СЕЙЧАС СВОБОДНО') : t('● HAPPENING NOW', '● ИДЁТ СЕЙЧАС')}
         </p>
         <p style={{ fontSize: 14, fontWeight: 800, color: 'rgba(225,250,255,0.95)',
           letterSpacing: '0.02em', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -326,7 +327,7 @@ function NowCard() {
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
         <p style={{ fontSize: 16, fontWeight: 900, color: '#39ff14', lineHeight: 1,
           textShadow: '0 0 10px rgba(57,255,20,0.4)' }}>{fmtDur(snap.freeMinutes)}</p>
-        <p style={{ fontSize: 7, color: 'rgba(57,255,20,0.5)', letterSpacing: '0.1em', marginTop: 2 }}>FREE TODAY</p>
+        <p style={{ fontSize: 7, color: 'rgba(57,255,20,0.5)', letterSpacing: '0.1em', marginTop: 2 }}>{t('FREE TODAY', 'СВОБОДНО СЕГОДНЯ')}</p>
         {snap.committedCount > 0 && (
           <p style={{ fontSize: 7.5, color: `${INF}70`, marginTop: 3 }}>{snap.doneCount}/{snap.committedCount} done</p>
         )}
@@ -348,7 +349,7 @@ function NowCard() {
         <span style={{ fontSize: 18, flexShrink: 0 }}>{suggest.icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 7, fontWeight: 800, letterSpacing: '0.16em',
-            color: `${SUGGEST_TONE[suggest.tone]}b0` }}>THE GUILD SUGGESTS</p>
+            color: `${SUGGEST_TONE[suggest.tone]}b0` }}>{t('THE GUILD SUGGESTS', 'ГИЛЬДИЯ СОВЕТУЕТ')}</p>
           <p style={{ fontSize: 12, fontWeight: 700, color: 'rgba(225,250,255,0.95)', marginTop: 1,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.label}</p>
           {suggest.detail && (
@@ -366,7 +367,7 @@ function NowCard() {
 function Dashboard({ displayName }: { displayName: string }) {
   const now  = new Date()
   const hour = now.getHours()
-  const greeting = hour < 5 ? 'still up?' : hour < 12 ? 'good morning' : hour < 17 ? 'good afternoon' : 'good evening'
+  const greeting = hour < 5 ? t('still up?', 'ещё не спите?') : hour < 12 ? t('good morning', 'доброе утро') : hour < 17 ? t('good afternoon', 'добрый день') : t('good evening', 'добрый вечер')
   const name = displayName || null
   const navigate = useNavigate()
 
@@ -381,10 +382,10 @@ function Dashboard({ displayName }: { displayName: string }) {
   }, [])
 
   const tiles = [
-    { label: 'Tasks due',    value: String(stats.tasksDue),    neon: '#00b4ff', emoji: '🦝', path: '/scrap7' },
-    { label: 'Active goals', value: String(stats.activeGoals), neon: '#c084fc', emoji: '🦫', path: '/log' },
-    { label: 'Kcal left',    value: stats.caloriesLeft === null ? '—' : String(stats.caloriesLeft), neon: '#ff006e', emoji: '🐼', path: '/solaris' },
-    { label: 'Best streak',  value: stats.streak > 0 ? `${stats.streak}🔥` : '0', neon: '#39ff14', emoji: '🔥', path: '/scrap7' },
+    { label: t('Tasks due', 'Задачи на сегодня'),    value: String(stats.tasksDue),    neon: '#00b4ff', emoji: '🦝', path: '/scrap7' },
+    { label: t('Active goals', 'Активные цели'), value: String(stats.activeGoals), neon: '#c084fc', emoji: '🦫', path: '/log' },
+    { label: t('Kcal left', 'Ккал осталось'),    value: stats.caloriesLeft === null ? '—' : String(stats.caloriesLeft), neon: '#ff006e', emoji: '🐼', path: '/solaris' },
+    { label: t('Best streak', 'Лучшая серия'),  value: stats.streak > 0 ? `${stats.streak}🔥` : '0', neon: '#39ff14', emoji: '🔥', path: '/scrap7' },
   ]
 
   return (
@@ -396,7 +397,7 @@ function Dashboard({ displayName }: { displayName: string }) {
           {greeting}{name ? `, ${name}` : ''} <span style={{ color: 'var(--accent)', textShadow: '0 0 10px var(--accent-dim)' }}>👋</span>
         </p>
         <p style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: 4, textTransform: 'uppercase' }}>
-          Warren hub · select a module →
+          {t('Warren hub · select a module →', 'Хаб Warren · выберите модуль →')}
         </p>
       </div>
 
@@ -430,10 +431,10 @@ function Dashboard({ displayName }: { displayName: string }) {
       {/* Status */}
       <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(57,255,20,0.04)', border: '1px solid rgba(57,255,20,0.1)' }}>
         <p style={{ fontSize: 9, color: 'rgba(57,255,20,0.6)', letterSpacing: '0.1em', fontWeight: 700 }}>
-          <span className="pulse">●</span> ALL SYSTEMS NOMINAL
+          <span className="pulse">●</span> {t('ALL SYSTEMS NOMINAL', 'ВСЕ СИСТЕМЫ В НОРМЕ')}
         </p>
         <p style={{ fontSize: 8, color: 'var(--text-muted)', marginTop: 3, letterSpacing: '0.06em' }}>
-          Warren is running · modules can be accessed from the sidebar →
+          {t('Warren is running · modules can be accessed from the sidebar →', 'Warren работает · модули доступны на боковой панели →')}
         </p>
       </div>
     </div>
@@ -509,6 +510,7 @@ function ModuleView({ member, unlocked }: { member: GuildMember; unlocked: boole
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
+  useLocale()   // re-render the whole shell when the language toggles
   const navigate  = useNavigate()
   const location  = useLocation()
 

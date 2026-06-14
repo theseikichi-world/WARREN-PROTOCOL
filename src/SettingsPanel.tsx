@@ -3,6 +3,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart'
 import { type Settings, ACCENT_PRESETS, CLAUDE_MODELS, DEFAULT_MODEL, AI_TASKS, modelForTask, saveSettings, applySettings, isTauri } from './settings'
 import { downloadBackup, exportAllJson, importBackup } from './backup'
+import { useLocale, setLocale, t } from './i18n'
 
 // ─── Toggle switch ────────────────────────────────────────────────────────────
 function Toggle({ on, onChange, accent }: { on: boolean; onChange: (v: boolean) => void; accent: string }) {
@@ -62,6 +63,7 @@ interface Props {
 }
 
 export default function SettingsPanel({ settings, onClose, onChange }: Props) {
+  const locale = useLocale()
   const [visible, setVisible] = useState(false)
   const [autostartLoading, setAutostartLoading] = useState(false)
   const [backupMsg, setBackupMsg] = useState('')
@@ -152,7 +154,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
               fontSize: 10, fontWeight: 700, letterSpacing: '0.18em',
               color: acc, textShadow: `0 0 8px ${acc}`,
               fontFamily: 'var(--font)', textTransform: 'uppercase',
-            }}>Settings</p>
+            }}>{t('Settings', 'Настройки')}</p>
           </div>
           <button
             onClick={close}
@@ -171,8 +173,28 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
         {/* Content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 20px' }}>
 
+          {/* ── Language ── */}
+          <Section label={t('Language', 'Язык')} />
+          <Row label={t('App language', 'Язык приложения')}
+            sub={t('Module names stay; everything else is translated', 'Названия модулей остаются; остальное переводится')}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {(['en', 'ru'] as const).map(l => {
+                const on = locale === l
+                return (
+                  <button key={l} onClick={() => setLocale(l)} style={{
+                    padding: '5px 12px', borderRadius: 6, cursor: 'pointer',
+                    fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800, letterSpacing: '0.06em',
+                    color: on ? acc : 'rgba(148,163,184,0.45)',
+                    border: `1px solid ${on ? acc : 'rgba(255,255,255,0.08)'}`,
+                    background: on ? `${acc}18` : 'transparent', transition: 'all 0.12s',
+                  }}>{l === 'en' ? 'EN' : 'RU'}</button>
+                )
+              })}
+            </div>
+          </Row>
+
           {/* ── Appearance ── */}
-          <Section label="Appearance" />
+          <Section label={t('Appearance', 'Оформление')} />
 
           {/* Accent color */}
           <p style={{ fontSize: 9, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 8, letterSpacing: '0.06em' }}>
@@ -235,7 +257,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
 
           {/* ── Behavior (desktop-only window controls) ── */}
           {isTauri() && <>
-          <Section label="Behavior" />
+          <Section label={t('Behavior', 'Поведение')} />
 
           <Row label="Always on top" sub="Keep Warren above other windows">
             <Toggle on={settings.alwaysOnTop} onChange={handleAlwaysOnTop} accent={acc} />
@@ -255,7 +277,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           </Row>
 
           {/* ── Profile ── */}
-          <Section label="Profile" />
+          <Section label={t('Profile', 'Профиль')} />
 
           <p style={{ fontSize: 9, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 6, letterSpacing: '0.06em' }}>
             Display name
@@ -282,7 +304,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           />
 
           {/* ── AI ── */}
-          <Section label="AI Assistant" />
+          <Section label={t('AI Assistant', 'ИИ-ассистент')} />
 
           <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
             lineHeight: 1.6, marginBottom: 10, letterSpacing: '0.03em' }}>
@@ -410,7 +432,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           )}
 
           {/* ── Data sources (Galactic Pictures) ── */}
-          <Section label="Data Sources" />
+          <Section label={t('Data Sources', 'Источники данных')} />
           <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
             lineHeight: 1.6, marginBottom: 10, letterSpacing: '0.03em' }}>
             Used by <strong style={{ color: '#ff6b00' }}>Galactic Pictures</strong> for movies, shows & games. Both are free.
@@ -437,7 +459,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           ))}
 
           {/* ── Backup ── */}
-          <Section label="Backup" />
+          <Section label={t('Backup', 'Резервная копия')} />
           <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
             lineHeight: 1.6, marginBottom: 10 }}>
             All Warren data lives on this machine. Export a backup file regularly —
@@ -501,7 +523,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           )}
 
           {/* ── About ── */}
-          <Section label="About" />
+          <Section label={t('About', 'О программе')} />
           <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
             <p style={{ fontSize: 9, color: acc, fontFamily: 'var(--font)', fontWeight: 700, letterSpacing: '0.1em', marginBottom: 4 }}>
               WARREN v0.1.0

@@ -1,3 +1,5 @@
+import { aiLangSuffix } from './i18n'
+
 // ─── Claude models (the only AI provider Warren uses) ─────────────────────────
 export interface ClaudeModel {
   id:    string
@@ -218,7 +220,7 @@ export async function aiChat(
     ? opts.model
     : (isClaudeModel(settings.aiModel) ? settings.aiModel : DEFAULT_MODEL)
 
-  const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n')
+  const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n') + aiLangSuffix()
   const turns  = messages
     .filter(m => m.role !== 'system')
     .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
@@ -260,7 +262,7 @@ export async function aiStream(
     ? opts.model
     : (isClaudeModel(settings.aiModel) ? settings.aiModel : DEFAULT_MODEL)
 
-  const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n')
+  const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n') + aiLangSuffix()
   const turns  = messages
     .filter(m => m.role !== 'system')
     .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
@@ -426,7 +428,7 @@ export async function aiVision(
   const body = JSON.stringify({
     model,
     max_tokens: opts.maxTokens ?? 1024,
-    ...(system ? { system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }] } : {}),
+    ...(system ? { system: [{ type: 'text', text: system + aiLangSuffix(), cache_control: { type: 'ephemeral' } }] } : {}),
     messages: [{ role: 'user', content }],
   })
 
