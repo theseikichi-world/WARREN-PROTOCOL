@@ -10,6 +10,7 @@ import {
   todayScheduledDailies, fuzzyMatchTask, type NewTaskData,
 } from './store'
 import { parseCommand } from './commandParser'
+import { t as tr } from '../../i18n'
 import { loadSettings, aiJson, modelForTask, type AiMessage } from '../../settings'
 
 const NEON = '#00b4ff'
@@ -246,7 +247,7 @@ function HabitCard({ task, onTrack, onSkip, onEdit, onDelete }: {
                 {scoreDisplay}%
               </span>
               {schedDays && (
-                <span title="Scheduled days" style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
+                <span title={tr('Scheduled days', 'Дни по расписанию')} style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
                   fontWeight: 700, color: '#22d3ee', letterSpacing: '0.06em',
                   padding: '1px 5px', borderRadius: 3, border: '1px solid rgba(34,211,238,0.3)',
                   background: 'rgba(34,211,238,0.08)' }}>{schedDays}</span>
@@ -269,17 +270,17 @@ function HabitCard({ task, onTrack, onSkip, onEdit, onDelete }: {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 12 }}>
             {hov && !isSkipped && (
               <>
-                <button onClick={onSkip} title="Skip today — no score penalty"
+                <button onClick={onSkip} title={tr('Skip today — no score penalty', 'Пропустить сегодня — без штрафа')}
                   style={{ fontSize: 13, color: 'rgba(148,163,184,0.25)', padding: '2px 5px', transition: 'color 0.12s' }}
                   onMouseEnter={e => e.currentTarget.style.color = 'rgba(148,163,184,0.7)'}
                   onMouseLeave={e => e.currentTarget.style.color = 'rgba(148,163,184,0.25)'}
                 >—</button>
-                <button onClick={onEdit} title="Edit"
+                <button onClick={onEdit} title={tr('Edit', 'Изменить')}
                   style={{ fontSize: 12, color: `${NEON}50`, padding: '2px 5px', transition: 'color 0.12s' }}
                   onMouseEnter={e => e.currentTarget.style.color = NEON}
                   onMouseLeave={e => e.currentTarget.style.color = `${NEON}50`}
                 >✎</button>
-                <button onClick={onDelete} title="Delete"
+                <button onClick={onDelete} title={tr('Delete', 'Удалить')}
                   style={{ fontSize: 13, color: 'rgba(255,0,51,0.25)', padding: '2px 5px', transition: 'color 0.12s' }}
                   onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
                   onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,0,51,0.25)'}
@@ -385,7 +386,7 @@ function PomodoroBar({ pomo, onPause, onStop }: {
           color: col, letterSpacing: '0.06em' }}>
           {m.toString().padStart(2,'0')}:{s.toString().padStart(2,'0')}{' '}
           <span style={{ color: 'rgba(148,163,184,0.4)', fontWeight: 400 }}>
-            {pomo.phase === 'work' ? 'FOCUS' : 'BREAK'}
+            {pomo.phase === 'work' ? tr('FOCUS', 'ФОКУС') : tr('BREAK', 'ПЕРЕРЫВ')}
           </span>
         </p>
         <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
@@ -474,7 +475,7 @@ function TaskRow({ task, onCheck, onDelete, onEdit, onPomo }: {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 3 }}>
           {task.taskType === 'daily' && (schedWeekly
-            ? <span title="Scheduled days" style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
+            ? <span title={tr('Scheduled days', 'Дни по расписанию')} style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
                 fontWeight: 700, color: '#22d3ee', letterSpacing: '0.06em',
                 padding: '1px 5px', borderRadius: 3, border: '1px solid rgba(34,211,238,0.3)',
                 background: 'rgba(34,211,238,0.08)' }}>{schedWeekly}</span>
@@ -504,7 +505,7 @@ function TaskRow({ task, onCheck, onDelete, onEdit, onPomo }: {
 
       {hov && !editing && (
         <div style={{ display: 'flex', gap: 3, flexShrink: 0, alignItems: 'center' }}>
-          <button onClick={onPomo} title="Start Pomodoro" style={{
+          <button onClick={onPomo} title={tr('Start Pomodoro', 'Запустить Помодоро')} style={{
             fontSize: 14, padding: '2px 4px', color: 'rgba(239,68,68,0.35)',
             transition: 'color 0.12s' }}
             onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
@@ -586,7 +587,7 @@ function TaskModal({ categories, initialTask, initialText = '', initialType = 't
         <div style={{ display: 'flex', gap: 5 }}>
           {(['habit', 'daily', 'todo'] as TaskType[]).map(t => (
             <button key={t} onClick={() => setTaskType(t)} style={chip(taskType === t, NEON)}>
-              {t === 'habit' ? 'Habit' : t === 'daily' ? 'Daily' : 'To-Do'}
+              {t === 'habit' ? tr('Habit', 'Привычка') : t === 'daily' ? tr('Daily', 'Ежедневная') : tr('To-Do', 'Задача')}
             </button>
           ))}
         </div>
@@ -594,7 +595,7 @@ function TaskModal({ categories, initialTask, initialText = '', initialType = 't
         {/* Title */}
         <input ref={ref} value={text} onChange={e => setText(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') onCancel() }}
-          placeholder={taskType === 'habit' ? 'Habit name...' : taskType === 'daily' ? 'Daily task...' : 'Task description...'}
+          placeholder={taskType === 'habit' ? tr('Habit name...', 'Название привычки...') : taskType === 'daily' ? tr('Daily task...', 'Ежедневная задача...') : tr('Task description...', 'Описание задачи...')}
           style={inp}
           onFocus={e => e.target.style.borderColor = `${NEON}45`}
           onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
@@ -605,17 +606,17 @@ function TaskModal({ categories, initialTask, initialText = '', initialType = 't
           <select value={category} onChange={e => e.target.value === '__new__' ? setAddingCat(true) : setCategory(e.target.value)}
             style={{ ...inp, appearance: 'none' }}>
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
-            <option value="__new__">+ New category</option>
+            <option value="__new__">{tr('+ New category', '+ Новая категория')}</option>
           </select>
         ) : (
           <div style={{ display: 'flex', gap: 6 }}>
-            <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder="Category name..."
+            <input value={newCat} onChange={e => setNewCat(e.target.value)} placeholder={tr('Category name...', 'Название категории...')}
               style={{ ...inp, flex: 1 }}
               onKeyDown={e => {
                 if (e.key === 'Enter' && newCat.trim()) { onNewCategory(newCat.trim()); setCategory(newCat.trim()); setAddingCat(false); setNewCat('') }
               }} />
             <button onClick={() => { if (newCat.trim()) { onNewCategory(newCat.trim()); setCategory(newCat.trim()) }; setAddingCat(false); setNewCat('') }}
-              style={{ ...chip(true, '#39ff14'), padding: '0 10px', flexShrink: 0, border: '1px solid rgba(57,255,20,0.25)' }}>ADD</button>
+              style={{ ...chip(true, '#39ff14'), padding: '0 10px', flexShrink: 0, border: '1px solid rgba(57,255,20,0.25)' }}>{tr('ADD', 'ДОБАВ.')}</button>
           </div>
         )}
 
@@ -623,13 +624,13 @@ function TaskModal({ categories, initialTask, initialText = '', initialType = 't
         {taskType === 'habit' && (
           <>
             <div style={{ display: 'flex', gap: 5 }}>
-              <button onClick={() => setDirection('positive')} style={chip(direction === 'positive', '#22c55e')}>➕ Build</button>
-              <button onClick={() => setDirection('negative')} style={chip(direction === 'negative', '#ef4444')}>➖ Break</button>
+              <button onClick={() => setDirection('positive')} style={chip(direction === 'positive', '#22c55e')}>➕ {tr('Build', 'Развивать')}</button>
+              <button onClick={() => setDirection('negative')} style={chip(direction === 'negative', '#ef4444')}>➖ {tr('Break', 'Бросать')}</button>
             </div>
             {/* Dose target */}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: 'rgba(148,163,184,0.4)' }}>Daily target</span>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: 'rgba(148,163,184,0.4)' }}>{tr('Daily target', 'Дневная цель')}</span>
                 <button onClick={() => setTarget(Math.max(1, target - 1))}
                   style={{ ...chip(false, NEON), padding: '3px 8px' }}>−</button>
                 <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-md)', color: NEON, fontWeight: 700, minWidth: 24, textAlign: 'center' }}>
@@ -638,7 +639,7 @@ function TaskModal({ categories, initialTask, initialText = '', initialType = 't
                 <button onClick={() => setTarget(target + 1)}
                   style={{ ...chip(false, NEON), padding: '3px 8px' }}>+</button>
               </div>
-              <input value={unit} onChange={e => setUnit(e.target.value)} placeholder="unit (glasses, min, km…)"
+              <input value={unit} onChange={e => setUnit(e.target.value)} placeholder={tr('unit (glasses, min, km…)', 'единица (стаканы, мин, км…)')}
                 style={{ ...inp, flex: 1, fontSize: 'var(--fs-xs)' }} />
             </div>
           </>
@@ -648,8 +649,8 @@ function TaskModal({ categories, initialTask, initialText = '', initialType = 't
         {taskType === 'daily' && (
           <>
             <div style={{ display: 'flex', gap: 5 }}>
-              <button onClick={() => setSchedType('everyday')} style={chip(schedType === 'everyday', NEON)}>∞ Every day</button>
-              <button onClick={() => setSchedType('weekly')}   style={chip(schedType === 'weekly', NEON)}>↻ Specific days</button>
+              <button onClick={() => setSchedType('everyday')} style={chip(schedType === 'everyday', NEON)}>∞ {tr('Every day', 'Каждый день')}</button>
+              <button onClick={() => setSchedType('weekly')}   style={chip(schedType === 'weekly', NEON)}>↻ {tr('Specific days', 'По дням')}</button>
             </div>
             {schedType === 'weekly' && (
               <div style={{ display: 'flex', gap: 3 }}>
@@ -676,11 +677,11 @@ function TaskModal({ categories, initialTask, initialText = '', initialType = 't
             <div style={{ display: 'flex', gap: 5 }}>
               {(['trivial', 'easy', 'medium', 'hard'] as Priority[]).map(p => {
                 const pc = { trivial: '#6b7280', easy: '#22c55e', medium: '#f59e0b', hard: '#ef4444' }[p]
-                return <button key={p} onClick={() => setPriority(p)} style={chip(priority === p, pc)}>{p}</button>
+                return <button key={p} onClick={() => setPriority(p)} style={chip(priority === p, pc)}>{tr(p, ({ trivial: 'тривиальная', easy: 'лёгкая', medium: 'средняя', hard: 'сложная' } as const)[p])}</button>
               })}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: 'rgba(148,163,184,0.4)', flexShrink: 0 }}>Due date</span>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: 'rgba(148,163,184,0.4)', flexShrink: 0 }}>{tr('Due date', 'Срок')}</span>
               <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                 style={{ ...inp, flex: 1 }} />
             </div>
@@ -697,12 +698,12 @@ function TaskModal({ categories, initialTask, initialText = '', initialType = 't
           }}
             onMouseEnter={e => e.currentTarget.style.background = `${NEON}20`}
             onMouseLeave={e => e.currentTarget.style.background = `${NEON}12`}
-          >{isEdit ? 'UPDATE' : 'DEPLOY'}</button>
+          >{isEdit ? tr('UPDATE', 'ОБНОВИТЬ') : tr('DEPLOY', 'СОЗДАТЬ')}</button>
           <button onClick={onCancel} style={{
             padding: '9px 16px', borderRadius: 5, fontFamily: 'var(--font)',
             fontSize: 'var(--fs-sm)', color: 'rgba(148,163,184,0.35)',
             border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer',
-          }}>ABORT</button>
+          }}>{tr('ABORT', 'ОТМЕНА')}</button>
         </div>
       </div>
     </div>
@@ -918,9 +919,9 @@ export default function Scrap7() {
   }
 
   const TABS: { id: TabKey; label: string }[] = [
-    { id: 'habit', label: 'Habits'  },
-    { id: 'daily', label: 'Dailies' },
-    { id: 'todo',  label: "To-Do's" },
+    { id: 'habit', label: tr('Habits', 'Привычки')  },
+    { id: 'daily', label: tr('Dailies', 'Ежедневные') },
+    { id: 'todo',  label: tr("To-Do's", 'Задачи') },
   ]
 
   const shownTasks  = tabTasks(tab)
@@ -1004,11 +1005,11 @@ export default function Scrap7() {
             <div style={{ padding: '28px 16px', textAlign: 'center' }}>
               <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-md)',
                 color: 'rgba(148,163,184,0.22)', marginBottom: 6 }}>
-                {tab === 'habit' ? 'No habits tracked' : tab === 'daily' ? 'No dailies today' : 'Queue empty'}
+                {tab === 'habit' ? tr('No habits tracked', 'Нет привычек') : tab === 'daily' ? tr('No dailies today', 'Нет задач на сегодня') : tr('Queue empty', 'Очередь пуста')}
               </p>
               <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
                 color: `${NEON}28`, letterSpacing: '0.06em' }}>
-                Talk to SCRAP-7 or press + ↑
+                {tr('Talk to SCRAP-7 or press + ↑', 'Напишите SCRAP-7 или нажмите + ↑')}
               </p>
             </div>
           )}
@@ -1038,7 +1039,7 @@ export default function Scrap7() {
             <>
               <div style={{ padding: '5px 14px 3px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
-                  color: 'rgba(148,163,184,0.2)', letterSpacing: '0.12em' }}>DONE</span>
+                  color: 'rgba(148,163,184,0.2)', letterSpacing: '0.12em' }}>{tr('DONE', 'ГОТОВО')}</span>
                 <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.03)' }} />
               </div>
               {tab === 'habit' && doneTasks.map(t => (
@@ -1109,7 +1110,7 @@ export default function Scrap7() {
         background: 'rgba(0,0,0,0.2)', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
         <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleSend() }}
-          placeholder={thinking ? 'Processing...' : 'Talk to SCRAP-7...'}
+          placeholder={thinking ? tr('Processing...', 'Обработка...') : tr('Talk to SCRAP-7...', 'Напишите SCRAP-7...')}
           disabled={thinking}
           style={{
             flex: 1, padding: '8px 12px', borderRadius: 6,

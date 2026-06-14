@@ -15,6 +15,7 @@ import {
   syncPlanItemToScrap7,
 } from './store'
 import { aiJson, loadSettings, modelForTask, type AiMessage } from '../../settings'
+import { t as tr } from '../../i18n'
 
 const LOG_NEON  = '#c084fc'
 const LOG_DIM   = 'rgba(192,132,252,0.1)'
@@ -159,7 +160,7 @@ function TaskRow({ task, onToggle, onDelete, onSync }: {
 
       {/* S-7 synced badge */}
       {task.scrap7Id && (
-        <span title="Synced to SCRAP-7" style={{
+        <span title={tr('Synced to SCRAP-7', 'Синхронизировано со SCRAP-7')} style={{
           fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800,
           color: S7_NEON, letterSpacing: '0.1em', flexShrink: 0,
           padding: '1px 5px', borderRadius: 3,
@@ -169,7 +170,7 @@ function TaskRow({ task, onToggle, onDelete, onSync }: {
 
       {/* Sync button (hover, daily/habit only, not yet synced) */}
       {hov && canSync && (
-        <button onClick={e => { e.stopPropagation(); onSync() }} title="Send to SCRAP-7" style={{
+        <button onClick={e => { e.stopPropagation(); onSync() }} title={tr('Send to SCRAP-7', 'Отправить в SCRAP-7')} style={{
           fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800,
           color: S7_NEON, letterSpacing: '0.08em', flexShrink: 0,
           padding: '2px 6px', borderRadius: 3, cursor: 'pointer',
@@ -261,7 +262,7 @@ function AnalysisPanel({ result, dream, state, onChange, onClose }: {
             <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
               color: LOG_NEON, letterSpacing: '0.2em' }}>L.O.G ANALYSIS</p>
             <p style={{ fontFamily: 'var(--font)', fontSize: 7,
-              color: `${LOG_NEON}50`, letterSpacing: '0.1em' }}>TRAJECTORY COMPUTED</p>
+              color: `${LOG_NEON}50`, letterSpacing: '0.1em' }}>{tr('TRAJECTORY COMPUTED', 'ТРАЕКТОРИЯ ГОТОВА')}</p>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -275,7 +276,7 @@ function AnalysisPanel({ result, dream, state, onChange, onClose }: {
             }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(192,132,252,0.18)'}
               onMouseLeave={e => e.currentTarget.style.background = LOG_DIM}
-            >DEPLOY ALL</button>
+            >{tr('DEPLOY ALL', 'СОЗДАТЬ ВСЁ')}</button>
           )}
           <button onClick={onClose} style={{ fontSize: 13, color: 'rgba(192,132,252,0.3)', cursor: 'pointer',
             transition: 'color 0.12s' }}
@@ -347,7 +348,7 @@ function AnalysisPanel({ result, dream, state, onChange, onClose }: {
                       <button
                         onClick={() => addTask(m, t)}
                         disabled={isDone}
-                        title={isDone ? 'Added' : toScrap ? 'Add to dream & sync to SCRAP-7' : 'Add to dream'}
+                        title={isDone ? tr('Added','Добавлено') : toScrap ? tr('Add to dream & sync to SCRAP-7','В мечту и в SCRAP-7') : tr('Add to dream','Добавить в мечту')}
                         style={{
                           width: 18, height: 18, borderRadius: 4, flexShrink: 0, cursor: isDone ? 'default' : 'pointer',
                           border: `1.5px solid ${isDone ? `${LOG_NEON}30` : `${LOG_NEON}60`}`,
@@ -500,19 +501,19 @@ function MissionBlock({ mission, dream, state, onChange }: {
         {hov && (
           <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
             {!completed && (
-              <button title="Mark mission complete"
+              <button title={tr('Mark mission complete', 'Отметить миссию выполненной')}
                 onClick={() => onChange(completeMission(state, dream.id, mission.id))}
                 style={{ fontSize: 11, color: 'rgba(245,158,11,0.35)', transition: 'color 0.12s' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#f59e0b'}
                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(245,158,11,0.35)'}
               >✦</button>
             )}
-            <button onClick={() => setAddingTask(v => !v)} title="Add task"
+            <button onClick={() => setAddingTask(v => !v)} title={tr('Add task', 'Добавить задачу')}
               style={{ fontSize: 13, color: `${LOG_NEON}50`, transition: 'color 0.12s' }}
               onMouseEnter={e => e.currentTarget.style.color = LOG_NEON}
               onMouseLeave={e => e.currentTarget.style.color = `${LOG_NEON}50`}
             >+</button>
-            <button onClick={() => onChange(deleteMission(state, dream.id, mission.id))} title="Delete mission"
+            <button onClick={() => onChange(deleteMission(state, dream.id, mission.id))} title={tr('Delete mission', 'Удалить миссию')}
               style={{ fontSize: 13, color: 'rgba(255,0,51,0.2)', transition: 'color 0.12s' }}
               onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,0,51,0.2)'}
@@ -551,13 +552,13 @@ function MissionBlock({ mission, dream, state, onChange }: {
           {/* Type selector */}
           <select value={taskType} onChange={e => setTaskType(e.target.value as LogTaskType)}
             style={{ ...inp, padding: '4px 6px', width: 62, flexShrink: 0, appearance: 'none', cursor: 'pointer' }}>
-            <option value="todo">todo</option>
-            <option value="daily">daily</option>
-            <option value="habit">habit</option>
+            <option value="todo">{tr('todo','задача')}</option>
+            <option value="daily">{tr('daily','ежедневная')}</option>
+            <option value="habit">{tr('habit','привычка')}</option>
           </select>
           <input ref={taskRef} value={taskText} onChange={e => setTaskText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') saveTask(); if (e.key === 'Escape') setAddingTask(false) }}
-            placeholder="Task description..."
+            placeholder={tr('Task description...', 'Описание задачи...')}
             style={{ ...inp, flex: 1 }}
             onFocus={e => e.target.style.borderColor = `${LOG_NEON}50`}
             onBlur={e => e.target.style.borderColor = 'rgba(192,132,252,0.15)'}
@@ -623,7 +624,7 @@ function MissionBlock({ mission, dream, state, onChange }: {
                     onChange(addSignal(state, dream.id, mission.id, signalText.trim()))
                     setSignalText('')
                   }}}
-                  placeholder="Transmit signal..."
+                  placeholder={tr('Transmit signal...', 'Передать сигнал...')}
                   style={{ ...inp, flex: 1 }}
                   onFocus={e => e.target.style.borderColor = `${LOG_NEON}50`}
                   onBlur={e => e.target.style.borderColor = 'rgba(192,132,252,0.15)'}
@@ -670,7 +671,7 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
       }
       onChange(setDreamAnalysis(state, dream.id, result))   // persisted — survives tab switch
     } catch (e) {
-      setAnalyzeError(e instanceof Error ? e.message : 'Analysis failed. Check AI settings.')
+      setAnalyzeError(e instanceof Error ? e.message : tr('Analysis failed. Check AI settings.', 'Анализ не удался. Проверьте настройки ИИ.'))
     }
     setAnalyzing(false)
   }
@@ -701,7 +702,7 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
             flexShrink: 0, paddingTop: 1, userSelect: 'none' }}
             onClick={e => e.stopPropagation()}>
-            <button onClick={() => onMove(-1)} disabled={rank === 1} title="Raise priority"
+            <button onClick={() => onMove(-1)} disabled={rank === 1} title={tr('Raise priority', 'Повысить приоритет')}
               style={{ fontSize: 9, lineHeight: 1, padding: '1px 3px', cursor: rank === 1 ? 'default' : 'pointer',
                 color: rank === 1 ? 'rgba(192,132,252,0.15)' : `${LOG_NEON}70`, transition: 'color 0.12s' }}
               onMouseEnter={e => { if (rank !== 1) e.currentTarget.style.color = LOG_NEON }}
@@ -710,7 +711,7 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
             <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
               color: rank === 1 ? '#ff6b00' : LOG_NEON, lineHeight: 1,
               textShadow: rank === 1 ? '0 0 6px #ff6b0080' : 'none' }}>#{rank}</span>
-            <button onClick={() => onMove(1)} disabled={rank === total} title="Lower priority"
+            <button onClick={() => onMove(1)} disabled={rank === total} title={tr('Lower priority', 'Понизить приоритет')}
               style={{ fontSize: 9, lineHeight: 1, padding: '1px 3px', cursor: rank === total ? 'default' : 'pointer',
                 color: rank === total ? 'rgba(192,132,252,0.15)' : `${LOG_NEON}70`, transition: 'color 0.12s' }}
               onMouseEnter={e => { if (rank !== total) e.currentTarget.style.color = LOG_NEON }}
@@ -763,18 +764,18 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
                 textShadow: `0 0 10px ${progress === 100 ? '#f59e0b' : LOG_NEON}60`,
                 lineHeight: 1 }}>{progress}%</p>
               <p style={{ fontFamily: 'var(--font)', fontSize: 6,
-                color: `${LOG_NEON}40`, letterSpacing: '0.1em', marginTop: 1 }}>TRAJ.</p>
+                color: `${LOG_NEON}40`, letterSpacing: '0.1em', marginTop: 1 }}>{tr('TRAJ.', 'ТРАЕКТ.')}</p>
             </div>
 
             {hovHeader && (
               <div style={{ display: 'flex', gap: 3 }}>
-                <button onClick={e => { e.stopPropagation(); onEdit() }} title="Edit dream"
+                <button onClick={e => { e.stopPropagation(); onEdit() }} title={tr('Edit dream', 'Изменить мечту')}
                   style={{ fontSize: 12, color: `${LOG_NEON}45`, padding: '2px 4px', transition: 'color 0.12s' }}
                   onMouseEnter={e => e.currentTarget.style.color = LOG_NEON}
                   onMouseLeave={e => e.currentTarget.style.color = `${LOG_NEON}45`}
                 >✎</button>
                 <button onClick={e => { e.stopPropagation(); onChange(deleteDream(state, dream.id)) }}
-                  title="Delete dream"
+                  title={tr('Delete dream', 'Удалить мечту')}
                   style={{ fontSize: 13, color: 'rgba(255,0,51,0.2)', padding: '2px 4px', transition: 'color 0.12s' }}
                   onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
                   onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,0,51,0.2)'}
@@ -830,7 +831,7 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
               <span style={{ fontSize: 14, filter: `drop-shadow(0 0 4px ${LOG_NEON})` }}>🦫</span>
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
-                  color: LOG_NEON, letterSpacing: '0.15em' }}>ANALYZE WITH L.O.G</p>
+                  color: LOG_NEON, letterSpacing: '0.15em' }}>{tr('ANALYZE WITH L.O.G', 'АНАЛИЗ С L.O.G')}</p>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 7,
                   color: `${LOG_NEON}50`, letterSpacing: '0.08em', marginTop: 1 }}>
                   AI will plot missions, tasks, dailies & habits
@@ -849,9 +850,9 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
                 filter: `drop-shadow(0 0 6px ${LOG_NEON})` }}>🦫</span>
               <div>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
-                  color: LOG_NEON, letterSpacing: '0.15em' }}>COMPUTING TRAJECTORY...</p>
+                  color: LOG_NEON, letterSpacing: '0.15em' }}>{tr('COMPUTING TRAJECTORY...', 'ВЫЧИСЛЯЮ ТРАЕКТОРИЮ...')}</p>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${LOG_NEON}45`,
-                  letterSpacing: '0.08em', marginTop: 1 }}>Connecting all the dots</p>
+                  letterSpacing: '0.08em', marginTop: 1 }}>{tr('Connecting all the dots', 'Соединяю все точки')}</p>
               </div>
               <div style={{ display: 'flex', gap: 3, marginLeft: 'auto' }}>
                 {[0,1,2].map(i => (
@@ -971,16 +972,16 @@ function MissionModal({ initial, onSave, onCancel }: {
       }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 700,
           color: LOG_NEON, letterSpacing: '0.2em', marginBottom: 2 }}>
-          {initial ? 'UPDATE MISSION' : 'DEPLOY MISSION'}
+          {initial ? tr('UPDATE MISSION','ОБНОВИТЬ МИССИЮ') : tr('DEPLOY MISSION','СОЗДАТЬ МИССИЮ')}
         </p>
         <input ref={ref} value={title} onChange={e => setTitle(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && title.trim()) onSave({ title: title.trim(), description: desc.trim(), priority, deadline: deadline || null }); if (e.key === 'Escape') onCancel() }}
-          placeholder="Mission objective..." style={inp}
+          placeholder={tr('Mission objective...', 'Цель миссии...')} style={inp}
           onFocus={e => e.target.style.borderColor = `${LOG_NEON}50`}
           onBlur={e => e.target.style.borderColor = 'rgba(192,132,252,0.15)'}
         />
         <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={2}
-          placeholder="Briefing / description..."
+          placeholder={tr('Briefing / description...', 'Бриф / описание...')}
           style={{ ...inp, resize: 'none' }}
           onFocus={e => e.target.style.borderColor = `${LOG_NEON}50`}
           onBlur={e => e.target.style.borderColor = 'rgba(192,132,252,0.15)'}
@@ -994,7 +995,7 @@ function MissionModal({ initial, onSave, onCancel }: {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
-            color: 'rgba(192,132,252,0.45)', flexShrink: 0 }}>DEADLINE</span>
+            color: 'rgba(192,132,252,0.45)', flexShrink: 0 }}>{tr('DEADLINE', 'СРОК')}</span>
           <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
             style={{ ...inp }} />
         </div>
@@ -1004,7 +1005,7 @@ function MissionModal({ initial, onSave, onCancel }: {
             fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800,
             letterSpacing: '0.12em', color: LOG_NEON,
             background: LOG_DIM, border: `1px solid ${LOG_NEON}40`,
-          }}>LOCK TARGET</button>
+          }}>{tr('LOCK TARGET', 'ЗАФИКСИРОВАТЬ ЦЕЛЬ')}</button>
           <button onClick={onCancel} style={{
             padding: '9px 16px', borderRadius: 5, cursor: 'pointer',
             fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
@@ -1050,16 +1051,16 @@ function DreamModal({ categories, initial, onSave, onCancel }: {
       }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 700,
           color: LOG_NEON, letterSpacing: '0.2em', marginBottom: 2 }}>
-          {initial ? 'UPDATE DREAM' : '✧ NEW DREAM'}
+          {initial ? tr('UPDATE DREAM','ОБНОВИТЬ МЕЧТУ') : tr('✧ NEW DREAM','✧ НОВАЯ МЕЧТА')}
         </p>
         <input ref={ref} value={title} onChange={e => setTitle(e.target.value)}
           onKeyDown={e => { if (e.key === 'Escape') onCancel() }}
-          placeholder="Your dream, vision, purpose..." style={inp}
+          placeholder={tr('Your dream, vision, purpose...', 'Ваша мечта, видение, цель...')} style={inp}
           onFocus={e => e.target.style.borderColor = `${LOG_NEON}55`}
           onBlur={e => e.target.style.borderColor = 'rgba(192,132,252,0.15)'}
         />
         <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3}
-          placeholder="Why does this matter? Paint the picture..."
+          placeholder={tr('Why does this matter? Paint the picture...', 'Почему это важно? Опишите картину...')}
           style={{ ...inp, resize: 'none' }}
           onFocus={e => e.target.style.borderColor = `${LOG_NEON}55`}
           onBlur={e => e.target.style.borderColor = 'rgba(192,132,252,0.15)'}
@@ -1074,7 +1075,7 @@ function DreamModal({ categories, initial, onSave, onCancel }: {
             fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800,
             letterSpacing: '0.12em', color: LOG_NEON,
             background: LOG_DIM, border: `1px solid ${LOG_NEON}40`,
-          }}>PLANT THE STAR</button>
+          }}>{tr('PLANT THE STAR', 'ЗАЖЕЧЬ ЗВЕЗДУ')}</button>
           <button onClick={onCancel} style={{
             padding: '9px 16px', borderRadius: 5, cursor: 'pointer',
             fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
@@ -1120,7 +1121,7 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
         <span style={{ fontSize: 13, filter: `drop-shadow(0 0 6px ${LOG_NEON})` }}>⟡</span>
         <div style={{ flex: 1 }}>
           <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
-            color: LOG_NEON, letterSpacing: '0.2em' }}>CONSTELLATION SYNTHESIS</p>
+            color: LOG_NEON, letterSpacing: '0.2em' }}>{tr('CONSTELLATION SYNTHESIS', 'СИНТЕЗ СОЗВЕЗДИЯ')}</p>
           <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${LOG_NEON}50`,
             letterSpacing: '0.1em' }}>{c.plan.length} UNIFIED ACTIONS · {c.links.length} LINKS</p>
         </div>
@@ -1134,7 +1135,7 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
             onMouseLeave={e => e.currentTarget.style.background = `${S7_NEON}0c`}
           >→ DEPLOY ALL</button>
         )}
-        <button onClick={onDismiss} title="Dismiss synthesis"
+        <button onClick={onDismiss} title={tr('Dismiss synthesis', 'Скрыть синтез')}
           style={{ fontSize: 13, color: 'rgba(192,132,252,0.3)', cursor: 'pointer', transition: 'color 0.12s' }}
           onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
           onMouseLeave={e => e.currentTarget.style.color = 'rgba(192,132,252,0.3)'}
@@ -1154,7 +1155,7 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
         <div style={{ padding: '8px 12px', borderBottom: `1px solid ${LOG_NEON}10`,
           display: 'flex', flexDirection: 'column', gap: 6 }}>
           <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: `${LOG_NEON}45`,
-            letterSpacing: '0.18em' }}>INTERCONNECTIONS</p>
+            letterSpacing: '0.18em' }}>{tr('INTERCONNECTIONS', 'ВЗАИМОСВЯЗИ')}</p>
           {c.links.map((l, i) => (
             <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
               <span style={{ fontSize: 9, color: LOG_NEON, lineHeight: 1.5, flexShrink: 0 }}>◇</span>
@@ -1312,9 +1313,9 @@ export default function Log() {
         </div>
         <div style={{ flex: 1 }} />
         {[
-          { v: String(state.dreams.length), l: 'DREAMS',   c: LOG_NEON },
-          { v: String(activeMissions),      l: 'ACTIVE',   c: LOG_NEON },
-          { v: `${overallPct}%`,            l: 'PROGRESS', c: 'rgba(192,132,252,0.5)' },
+          { v: String(state.dreams.length), l: tr('DREAMS', 'МЕЧТЫ'),   c: LOG_NEON },
+          { v: String(activeMissions),      l: tr('ACTIVE', 'АКТИВНЫЕ'),   c: LOG_NEON },
+          { v: `${overallPct}%`,            l: tr('PROGRESS', 'ПРОГРЕСС'), c: 'rgba(192,132,252,0.5)' },
         ].map(({ v, l, c }) => (
           <div key={l} style={{ textAlign: 'right' }}>
             <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 900, color: c, lineHeight: 1 }}>{v}</p>
@@ -1322,7 +1323,7 @@ export default function Log() {
           </div>
         ))}
         {state.dreams.length >= 2 && (
-          <button onClick={synthesize} disabled={synthesizing} title="Analyze all dreams together"
+          <button onClick={synthesize} disabled={synthesizing} title={tr('Analyze all dreams together', 'Проанализировать все мечты вместе')}
             style={{
               height: 28, padding: '0 10px', borderRadius: 7, cursor: synthesizing ? 'default' : 'pointer',
               fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.1em',
@@ -1334,7 +1335,7 @@ export default function Log() {
             onMouseLeave={e => e.currentTarget.style.background = LOG_DIM}
           >
             <span style={{ animation: synthesizing ? 'pulse 1.2s ease-in-out infinite' : 'none' }}>⟡</span>
-            {synthesizing ? 'SYNTHESIZING' : 'SYNTHESIZE'}
+            {synthesizing ? tr('SYNTHESIZING','СИНТЕЗ...') : tr('SYNTHESIZE','СИНТЕЗ')}
           </button>
         )}
         <button onClick={() => setDreamModal('new')} style={{
@@ -1382,18 +1383,18 @@ export default function Log() {
             <div style={{ fontSize: 28, marginBottom: 12, filter: `drop-shadow(0 0 12px ${LOG_NEON})` }}>✧</div>
             <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-md)',
               color: 'rgba(192,132,252,0.25)', marginBottom: 6, letterSpacing: '0.05em' }}>
-              THE CONSTELLATION IS EMPTY
+              {tr('THE CONSTELLATION IS EMPTY', 'СОЗВЕЗДИЕ ПУСТО')}
             </p>
             <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
               color: `${LOG_NEON}22`, letterSpacing: '0.1em', lineHeight: 1.8 }}>
-              Plant your first star —<br/>a Dream you want to make real.
+              {tr('Plant your first star —', 'Зажгите первую звезду —')}<br/>{tr('a Dream you want to make real.', 'мечту, которую хотите осуществить.')}
             </p>
             <button onClick={() => setDreamModal('new')} style={{
               marginTop: 18, padding: '8px 22px', borderRadius: 7, cursor: 'pointer',
               fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700,
               letterSpacing: '0.12em', color: LOG_NEON,
               border: `1px solid ${LOG_NEON}40`, background: LOG_DIM, transition: 'background 0.15s',
-            }}>✧ PLANT FIRST STAR</button>
+            }}>{tr('✧ PLANT FIRST STAR', '✧ ЗАЖЕЧЬ ПЕРВУЮ ЗВЕЗДУ')}</button>
           </div>
         )}
 
