@@ -716,13 +716,13 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
         zIndex: isNow ? 6 : 1,
       }}>
       {isCommit ? (
-        /* Read-only status — completion is owned by SCRAP-7, shown here for tracking only */
-        <span title={b.done ? 'Done (tracked in SCRAP-7)' : 'Open — mark it in SCRAP-7'} style={{
-          width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+        /* Read-only status DOT (not a checkbox) — completion is owned by SCRAP-7; shown here just for tracking */
+        <span title={b.done ? 'Done (marked in SCRAP-7)' : 'Still open — mark it in SCRAP-7'} style={{
+          width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
           border: `1.5px solid ${b.done ? color : `${color}55`}`,
-          background: b.done ? `${color}22` : 'transparent',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color,
-        }}>{b.done ? '✓' : ''}</span>
+          background: b.done ? color : 'transparent',
+          boxShadow: b.done ? `0 0 6px ${color}` : 'none',
+        }} />
       ) : (
         <span style={{ fontSize: 12, flexShrink: 0, opacity: isFree ? 0.6 : 1 }}>{BLOCK_ICON[b.kind]}</span>
       )}
