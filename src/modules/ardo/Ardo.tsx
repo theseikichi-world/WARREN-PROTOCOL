@@ -15,9 +15,16 @@ import {
 } from './store'
 import { SPRINT_STAGE_LABELS } from './types'
 import ArticulationWorkout from './ArticulationWorkout'
+import { t as tr } from '../../i18n'
 
 const NEON    = '#00e4a0'
 const NEON_DIM = 'rgba(0,228,160,0.1)'
+
+// Display-only localisation — enum keys and stored values stay English.
+const typeLabel  = (t: TextType) => tr(TEXT_TYPE_LABEL[t], ({ poem: 'СТИХ', monologue: 'МОНОЛОГ', role: 'РОЛЬ', song: 'ПЕСНЯ', prose: 'ПРОЗА' } as Record<TextType, string>)[t])
+const scoreLabel = (s: number, en: string) => tr(en, ({ 1: 'ЗАБЫЛ', 2: 'ЧАСТИЧНО', 3: 'ПОМНЮ', 4: 'АВТО' } as Record<number, string>)[s] ?? en)
+const stageLabelRu = (en: string) => tr(en, ({ 'LEARN': 'УЧИТЬ', '20 MIN': '20 МИН', '1 HOUR': '1 ЧАС', '4 HOURS': '4 ЧАСА', '8 HOURS': '8 ЧАСОВ', 'DAY 2': 'ДЕНЬ 2', 'DAY 4': 'ДЕНЬ 4', 'DAY 7': 'ДЕНЬ 7' } as Record<string, string>)[en] ?? en)
+const statusLabel = (st: string) => tr(st, ({ new: 'новый', learning: 'учится', reviewing: 'повтор', mastered: 'освоен' } as Record<string, string>)[st] ?? st)
 
 // ─── TTS helper ───────────────────────────────────────────────────────────────
 function speak(text: string, lang: Language) {
@@ -85,7 +92,7 @@ function MemoryCurve({ text, cards }: { text: ArdoText; cards: ReviewCard[] }) {
         borderTop: `1px solid ${NEON}08` }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
           color: `${NEON}25`, letterSpacing: '0.1em' }}>
-          Complete a session to see the memory curve
+          {tr('Complete a session to see the memory curve', 'Завершите сессию, чтобы увидеть кривую памяти')}
         </p>
       </div>
     )
@@ -163,7 +170,7 @@ function MemoryCurve({ text, cards }: { text: ArdoText; cards: ReviewCard[] }) {
             color: mainColor, lineHeight: 1,
             textShadow: `0 0 12px ${mainColor}70` }}>{retPct}%</p>
           <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${mainColor}60`,
-            letterSpacing: '0.12em', marginTop: 2 }}>RETENTION</p>
+            letterSpacing: '0.12em', marginTop: 2 }}>{tr('RETENTION', 'УДЕРЖАНИЕ')}</p>
         </div>
 
         {/* SVG curve */}
@@ -227,7 +234,7 @@ function MemoryCurve({ text, cards }: { text: ArdoText; cards: ReviewCard[] }) {
       <div>
         <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: 'rgba(148,163,184,0.3)',
           letterSpacing: '0.14em', marginBottom: 5 }}>
-          CHUNKS — {textCards.length} total
+          {tr('CHUNKS —', 'ФРАГМЕНТЫ —')} {textCards.length} {tr('total', 'всего')}
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
           {textCards.map((c, i) => {
@@ -236,7 +243,7 @@ function MemoryCurve({ text, cards }: { text: ArdoText; cards: ReviewCard[] }) {
             const pct   = Math.round(r * 100)
             return (
               <div key={c.chunkId}
-                title={`Chunk ${i + 1}: ${r === 0 ? 'not reviewed' : `${pct}% retention`}`}
+                title={`${tr('Chunk', 'Фрагмент')} ${i + 1}: ${r === 0 ? tr('not reviewed', 'не повторялся') : `${pct}% ${tr('retention', 'удержание')}`}`}
                 style={{
                   width: 12, height: 12, borderRadius: 2,
                   background: color,
@@ -255,7 +262,7 @@ function MemoryCurve({ text, cards }: { text: ArdoText; cards: ReviewCard[] }) {
             { color: '#eab308', label: '50–75%' },
             { color: '#ff6b00', label: '25–50%' },
             { color: '#ff0033', label: '<25%'  },
-            { color: 'rgba(148,163,184,0.2)', label: 'new' },
+            { color: 'rgba(148,163,184,0.2)', label: tr('new', 'новый') },
           ].map(({ color, label }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <div style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }}/>
@@ -270,19 +277,19 @@ function MemoryCurve({ text, cards }: { text: ArdoText; cards: ReviewCard[] }) {
           {weakCount > 0 && (
             <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#ff6b00',
               letterSpacing: '0.08em' }}>
-              ⚠ {weakCount} chunk{weakCount !== 1 ? 's' : ''} below 50% — drill soon
+              ⚠ {weakCount} {tr('chunks below 50% — drill soon', 'фрагм. ниже 50% — скоро повторить')}
             </p>
           )}
           {weakCount === 0 && avgRet >= 0.75 && (
             <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#22c55e',
               letterSpacing: '0.08em' }}>
-              ✦ Strong memory — next review in {Math.max(0, Math.round(nextReviewInDays))}d
+              ✦ {tr('Strong memory — next review in', 'Крепкая память — повтор через')} {Math.max(0, Math.round(nextReviewInDays))}{tr('d', 'д')}
             </p>
           )}
           {weakCount === 0 && avgRet >= 0.5 && avgRet < 0.75 && (
             <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#eab308',
               letterSpacing: '0.08em' }}>
-              ◈ Holding — schedule a recall to strengthen
+              ◈ {tr('Holding — schedule a recall to strengthen', 'Держится — назначьте повтор для закрепления')}
             </p>
           )}
         </div>
@@ -385,7 +392,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
           transition: 'color 0.12s' }}
           onMouseEnter={e => e.currentTarget.style.color = KA}
           onMouseLeave={e => e.currentTarget.style.color = `${KA}45`}
-        >← BACK</button>
+        >← {tr('BACK', 'НАЗАД')}</button>
 
         <span style={{ fontSize: 28, filter: `drop-shadow(0 0 14px ${KA})` }}>🎵</span>
 
@@ -396,12 +403,12 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
             letterSpacing: '0.1em', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis',
             whiteSpace: 'nowrap', maxWidth: 220 }}>{text.title}</p>
           <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${KA}35`,
-            letterSpacing: '0.08em', marginTop: 2 }}>{lines.length} lines</p>
+            letterSpacing: '0.08em', marginTop: 2 }}>{lines.length} {tr('lines', 'строк')}</p>
         </div>
 
         <div style={{ width: '100%', maxWidth: 260, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${KA}50`,
-            letterSpacing: '0.15em', textAlign: 'center' }}>ADVANCE MODE</p>
+            letterSpacing: '0.15em', textAlign: 'center' }}>{tr('ADVANCE MODE', 'РЕЖИМ ПЕРЕХОДА')}</p>
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => { if (timerRef.current) clearInterval(timerRef.current); setAutoMs(null) }} style={{
@@ -412,8 +419,8 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
               background: autoMs === null ? KA_DIM : 'transparent', transition: 'all 0.12s',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
             }}>
-              <span>👆 TAP</span>
-              <span style={{ fontSize: 7, opacity: 0.6 }}>manual</span>
+              <span>👆 {tr('TAP', 'КАСАНИЕ')}</span>
+              <span style={{ fontSize: 7, opacity: 0.6 }}>{tr('manual', 'вручную')}</span>
             </button>
             <button onClick={() => {
               const ms = bpmToMs(parseFloat(bpmInput) || 120, bars)
@@ -427,7 +434,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
             }}>
               <span>♩ BPM</span>
-              <span style={{ fontSize: 7, opacity: 0.6 }}>auto-scroll</span>
+              <span style={{ fontSize: 7, opacity: 0.6 }}>{tr('auto-scroll', 'авто-прокрутка')}</span>
             </button>
           </div>
 
@@ -449,19 +456,19 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
               />
             </div>
             <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${KA}45`,
-              letterSpacing: '0.1em', marginBottom: 5 }}>BARS PER LINE</p>
+              letterSpacing: '0.1em', marginBottom: 5 }}>{tr('BARS PER LINE', 'ТАКТОВ НА СТРОКУ')}</p>
             <div style={{ display: 'flex', gap: 5 }}>
               {([1, 2, 4] as const).map(b => (
                 <button key={b} onClick={() => {
                   setBars(b)
                   if (autoMs !== null) setAutoMs(bpmToMs(parseFloat(bpmInput) || 120, b))
-                }} style={chipStyle(bars === b)}>{b} {b === 1 ? 'bar' : 'bars'}</button>
+                }} style={chipStyle(bars === b)}>{b} {tr('bars', 'такт.')}</button>
               ))}
             </div>
             {estMs && (
               <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${KA}50`,
                 marginTop: 6, letterSpacing: '0.06em' }}>
-                ≈ {(estMs / 1000).toFixed(1)}s per line
+                ≈ {(estMs / 1000).toFixed(1)}{tr('s per line', 'с на строку')}
               </p>
             )}
           </div>
@@ -474,7 +481,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
         }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,158,11,0.18)'}
           onMouseLeave={e => e.currentTarget.style.background = KA_DIM}
-        >🎵 START</button>
+        >🎵 {tr('START', 'СТАРТ')}</button>
       </div>
     )
   }
@@ -487,10 +494,10 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
         background: 'rgba(20,10,2,0.97)' }}>
         <span style={{ fontSize: 32, filter: `drop-shadow(0 0 14px ${KA})` }}>🌟</span>
         <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 900,
-          color: KA, textShadow: `0 0 10px ${KA}`, letterSpacing: '0.1em' }}>END OF SONG</p>
+          color: KA, textShadow: `0 0 10px ${KA}`, letterSpacing: '0.1em' }}>{tr('END OF SONG', 'КОНЕЦ ПЕСНИ')}</p>
         <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: `${KA}60`,
           textAlign: 'center', lineHeight: 1.7 }}>
-          {lines.length} lines · {text.title}
+          {lines.length} {tr('lines', 'строк')} · {text.title}
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => { setLineIdx(0); setPhase('live') }} style={{
@@ -500,13 +507,13 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
           }}
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,158,11,0.18)'}
             onMouseLeave={e => e.currentTarget.style.background = KA_DIM}
-          >↺ AGAIN</button>
+          >↺ {tr('AGAIN', 'СНОВА')}</button>
           <button onClick={onDone} style={{
             padding: '10px 20px', borderRadius: 7, cursor: 'pointer',
             fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800, letterSpacing: '0.12em',
             color: 'rgba(148,163,184,0.5)', border: '1px solid rgba(148,163,184,0.15)',
             background: 'transparent', transition: 'all 0.15s',
-          }}>DONE</button>
+          }}>{tr('DONE', 'ГОТОВО')}</button>
         </div>
       </div>
     )
@@ -548,7 +555,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
           letterSpacing: '0.1em', flexShrink: 0 }}>{lineIdx + 1} / {lines.length}</p>
         {autoMs && (
           <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${KA}55`,
-            letterSpacing: '0.08em' }}>♩ AUTO</span>
+            letterSpacing: '0.08em' }}>♩ {tr('AUTO', 'АВТО')}</span>
         )}
       </div>
 
@@ -619,7 +626,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
           color: lineIdx > 0 ? `${KA}70` : 'rgba(148,163,184,0.2)',
           border: `1px solid ${lineIdx > 0 ? `${KA}25` : 'rgba(255,255,255,0.05)'}`,
           background: 'transparent', transition: 'all 0.15s',
-        }}>← PREV</button>
+        }}>← {tr('PREV', 'НАЗАД')}</button>
 
         <button onClick={handleAreaClick} style={{
           flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
@@ -628,9 +635,9 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
         }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,158,11,0.18)'}
           onMouseLeave={e => e.currentTarget.style.background = KA_DIM}
-        >{autoMs ? '♩ AUTO — TAP TO SYNC' : 'TAP ▶'}</button>
+        >{autoMs ? tr('♩ AUTO — TAP TO SYNC', '♩ АВТО — КАСАНИЕ ДЛЯ СИНХРО') : tr('TAP ▶', 'КАСАНИЕ ▶')}</button>
 
-        <button onClick={() => setLineIdx(0)} title="Restart from beginning" style={{
+        <button onClick={() => setLineIdx(0)} title={tr('Restart from beginning', 'Начать сначала')} style={{
           padding: '8px 10px', borderRadius: 6, cursor: 'pointer',
           fontFamily: 'var(--font)', fontSize: 11, color: `${KA}45`,
           border: `1px solid ${KA}15`, background: 'transparent', transition: 'all 0.15s',
@@ -681,15 +688,15 @@ function FullRunView({ text, onDone }: {
       <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900,
-          color: NEON, letterSpacing: '0.2em', textShadow: `0 0 8px ${NEON}` }}>FULL RUN</p>
+          color: NEON, letterSpacing: '0.2em', textShadow: `0 0 8px ${NEON}` }}>{tr('FULL RUN', 'ПОЛНЫЙ ПРОГОН')}</p>
         <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
           color: `${NEON}60`, textAlign: 'center', lineHeight: 1.7, maxWidth: 220 }}>
-          Recall the complete <strong style={{ color: NEON }}>{text.title}</strong> from start to finish — no text, no prompts.
-          <br/>Click chunk numbers for first-word hints (like a stage prompter).
+          {tr('Recall the complete', 'Воспроизведите целиком')} <strong style={{ color: NEON }}>{text.title}</strong> {tr('from start to finish — no text, no prompts.', 'от начала до конца — без текста и подсказок.')}
+          <br/>{tr('Click chunk numbers for first-word hints (like a stage prompter).', 'Жмите номера фрагментов для подсказок первым словом (как суфлёр).')}
         </p>
         <div>
           <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`,
-            letterSpacing: '0.18em', textAlign: 'center', marginBottom: 8 }}>TIME LIMIT (OPTIONAL)</p>
+            letterSpacing: '0.18em', textAlign: 'center', marginBottom: 8 }}>{tr('TIME LIMIT (OPTIONAL)', 'ЛИМИТ ВРЕМЕНИ (НЕОБЯЗ.)')}</p>
           <div style={{ display: 'flex', gap: 6 }}>
             {[null, 60, 120, 300].map(s => (
               <button key={String(s)} onClick={() => setTimer(s)} style={{
@@ -699,7 +706,7 @@ function FullRunView({ text, onDone }: {
                 border: `1px solid ${timer === s ? `${NEON}40` : 'rgba(255,255,255,0.06)'}`,
                 background: timer === s ? NEON_DIM : 'transparent', transition: 'all 0.12s',
               }}>
-                {s === null ? '∞ FREE' : s === 60 ? '1 MIN' : s === 120 ? '2 MIN' : '5 MIN'}
+                {s === null ? tr('∞ FREE', '∞ СВОБОДНО') : s === 60 ? tr('1 MIN', '1 МИН') : s === 120 ? tr('2 MIN', '2 МИН') : tr('5 MIN', '5 МИН')}
               </button>
             ))}
           </div>
@@ -711,7 +718,7 @@ function FullRunView({ text, onDone }: {
         }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,228,160,0.18)'}
           onMouseLeave={e => e.currentTarget.style.background = NEON_DIM}
-        >🎭 ACTION</button>
+        >🎭 {tr('ACTION', 'МОТОР')}</button>
       </div>
     )
   }
@@ -733,7 +740,7 @@ function FullRunView({ text, onDone }: {
         <div style={{ padding: '10px 14px', flexShrink: 0, display: 'flex', justifyContent: 'space-between',
           borderBottom: `1px solid ${NEON}10` }}>
           <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`, letterSpacing: '0.15em' }}>
-            {text.title} — FULL RUN
+            {text.title} — {tr('FULL RUN', 'ПОЛНЫЙ ПРОГОН')}
           </p>
           {timer && (
             <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
@@ -754,7 +761,7 @@ function FullRunView({ text, onDone }: {
           <div style={{ width: 32, borderRight: `1px solid ${NEON}08`, overflowY: 'auto',
             display: 'flex', flexDirection: 'column', padding: '8px 0' }}>
             {chunks.map(ch => (
-              <button key={ch.id} onClick={() => toggleHint(ch.order)} title="Show first word"
+              <button key={ch.id} onClick={() => toggleHint(ch.order)} title={tr('Show first word', 'Показать первое слово')}
                 style={{
                   width: '100%', padding: '4px 0', cursor: 'pointer', flexShrink: 0,
                   fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700,
@@ -773,7 +780,7 @@ function FullRunView({ text, onDone }: {
             {hints.size === 0 && (
               <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
                 color: `${NEON}18`, textAlign: 'center', marginTop: 40, letterSpacing: '0.1em' }}>
-                Click a number for a first-word hint
+                {tr('Click a number for a first-word hint', 'Нажмите номер для подсказки первым словом')}
               </p>
             )}
             {chunks.filter(ch => hints.has(ch.order)).map(ch => (
@@ -797,7 +804,7 @@ function FullRunView({ text, onDone }: {
         }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,228,160,0.18)'}
           onMouseLeave={e => e.currentTarget.style.background = NEON_DIM}
-        >DONE — REVEAL ↓</button>
+        >{tr('DONE — REVEAL ↓', 'ГОТОВО — ПОКАЗАТЬ ↓')}</button>
       </div>
     )
   }
@@ -809,11 +816,11 @@ function FullRunView({ text, onDone }: {
       <div style={{ padding: '10px 14px', flexShrink: 0, borderBottom: `1px solid ${NEON}10`,
         display: 'flex', alignItems: 'center', gap: 8 }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`, letterSpacing: '0.15em', flex: 1 }}>
-          {text.title} — ORIGINAL
+          {text.title} — {tr('ORIGINAL', 'ОРИГИНАЛ')}
         </p>
         {hintsUsed > 0 && (
           <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: '#eab308' }}>
-            {hintsUsed} hints used
+            {hintsUsed} {tr('hints used', 'подсказок')}
           </p>
         )}
       </div>
@@ -832,12 +839,12 @@ function FullRunView({ text, onDone }: {
 
       <div style={{ padding: '10px 12px', borderTop: `1px solid ${NEON}10`, flexShrink: 0 }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`,
-          letterSpacing: '0.18em', textAlign: 'center', marginBottom: 10 }}>HOW WAS YOUR PERFORMANCE?</p>
+          letterSpacing: '0.18em', textAlign: 'center', marginBottom: 10 }}>{tr('HOW WAS YOUR PERFORMANCE?', 'КАК ПРОШЁЛ ПРОГОН?')}</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
           {[
-            { score: 1, label: 'STRUGGLED', emoji: '🔴', color: '#ff0033', sub: 'Major gaps' },
-            { score: 2, label: 'MOSTLY',    emoji: '🟡', color: '#ff6b00', sub: 'Minor stumbles' },
-            { score: 3, label: 'NAILED IT', emoji: '⭐', color: '#22c55e', sub: 'Clean run' },
+            { score: 1, label: tr('STRUGGLED', 'ТЯЖЕЛО'), emoji: '🔴', color: '#ff0033', sub: tr('Major gaps', 'Большие пробелы') },
+            { score: 2, label: tr('MOSTLY', 'ПОЧТИ'),    emoji: '🟡', color: '#ff6b00', sub: tr('Minor stumbles', 'Мелкие запинки') },
+            { score: 3, label: tr('NAILED IT', 'ИДЕАЛЬНО'), emoji: '⭐', color: '#22c55e', sub: tr('Clean run', 'Чистый прогон') },
           ].map(({ score, label, emoji, color, sub }) => (
             <button key={score} onClick={() => onDone(score)} style={{
               padding: '10px 6px', borderRadius: 8, cursor: 'pointer',
@@ -866,7 +873,7 @@ function SprintBadge({ sprint, onStart }: {
   onStart: () => void
 }) {
   const { label, isDue } = useCountdown(sprint.nextDueAt)
-  const stageLabel = SPRINT_STAGE_LABELS[sprint.stage] ?? `STAGE ${sprint.stage}`
+  const stageLabel = stageLabelRu(SPRINT_STAGE_LABELS[sprint.stage] ?? `STAGE ${sprint.stage}`)
   return (
     <button onClick={isDue ? onStart : undefined} style={{
       flex: 1, padding: '6px 4px', borderRadius: 5, cursor: isDue ? 'pointer' : 'default',
@@ -877,8 +884,8 @@ function SprintBadge({ sprint, onStart }: {
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
       transition: 'all 0.15s', animation: isDue ? 'pulse 1.8s ease-in-out infinite' : 'none',
     }}>
-      <span style={{ fontSize: 7, opacity: 0.7 }}>SPRINT {sprint.stage}/{SPRINT_STAGE_LABELS.length - 1}</span>
-      <span>{isDue ? `${stageLabel} — NOW` : `${stageLabel} in ${label}`}</span>
+      <span style={{ fontSize: 7, opacity: 0.7 }}>{tr('SPRINT', 'СПРИНТ')} {sprint.stage}/{SPRINT_STAGE_LABELS.length - 1}</span>
+      <span>{isDue ? `${stageLabel} — ${tr('NOW', 'СЕЙЧАС')}` : `${stageLabel} ${tr('in', 'через')} ${label}`}</span>
     </button>
   )
 }
@@ -930,7 +937,7 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
               <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700,
                 color: tc, letterSpacing: '0.1em', padding: '1px 5px', borderRadius: 3,
                 border: `1px solid ${tc}30`, background: `${tc}08` }}>
-                {TEXT_TYPE_LABEL[text.type]}
+                {typeLabel(text.type)}
               </span>
               <span style={{ fontFamily: 'var(--font)', fontSize: 7,
                 color: `${NEON}50`, letterSpacing: '0.08em' }}>{LANG_LABEL[text.language]}</span>
@@ -954,20 +961,20 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
               padding: '2px 7px', borderRadius: 4,
               border: '1px solid rgba(255,68,68,0.3)', background: 'rgba(255,68,68,0.08)',
               animation: 'pulse 2s ease-in-out infinite',
-            }}>🔴 {stats.due} DUE</span>
+            }}>🔴 {stats.due} {tr('DUE', 'К ПОВТОРУ')}</span>
           )}
           {stats.reviewing > 0 && (
             <span style={{ fontFamily: 'var(--font)', fontSize: 7.5,
-              color: '#eab308', letterSpacing: '0.06em' }}>{stats.reviewing} reviewing</span>
+              color: '#eab308', letterSpacing: '0.06em' }}>{stats.reviewing} {tr('reviewing', 'на повторе')}</span>
           )}
           {stats.new > 0 && (
             <span style={{ fontFamily: 'var(--font)', fontSize: 7.5,
-              color: 'rgba(148,163,184,0.4)', letterSpacing: '0.06em' }}>{stats.new} new</span>
+              color: 'rgba(148,163,184,0.4)', letterSpacing: '0.06em' }}>{stats.new} {tr('new', 'новых')}</span>
           )}
           {text.deadline && (
             <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, marginLeft: 'auto',
               color: 'rgba(148,163,184,0.35)', letterSpacing: '0.06em' }}>
-              deadline {new Date(text.deadline).toLocaleDateString('en', { day: 'numeric', month: 'short' })}
+              {tr('deadline', 'срок')} {new Date(text.deadline).toLocaleDateString('en', { day: 'numeric', month: 'short' })}
             </span>
           )}
         </div>
@@ -985,7 +992,7 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
               }}
                 onMouseEnter={e => { e.currentTarget.style.color = NEON; e.currentTarget.style.background = NEON_DIM }}
                 onMouseLeave={e => { e.currentTarget.style.color = `${NEON}70`; e.currentTarget.style.background = 'transparent' }}
-              >🎭 RUN</button>
+              >🎭 {tr('RUN', 'ПРОГОН')}</button>
             </>
           ) : (
             <>
@@ -996,7 +1003,7 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
               }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,228,160,0.18)'}
                 onMouseLeave={e => e.currentTarget.style.background = NEON_DIM}
-              >LEARN</button>
+              >{tr('LEARN', 'УЧИТЬ')}</button>
 
               <button onClick={() => onStudy('recall')} disabled={stats.due === 0} style={{
                 flex: 1, padding: '6px 0', borderRadius: 5, cursor: stats.due > 0 ? 'pointer' : 'default',
@@ -1007,10 +1014,10 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
               }}
                 onMouseEnter={e => { if (stats.due > 0) e.currentTarget.style.background = 'rgba(255,68,68,0.12)' }}
                 onMouseLeave={e => { if (stats.due > 0) e.currentTarget.style.background = 'rgba(255,68,68,0.06)' }}
-              >RECALL {stats.due > 0 ? `(${stats.due})` : ''}</button>
+              >{tr('RECALL', 'ПОВТОР')} {stats.due > 0 ? `(${stats.due})` : ''}</button>
 
               {/* SPRINT button — emergency mode */}
-              <button onClick={onSprintStart} title="Sprint mode: intra-day SRS (20min→1hr→4hr→8hr→...)" style={{
+              <button onClick={onSprintStart} title={tr('Sprint mode: intra-day SRS (20min→1hr→4hr→8hr→...)', 'Спринт: SRS внутри дня (20мин→1ч→4ч→8ч→...)')} style={{
                 padding: '6px 8px', borderRadius: 5, cursor: 'pointer', flexShrink: 0,
                 fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
                 color: '#ff6b00', border: '1px solid rgba(255,107,0,0.3)', background: 'rgba(255,107,0,0.06)',
@@ -1018,21 +1025,21 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
               }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,107,0,0.12)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,107,0,0.06)'}
-              >⚡ SPRINT</button>
+              >⚡ {tr('SPRINT', 'СПРИНТ')}</button>
 
               {/* Full run — whole text */}
-              <button onClick={onFullRun} title="Full run: recall entire text in sequence" style={{
+              <button onClick={onFullRun} title={tr('Full run: recall entire text in sequence', 'Полный прогон: воспроизвести весь текст подряд')} style={{
                 padding: '6px 8px', borderRadius: 5, cursor: 'pointer', flexShrink: 0,
                 fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
                 color: `${NEON}70`, border: `1px solid ${NEON}25`, background: 'transparent', transition: 'all 0.15s',
               }}
                 onMouseEnter={e => { e.currentTarget.style.color = NEON; e.currentTarget.style.background = NEON_DIM }}
                 onMouseLeave={e => { e.currentTarget.style.color = `${NEON}70`; e.currentTarget.style.background = 'transparent' }}
-              >🎭 RUN</button>
+              >🎭 {tr('RUN', 'ПРОГОН')}</button>
 
               {/* Karaoke — songs only */}
               {text.type === 'song' && onKaraoke && (
-                <button onClick={onKaraoke} title="Karaoke mode: line-by-line with BPM scroll" style={{
+                <button onClick={onKaraoke} title={tr('Karaoke mode: line-by-line with BPM scroll', 'Караоке: построчно с прокруткой по BPM')} style={{
                   padding: '6px 8px', borderRadius: 5, cursor: 'pointer', flexShrink: 0,
                   fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.06em',
                   color: 'rgba(245,158,11,0.7)', border: '1px solid rgba(245,158,11,0.25)',
@@ -1046,7 +1053,7 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
           )}
 
           {/* Memory curve toggle */}
-          <button onClick={() => setShowCurve(v => !v)} title="Memory curve"
+          <button onClick={() => setShowCurve(v => !v)} title={tr('Memory curve', 'Кривая памяти')}
             style={{
               width: 28, padding: '6px 0', borderRadius: 5, cursor: 'pointer',
               fontFamily: 'var(--font)', fontSize: 11,
@@ -1072,7 +1079,7 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
           {hov && (
             <button
               onClick={onMarkLearned}
-              title={stats.mastered === stats.total && stats.total > 0 ? 'Move to Glory Hall ✦' : 'Mark as learned'}
+              title={stats.mastered === stats.total && stats.total > 0 ? tr('Move to Glory Hall ✦', 'В репертуар ✦') : tr('Mark as learned', 'Отметить выученным')}
               style={{
                 padding: '6px 8px', borderRadius: 5, cursor: 'pointer', flexShrink: 0,
                 fontFamily: 'var(--font)', fontSize: stats.mastered === stats.total && stats.total > 0 ? 9 : 7,
@@ -1090,7 +1097,7 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
                 e.currentTarget.style.color = allDone ? '#f59e0b' : 'rgba(245,158,11,0.3)'
               }}
             >
-              {stats.mastered === stats.total && stats.total > 0 ? '✦ LEARNED' : '✦'}
+              {stats.mastered === stats.total && stats.total > 0 ? tr('✦ LEARNED', '✦ ВЫУЧЕНО') : '✦'}
             </button>
           )}
         </div>
@@ -1132,7 +1139,7 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
                 </div>
                 <div style={{ flexShrink: 0, textAlign: 'right' }}>
                   <p style={{ fontFamily: 'var(--font)', fontSize: 7, color, letterSpacing: '0.1em', fontWeight: 700 }}>
-                    {status.toUpperCase()}
+                    {statusLabel(status).toUpperCase()}
                   </p>
                   {card && card.reviewCount > 0 && (
                     <p style={{ fontFamily: 'var(--font)', fontSize: 6, color: 'rgba(148,163,184,0.3)', marginTop: 1 }}>
@@ -1207,7 +1214,7 @@ function GloryCard({ text, state, onRevive, onFullRun, onKaraoke }: {
                 color: typeColor[text.type], letterSpacing: '0.1em', padding: '1px 5px',
                 borderRadius: 3, border: `1px solid ${typeColor[text.type]}25`,
                 background: `${typeColor[text.type]}08` }}>
-                {TEXT_TYPE_LABEL[text.type]}
+                {typeLabel(text.type)}
               </span>
             </div>
           </div>
@@ -1219,7 +1226,7 @@ function GloryCard({ text, state, onRevive, onFullRun, onKaraoke }: {
               {stats.total}
             </p>
             <p style={{ fontFamily: 'var(--font)', fontSize: 6.5,
-              color: 'rgba(245,158,11,0.4)', letterSpacing: '0.1em' }}>CHUNKS</p>
+              color: 'rgba(245,158,11,0.4)', letterSpacing: '0.1em' }}>{tr('CHUNKS', 'ФРАГМ.')}</p>
           </div>
         </div>
 
@@ -1227,7 +1234,7 @@ function GloryCard({ text, state, onRevive, onFullRun, onKaraoke }: {
         {learnedDate && (
           <p style={{ fontFamily: 'var(--font)', fontSize: 7.5,
             color: 'rgba(245,158,11,0.45)', letterSpacing: '0.08em', marginTop: 8 }}>
-            LEARNED · {learnedDate}
+            {tr('LEARNED ·', 'ОСВОЕНО ·')} {learnedDate}
           </p>
         )}
 
@@ -1242,11 +1249,11 @@ function GloryCard({ text, state, onRevive, onFullRun, onKaraoke }: {
             }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,158,11,0.12)'}
               onMouseLeave={e => e.currentTarget.style.background = 'rgba(245,158,11,0.05)'}
-            >🎭 PERFORM</button>
+            >🎭 {tr('PERFORM', 'ИСПОЛНИТЬ')}</button>
 
             {/* Karaoke — songs only */}
             {text.type === 'song' && onKaraoke && (
-              <button onClick={onKaraoke} title="Karaoke mode" style={{
+              <button onClick={onKaraoke} title={tr('Karaoke mode', 'Режим караоке')} style={{
                 padding: '6px 10px', borderRadius: 5, cursor: 'pointer', flexShrink: 0,
                 fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.06em',
                 color: 'rgba(245,158,11,0.7)', border: '1px solid rgba(245,158,11,0.2)',
@@ -1257,7 +1264,7 @@ function GloryCard({ text, state, onRevive, onFullRun, onKaraoke }: {
               >🎵</button>
             )}
 
-            <button onClick={onRevive} title="Move back to active drilling" style={{
+            <button onClick={onRevive} title={tr('Move back to active drilling', 'Вернуть к активной отработке')} style={{
               padding: '6px 12px', borderRadius: 5, cursor: 'pointer', flexShrink: 0,
               fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.1em',
               color: 'rgba(148,163,184,0.4)', border: '1px solid rgba(148,163,184,0.1)',
@@ -1265,7 +1272,7 @@ function GloryCard({ text, state, onRevive, onFullRun, onKaraoke }: {
             }}
               onMouseEnter={e => { e.currentTarget.style.color = NEON; e.currentTarget.style.borderColor = `${NEON}30` }}
               onMouseLeave={e => { e.currentTarget.style.color = 'rgba(148,163,184,0.4)'; e.currentTarget.style.borderColor = 'rgba(148,163,184,0.1)' }}
-            >REVIVE</button>
+            >{tr('REVIVE', 'ВЕРНУТЬ')}</button>
           </div>
         )}
       </div>
@@ -1315,19 +1322,19 @@ function AddTextForm({ onSave, onCancel }: {
           transition: 'color 0.12s' }}
           onMouseEnter={e => e.currentTarget.style.color = NEON}
           onMouseLeave={e => e.currentTarget.style.color = `${NEON}50`}
-        >← BACK</button>
+        >← {tr('BACK', 'НАЗАД')}</button>
         <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
-          color: NEON, letterSpacing: '0.2em', textShadow: `0 0 8px ${NEON}` }}>IMPORT TEXT</p>
+          color: NEON, letterSpacing: '0.2em', textShadow: `0 0 8px ${NEON}` }}>{tr('IMPORT TEXT', 'ИМПОРТ ТЕКСТА')}</p>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 9 }}>
         {/* Title + Author */}
         <div style={{ display: 'flex', gap: 8 }}>
-          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title *"
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder={tr('Title *', 'Заголовок *')}
             style={{ ...inp, flex: 2 }}
             onFocus={e => e.target.style.borderColor = `${NEON}50`}
             onBlur={e => e.target.style.borderColor = `${NEON}18`} />
-          <input value={author} onChange={e => setAuthor(e.target.value)} placeholder="Author"
+          <input value={author} onChange={e => setAuthor(e.target.value)} placeholder={tr('Author', 'Автор')}
             style={{ ...inp, flex: 1 }}
             onFocus={e => e.target.style.borderColor = `${NEON}50`}
             onBlur={e => e.target.style.borderColor = `${NEON}18`} />
@@ -1336,11 +1343,11 @@ function AddTextForm({ onSave, onCancel }: {
         {/* Type */}
         <div>
           <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}50`,
-            letterSpacing: '0.15em', marginBottom: 6 }}>TEXT TYPE</p>
+            letterSpacing: '0.15em', marginBottom: 6 }}>{tr('TEXT TYPE', 'ТИП ТЕКСТА')}</p>
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {(['poem','monologue','role','song','prose'] as TextType[]).map(t => (
               <button key={t} onClick={() => setType(t)} style={chipStyle(type === t)}>
-                {TEXT_TYPE_LABEL[t]}
+                {typeLabel(t)}
               </button>
             ))}
           </div>
@@ -1349,7 +1356,7 @@ function AddTextForm({ onSave, onCancel }: {
         {/* Language */}
         <div>
           <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}50`,
-            letterSpacing: '0.15em', marginBottom: 6 }}>LANGUAGE</p>
+            letterSpacing: '0.15em', marginBottom: 6 }}>{tr('LANGUAGE', 'ЯЗЫК')}</p>
           <div style={{ display: 'flex', gap: 5 }}>
             {(['RU','EN','CN','other'] as Language[]).map(l => (
               <button key={l} onClick={() => setLanguage(l)} style={chipStyle(language === l)}>
@@ -1362,7 +1369,7 @@ function AddTextForm({ onSave, onCancel }: {
         {/* Deadline */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}50`,
-            letterSpacing: '0.15em', flexShrink: 0 }}>DEADLINE</span>
+            letterSpacing: '0.15em', flexShrink: 0 }}>{tr('DEADLINE', 'СРОК')}</span>
           <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
             style={{ ...inp, flex: 1 }}
             onFocus={e => e.target.style.borderColor = `${NEON}50`}
@@ -1372,9 +1379,9 @@ function AddTextForm({ onSave, onCancel }: {
         {/* Raw text */}
         <div>
           <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}50`,
-            letterSpacing: '0.15em', marginBottom: 6 }}>PASTE TEXT *</p>
+            letterSpacing: '0.15em', marginBottom: 6 }}>{tr('PASTE TEXT *', 'ВСТАВЬТЕ ТЕКСТ *')}</p>
           <textarea value={rawText} onChange={e => setRawText(e.target.value)}
-            placeholder={'Paste your text here...\n\nFor poems: separate stanzas with empty lines.\nFor roles: format as CHARACTER: dialogue\nFor prose: natural paragraphs.'}
+            placeholder={tr('Paste your text here...\n\nFor poems: separate stanzas with empty lines.\nFor roles: format as CHARACTER: dialogue\nFor prose: natural paragraphs.', 'Вставьте текст сюда...\n\nДля стихов: разделяйте строфы пустыми строками.\nДля ролей: формат ПЕРСОНАЖ: реплика\nДля прозы: обычные абзацы.')}
             rows={10}
             style={{ ...inp, resize: 'none', lineHeight: 1.7 }}
             onFocus={e => e.target.style.borderColor = `${NEON}50`}
@@ -1388,7 +1395,7 @@ function AddTextForm({ onSave, onCancel }: {
             background: `${NEON}05`, border: `1px solid ${NEON}18` }}>
             <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700,
               color: NEON, letterSpacing: '0.18em', marginBottom: 8 }}>
-              PREVIEW — {preview.length} CHUNKS
+              {tr('PREVIEW —', 'ПРЕДПРОСМОТР —')} {preview.length} {tr('CHUNKS', 'ФРАГМ.')}
             </p>
             {preview.map((c, i) => (
               <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6,
@@ -1415,7 +1422,7 @@ function AddTextForm({ onSave, onCancel }: {
             background: title.trim() && rawText.trim() ? NEON_DIM : 'transparent',
             transition: 'all 0.15s',
           }}
-        >LOAD INTO A.R.D.O</button>
+        >{tr('LOAD INTO A.R.D.O', 'ЗАГРУЗИТЬ В A.R.D.O')}</button>
       </div>
     </div>
   )
@@ -1461,13 +1468,13 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
         <span style={{ fontSize: 32, filter: `drop-shadow(0 0 12px ${NEON})` }}>🐢</span>
         <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 900,
           color: NEON, textShadow: `0 0 10px ${NEON}`, letterSpacing: '0.1em' }}>
-          SESSION COMPLETE
+          {tr('SESSION COMPLETE', 'СЕССИЯ ЗАВЕРШЕНА')}
         </p>
         <div style={{ display: 'flex', gap: 16 }}>
           {[
-            { v: total, l: 'CHUNKS' },
-            { v: mode === 'recall' ? results.length : total, l: 'REVIEWED' },
-            { v: avg.toFixed(1), l: 'AVG SCORE' },
+            { v: total, l: tr('CHUNKS', 'ФРАГМ.') },
+            { v: mode === 'recall' ? results.length : total, l: tr('REVIEWED', 'ПОВТОР.') },
+            { v: avg.toFixed(1), l: tr('AVG SCORE', 'СР. БАЛЛ') },
           ].map(({ v, l }) => (
             <div key={l} style={{ textAlign: 'center' }}>
               <p style={{ fontFamily: 'var(--font)', fontSize: 20, fontWeight: 900,
@@ -1480,15 +1487,15 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
         <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: `${NEON}60`,
           textAlign: 'center', lineHeight: 1.7, maxWidth: 200 }}>
           {mode === 'recall'
-            ? 'SRS intervals updated. Next review scheduled.'
-            : 'All chunks seen. They\'ll be queued for recall tomorrow.'}
+            ? tr('SRS intervals updated. Next review scheduled.', 'Интервалы SRS обновлены. Следующий повтор назначен.')
+            : tr('All chunks seen. They will be queued for recall tomorrow.', 'Все фрагменты просмотрены. Завтра — на повтор.')}
         </p>
         <button onClick={() => onFinish(results)} style={{
           padding: '10px 28px', borderRadius: 7, cursor: 'pointer',
           fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800,
           letterSpacing: '0.12em', color: NEON, border: `1px solid ${NEON}40`,
           background: NEON_DIM, transition: 'background 0.15s',
-        }}>DONE →</button>
+        }}>{tr('DONE →', 'ГОТОВО →')}</button>
       </div>
     )
   }
@@ -1502,7 +1509,7 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
         borderBottom: `1px solid ${NEON}10`,
         display: 'flex', alignItems: 'center', gap: 10 }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`, letterSpacing: '0.15em' }}>
-          {mode === 'learn' ? 'LEARN' : 'RECALL'} · {idx + 1}/{total}
+          {mode === 'learn' ? tr('LEARN', 'УЧИТЬ') : tr('RECALL', 'ПОВТОР')} · {idx + 1}/{total}
         </p>
         <div style={{ flex: 1 }}>
           <ProgressBar pct={pct} />
@@ -1519,7 +1526,7 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
         {/* Chunk number */}
         <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}40`,
           letterSpacing: '0.18em', marginBottom: 12, textAlign: 'center' }}>
-          CHUNK {current.chunk.order + 1}
+          {tr('CHUNK', 'ФРАГМЕНТ')} {current.chunk.order + 1}
         </p>
 
         {/* ── LEARN mode: show full text ── */}
@@ -1548,13 +1555,13 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
                   border: `1px solid ${NEON}25`, background: 'transparent', transition: 'all 0.15s' }}
                 onMouseEnter={e => { e.currentTarget.style.background = NEON_DIM; e.currentTarget.style.color = NEON }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = `${NEON}70` }}
-              >🔊 LISTEN</button>
+              >🔊 {tr('LISTEN', 'СЛУШАТЬ')}</button>
               <button onClick={next} style={{ flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
                 fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800, letterSpacing: '0.12em',
                 color: NEON, border: `1px solid ${NEON}40`, background: NEON_DIM, transition: 'background 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,228,160,0.18)'}
                 onMouseLeave={e => e.currentTarget.style.background = NEON_DIM}
-              >{idx + 1 >= total ? 'FINISH' : 'NEXT →'}</button>
+              >{idx + 1 >= total ? tr('FINISH', 'ЗАВЕРШИТЬ') : tr('NEXT →', 'ДАЛЕЕ →')}</button>
             </div>
           </>
         )}
@@ -1567,7 +1574,7 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 8,
                   color: `${NEON}50`, letterSpacing: '0.18em', textAlign: 'center' }}>
-                  {phase === 'cue' ? 'RECALL THE FULL TEXT ↓' : '30% HINT ↓'}
+                  {phase === 'cue' ? tr('RECALL THE FULL TEXT ↓', 'ВСПОМНИТЕ ВЕСЬ ТЕКСТ ↓') : tr('30% HINT ↓', 'ПОДСКАЗКА 30% ↓')}
                 </p>
                 <div style={{ padding: '16px', borderRadius: 10,
                   background: `${NEON}06`, border: `1px solid ${NEON}18` }}>
@@ -1586,7 +1593,7 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
                       letterSpacing: '0.1em', color: '#eab308',
                       border: '1px solid rgba(234,179,8,0.3)', background: 'rgba(234,179,8,0.06)',
                       transition: 'background 0.15s',
-                    }}>HINT 30%</button>
+                    }}>{tr('HINT 30%', 'ПОДСКАЗКА 30%')}</button>
                   )}
                   <button onClick={() => setPhase('revealed')} style={{
                     flex: 2, padding: '8px', borderRadius: 6, cursor: 'pointer',
@@ -1596,7 +1603,7 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
                   }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,228,160,0.18)'}
                     onMouseLeave={e => e.currentTarget.style.background = NEON_DIM}
-                  >REVEAL</button>
+                  >{tr('REVEAL', 'ПОКАЗАТЬ')}</button>
                 </div>
               </div>
             )}
@@ -1615,7 +1622,7 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
                 <div style={{ flex: 1 }} />
                 <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`,
                   letterSpacing: '0.18em', textAlign: 'center', flexShrink: 0 }}>
-                  HOW WELL DID YOU RECALL?
+                  {tr('HOW WELL DID YOU RECALL?', 'НАСКОЛЬКО ХОРОШО ВСПОМНИЛИ?')}
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 7, flexShrink: 0 }}>
                   {SCORE_LABELS.map(({ score, label, emoji, color }) => (
@@ -1631,7 +1638,7 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
                       onMouseLeave={e => e.currentTarget.style.background = `${color}08`}
                     >
                       <span style={{ fontSize: 16 }}>{emoji}</span>
-                      {label}
+                      {scoreLabel(score, label)}
                     </button>
                   ))}
                 </div>
@@ -1788,14 +1795,14 @@ export default function Ardo() {
           <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900,
             color: NEON, letterSpacing: '0.2em', textShadow: `0 0 10px ${NEON}` }}>A.R.D.O</p>
           <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}40`, letterSpacing: '0.1em' }}>
-            ADAPTIVE RECALL & DRILLING OPERATOR
+            {tr('ADAPTIVE RECALL & DRILLING OPERATOR', 'АДАПТИВНЫЙ ОПЕРАТОР ПОВТОРА И ОТРАБОТКИ')}
           </p>
         </div>
         <div style={{ flex: 1 }} />
         {[
-          { v: String(state.profile.streak), l: 'STREAK',  c: state.profile.streak > 0 ? '#ff6b00' : `${NEON}50`, suffix: '🔥' },
-          { v: String(totalDue),             l: 'DUE',     c: totalDue > 0 ? '#ff4444' : `${NEON}50`, suffix: '' },
-          { v: String(learnedTexts.length),  l: 'REPERTOIRE', c: learnedTexts.length > 0 ? '#f59e0b' : `${NEON}50`, suffix: '' },
+          { v: String(state.profile.streak), l: tr('STREAK', 'СЕРИЯ'),  c: state.profile.streak > 0 ? '#ff6b00' : `${NEON}50`, suffix: '🔥' },
+          { v: String(totalDue),             l: tr('DUE', 'К ПОВТОРУ'),     c: totalDue > 0 ? '#ff4444' : `${NEON}50`, suffix: '' },
+          { v: String(learnedTexts.length),  l: tr('REPERTOIRE', 'РЕПЕРТУАР'), c: learnedTexts.length > 0 ? '#f59e0b' : `${NEON}50`, suffix: '' },
         ].map(({ v, l, c, suffix }) => (
           <div key={l} style={{ textAlign: 'right' }}>
             <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 900, color: c, lineHeight: 1 }}>
@@ -1830,10 +1837,10 @@ export default function Ardo() {
           <span style={{ fontSize: 16 }}>🔴</span>
           <div style={{ flex: 1, textAlign: 'left' }}>
             <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
-              color: '#ff4444', letterSpacing: '0.15em' }}>START TODAY'S REVIEW</p>
+              color: '#ff4444', letterSpacing: '0.15em' }}>{tr('START TODAY\'S REVIEW', 'НАЧАТЬ СЕГОДНЯШНИЙ ПОВТОР')}</p>
             <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(255,68,68,0.5)',
               letterSpacing: '0.06em', marginTop: 1 }}>
-              {totalDue} chunks need drilling across all texts
+              {totalDue} {tr('chunks need drilling across all texts', 'фрагментов ждут отработки во всех текстах')}
             </p>
           </div>
           <span style={{ fontFamily: 'var(--font)', fontSize: 9, color: 'rgba(255,68,68,0.5)' }}>→</span>
@@ -1852,9 +1859,9 @@ export default function Ardo() {
         <span style={{ fontSize: 16 }}>🗣</span>
         <div style={{ flex: 1, textAlign: 'left' }}>
           <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
-            color: NEON, letterSpacing: '0.15em' }}>ARTICULATION WARM-UP</p>
+            color: NEON, letterSpacing: '0.15em' }}>{tr('ARTICULATION WARM-UP', 'РАЗМИНКА АРТИКУЛЯЦИИ')}</p>
           <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}55`,
-            letterSpacing: '0.06em', marginTop: 1 }}>Tongue twisters & drills — loosen up before you learn</p>
+            letterSpacing: '0.06em', marginTop: 1 }}>{tr('Tongue twisters & drills — loosen up before you learn', 'Скороговорки и упражнения — разомнитесь перед учёбой')}</p>
         </div>
         <span style={{ fontFamily: 'var(--font)', fontSize: 9, color: `${NEON}55` }}>→</span>
       </button>
@@ -1863,8 +1870,8 @@ export default function Ardo() {
       <div style={{ display: 'flex', borderBottom: `1px solid ${NEON}12`, flexShrink: 0,
         background: 'rgba(0,8,5,0.3)' }}>
         {([
-          ['active', `ACTIVE (${activeTexts.length})`,         NEON],
-          ['glory',  `REPERTOIRE (${learnedTexts.length})`, '#f59e0b'],
+          ['active', `${tr('ACTIVE', 'АКТИВНЫЕ')} (${activeTexts.length})`,         NEON],
+          ['glory',  `${tr('REPERTOIRE', 'РЕПЕРТУАР')} (${learnedTexts.length})`, '#f59e0b'],
         ] as [typeof tab, string, string][]).map(([id, label, color]) => (
           <button key={id} onClick={() => setTab(id)} style={{
             flex: 1, padding: '8px 4px', cursor: 'pointer',
@@ -1889,18 +1896,18 @@ export default function Ardo() {
               <div style={{ padding: '40px 16px', textAlign: 'center' }}>
                 <div style={{ fontSize: 28, marginBottom: 12, filter: `drop-shadow(0 0 12px ${NEON})` }}>🐢</div>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-md)',
-                  color: 'rgba(0,228,160,0.2)', marginBottom: 6 }}>NO TEXTS LOADED</p>
+                  color: 'rgba(0,228,160,0.2)', marginBottom: 6 }}>{tr('NO TEXTS LOADED', 'НЕТ ЗАГРУЖЕННЫХ ТЕКСТОВ')}</p>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
                   color: `${NEON}18`, lineHeight: 1.8, letterSpacing: '0.08em' }}>
-                  Import a poem, monologue, role or song.<br/>
-                  A.R.D.O will drill it into permanent memory.
+                  {tr('Import a poem, monologue, role or song.', 'Импортируйте стих, монолог, роль или песню.')}<br/>
+                  {tr('A.R.D.O will drill it into permanent memory.', 'A.R.D.O закрепит это в долговременной памяти.')}
                 </p>
                 <button onClick={() => setScreen({ type: 'add-text' })} style={{
                   marginTop: 18, padding: '8px 22px', borderRadius: 7, cursor: 'pointer',
                   fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700,
                   letterSpacing: '0.12em', color: NEON, border: `1px solid ${NEON}40`,
                   background: NEON_DIM, transition: 'background 0.15s',
-                }}>+ IMPORT FIRST TEXT</button>
+                }}>{tr('+ IMPORT FIRST TEXT', '+ ИМПОРТ ПЕРВОГО ТЕКСТА')}</button>
               </div>
             )}
             {activeTexts.map(text => (
@@ -1922,11 +1929,11 @@ export default function Ardo() {
               <div style={{ padding: '40px 16px', textAlign: 'center' }}>
                 <div style={{ fontSize: 28, marginBottom: 12 }}>🏛️</div>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-md)',
-                  color: 'rgba(245,158,11,0.2)', marginBottom: 6 }}>REPERTOIRE IS EMPTY</p>
+                  color: 'rgba(245,158,11,0.2)', marginBottom: 6 }}>{tr('REPERTOIRE IS EMPTY', 'РЕПЕРТУАР ПУСТ')}</p>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
                   color: 'rgba(245,158,11,0.15)', lineHeight: 1.8, letterSpacing: '0.08em' }}>
-                  Master a text and mark it as learned.<br/>
-                  Your repertoire grows with every text you master.
+                  {tr('Master a text and mark it as learned.', 'Освойте текст и отметьте выученным.')}<br/>
+                  {tr('Your repertoire grows with every text you master.', 'Репертуар растёт с каждым освоенным текстом.')}
                 </p>
               </div>
             )}
@@ -1936,7 +1943,7 @@ export default function Ardo() {
                 <span style={{ fontSize: 16, filter: 'drop-shadow(0 0 6px rgba(245,158,11,0.6))' }}>✦</span>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700,
                   color: 'rgba(245,158,11,0.5)', letterSpacing: '0.2em' }}>
-                  {learnedTexts.length} TEXT{learnedTexts.length !== 1 ? 'S' : ''} IN YOUR REPERTOIRE
+                  {learnedTexts.length} {tr('texts in your repertoire', 'текстов в репертуаре')}
                 </p>
               </div>
             )}

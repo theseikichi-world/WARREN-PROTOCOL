@@ -5,6 +5,7 @@
 
 import { loadState as loadScrap7, todayScheduledDailies } from '../scrap7/store'
 import type { Task } from '../scrap7/types'
+import { t as tr } from '../../i18n'
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -213,10 +214,10 @@ export function buildDay(anchors: Anchors, commitments: Commitment[], events: Da
     fixed.push({ start: s, end: e, block: { id: `${kind}-${startRaw}`, kind, label, start: s, end: e, ...extra } })
   }
 
-  if (anchors.breakfast) addFixed('meal', 'Breakfast', toMin(anchors.breakfast), toMin(anchors.breakfast) + 30)
-  if (anchors.lunch)     addFixed('meal', 'Lunch',     toMin(anchors.lunch),     toMin(anchors.lunch) + 45)
-  if (anchors.dinner)    addFixed('meal', 'Dinner',    toMin(anchors.dinner),    toMin(anchors.dinner) + 45)
-  if (anchors.workEnabled) addFixed('work', 'Work', toMin(anchors.workStart), toMin(anchors.workEnd))
+  if (anchors.breakfast) addFixed('meal', tr('Breakfast', 'Завтрак'), toMin(anchors.breakfast), toMin(anchors.breakfast) + 30)
+  if (anchors.lunch)     addFixed('meal', tr('Lunch', 'Обед'),     toMin(anchors.lunch),     toMin(anchors.lunch) + 45)
+  if (anchors.dinner)    addFixed('meal', tr('Dinner', 'Ужин'),    toMin(anchors.dinner),    toMin(anchors.dinner) + 45)
+  if (anchors.workEnabled) addFixed('work', tr('Work', 'Работа'), toMin(anchors.workStart), toMin(anchors.workEnd))
   for (const ev of events) addFixed('event', ev.title, toMin(ev.start), toMin(ev.end), { id: ev.id })
 
   fixed.sort((a, b) => a.start - b.start)
@@ -240,7 +241,7 @@ export function buildDay(anchors: Anchors, commitments: Commitment[], events: Da
     while (queue.length && c + queue[0].duration <= g.end) {
       // insert a rest break between consecutive activities (not before the first)
       if (placedInGap > 0 && brk > 0 && c + brk + queue[0].duration <= g.end) {
-        placed.push({ id: `brk-${c}`, kind: 'break', label: 'Break', start: c, end: c + brk })
+        placed.push({ id: `brk-${c}`, kind: 'break', label: tr('Break', 'Перерыв'), start: c, end: c + brk })
         c += brk
       }
       const cm = queue.shift()!
@@ -251,7 +252,7 @@ export function buildDay(anchors: Anchors, commitments: Commitment[], events: Da
       c += cm.duration
       placedInGap++
     }
-    if (c < g.end) placed.push({ id: `free-${g.start}`, kind: 'free', label: 'Free', start: c, end: g.end })
+    if (c < g.end) placed.push({ id: `free-${g.start}`, kind: 'free', label: tr('Free', 'Свободно'), start: c, end: g.end })
   }
   // Overflow commitments that didn't fit — stack them at the end (compressed)
   let ofs = sleep

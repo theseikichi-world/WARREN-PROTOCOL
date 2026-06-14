@@ -13,6 +13,7 @@ import {
   updateTask, createTask,
 } from '../scrap7/store'
 import { aiJson, loadSettings, modelForTask } from '../../settings'
+import { t as tr } from '../../i18n'
 
 const NEON   = '#22d3ee'   // infinity cyan
 const NEON_D = 'rgba(34,211,238,0.1)'
@@ -35,7 +36,14 @@ const TONE: Record<Suggestion['tone'], string> = {
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 const DAY_SHORT: Record<string, string> = { mon: 'M', tue: 'T', wed: 'W', thu: 'T', fri: 'F', sat: 'S', sun: 'S' }
-const daysLabel = (d: string[] | 'everyday') => d === 'everyday' ? 'Every day' : d.map(k => DAY_SHORT[k] ?? k).join(' ')
+const daysLabel = (d: string[] | 'everyday') => d === 'everyday' ? tr('Every day', 'Каждый день') : d.map(k => DAY_SHORT[k] ?? k).join(' ')
+
+// Localized labels for AI-returned periods and SCRAP-7 task kinds
+const periodLabel = (p: Period) =>
+  ({ morning: tr('morning', 'утро'), midday: tr('midday', 'полдень'),
+     afternoon: tr('afternoon', 'день'), evening: tr('evening', 'вечер') }[p] ?? p)
+const kindLabel = (k: 'habit' | 'daily') =>
+  k === 'habit' ? tr('HABIT', 'ПРИВЫЧКА') : tr('DAILY', 'ЕЖЕДН.')
 
 // ─── Optimize types ───────────────────────────────────────────────────────────
 interface OptChange   { id: string; label: string; days: string[] | 'everyday'; bestTime: Period; note: string }
@@ -86,7 +94,7 @@ function AnchorSheet({ anchors, onSave, onClose }: {
     <Row label={label}>
       {a[key] === null ? (
         <button onClick={() => set({ [key]: key === 'breakfast' ? '08:00' : key === 'lunch' ? '13:00' : '19:00' } as Partial<Anchors>)}
-          style={{ ...timeInp, color: `${NEON}50`, cursor: 'pointer' }}>+ add</button>
+          style={{ ...timeInp, color: `${NEON}50`, cursor: 'pointer' }}>{tr('+ add', '+ доб.')}</button>
       ) : (
         <>
           <input type="time" value={a[key]!} onChange={e => set({ [key]: e.target.value } as Partial<Anchors>)} style={timeInp} />
@@ -106,11 +114,11 @@ function AnchorSheet({ anchors, onSave, onClose }: {
         borderTopLeftRadius: 14, borderTopRightRadius: 14,
       }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, color: NEON,
-          letterSpacing: '0.2em', marginBottom: 12 }}>DAY ANCHORS</p>
+          letterSpacing: '0.2em', marginBottom: 12 }}>{tr('DAY ANCHORS', 'ОПОРЫ ДНЯ')}</p>
 
-        <Row label="☀ Wake up"><input type="time" value={a.wake} onChange={e => set({ wake: e.target.value })} style={timeInp} /></Row>
-        <Row label="🌙 Bedtime"><input type="time" value={a.sleep} onChange={e => set({ sleep: e.target.value })} style={timeInp} /></Row>
-        <Row label={`😴 Sleep length · ${sleepHours(a)}h`}>
+        <Row label={tr('☀ Wake up', '☀ Подъём')}><input type="time" value={a.wake} onChange={e => set({ wake: e.target.value })} style={timeInp} /></Row>
+        <Row label={tr('🌙 Bedtime', '🌙 Отбой')}><input type="time" value={a.sleep} onChange={e => set({ sleep: e.target.value })} style={timeInp} /></Row>
+        <Row label={`${tr('😴 Sleep length', '😴 Длина сна')} · ${sleepHours(a)}${tr('h', 'ч')}`}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {[6, 7, 8, 9].map(h => {
               const on = Math.round(sleepHours(a)) === h
@@ -123,12 +131,12 @@ function AnchorSheet({ anchors, onSave, onClose }: {
                   ...timeInp, padding: '4px 8px', cursor: 'pointer',
                   color: on ? NEON : 'rgba(148,163,184,0.4)',
                   borderColor: on ? `${NEON}40` : 'rgba(255,255,255,0.08)',
-                }}>{h}h</button>
+                }}>{h}{tr('h', 'ч')}</button>
               )
             })}
           </div>
         </Row>
-        <Row label={`☕ Break between activities · ${a.breakMin}m`}>
+        <Row label={`${tr('☕ Break between activities', '☕ Перерыв между делами')} · ${a.breakMin}${tr('m', 'м')}`}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             {[0, 5, 10, 15].map(m => {
               const on = a.breakMin === m
@@ -137,23 +145,23 @@ function AnchorSheet({ anchors, onSave, onClose }: {
                   ...timeInp, padding: '4px 8px', cursor: 'pointer',
                   color: on ? NEON : 'rgba(148,163,184,0.4)',
                   borderColor: on ? `${NEON}40` : 'rgba(255,255,255,0.08)',
-                }}>{m === 0 ? 'none' : `${m}m`}</button>
+                }}>{m === 0 ? tr('none', 'нет') : `${m}${tr('m', 'м')}`}</button>
               )
             })}
           </div>
         </Row>
 
         <div style={{ height: 1, background: `${NEON}12`, margin: '6px 0 10px' }} />
-        {mealRow('breakfast', '🍽 Breakfast')}
-        {mealRow('lunch', '🍽 Lunch')}
-        {mealRow('dinner', '🍽 Dinner')}
+        {mealRow('breakfast', tr('🍽 Breakfast', '🍽 Завтрак'))}
+        {mealRow('lunch', tr('🍽 Lunch', '🍽 Обед'))}
+        {mealRow('dinner', tr('🍽 Dinner', '🍽 Ужин'))}
 
         <div style={{ height: 1, background: `${NEON}12`, margin: '6px 0 10px' }} />
-        <Row label="💼 Work block">
+        <Row label={tr('💼 Work block', '💼 Рабочий блок')}>
           <button onClick={() => set({ workEnabled: !a.workEnabled })} style={{
             ...timeInp, cursor: 'pointer', color: a.workEnabled ? NEON : 'rgba(148,163,184,0.4)',
             borderColor: a.workEnabled ? `${NEON}40` : 'rgba(255,255,255,0.08)',
-          }}>{a.workEnabled ? 'ON' : 'OFF'}</button>
+          }}>{a.workEnabled ? tr('ON', 'ВКЛ') : tr('OFF', 'ВЫКЛ')}</button>
         </Row>
         {a.workEnabled && (
           <Row label="">
@@ -167,7 +175,7 @@ function AnchorSheet({ anchors, onSave, onClose }: {
           width: '100%', marginTop: 12, padding: '10px', borderRadius: 7, cursor: 'pointer',
           fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800, letterSpacing: '0.12em',
           color: NEON, border: `1px solid ${NEON}40`, background: NEON_D,
-        }}>SAVE ANCHORS</button>
+        }}>{tr('SAVE ANCHORS', 'СОХРАНИТЬ ОПОРЫ')}</button>
       </div>
     </div>
   )
@@ -195,8 +203,8 @@ function EventSheet({ onSave, onClose }: {
         borderTopLeftRadius: 14, borderTopRightRadius: 14,
       }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, color: NEON,
-          letterSpacing: '0.2em' }}>SOMETHING CAME UP</p>
-        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Event…" style={{ ...inp }} autoFocus />
+          letterSpacing: '0.2em' }}>{tr('SOMETHING CAME UP', 'ЧТО-ТО ВОЗНИКЛО')}</p>
+        <input value={title} onChange={e => setTitle(e.target.value)} placeholder={tr('Event…', 'Событие…')} style={{ ...inp }} autoFocus />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <input type="time" value={start} onChange={e => setStart(e.target.value)} style={inp} />
           <span style={{ color: `${NEON}50` }}>→</span>
@@ -207,7 +215,7 @@ function EventSheet({ onSave, onClose }: {
             fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800, letterSpacing: '0.12em',
             color: valid ? NEON : 'rgba(148,163,184,0.25)',
             border: `1px solid ${valid ? `${NEON}40` : 'rgba(255,255,255,0.05)'}`,
-            background: valid ? NEON_D : 'transparent' }}>+ BLOCK THE TIME</button>
+            background: valid ? NEON_D : 'transparent' }}>{tr('+ BLOCK THE TIME', '+ ЗАНЯТЬ ВРЕМЯ')}</button>
       </div>
     </div>
   )
@@ -299,7 +307,7 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
           })).filter((a: OptAddition) => a.text.length > 1) : [],
       })
     } catch (err) {
-      setOptError(err instanceof Error ? err.message : 'Optimize failed. Check AI settings.')
+      setOptError(err instanceof Error ? err.message : tr('Optimize failed. Check AI settings.', 'Не удалось оптимизировать. Проверьте настройки ИИ.'))
     }
     setOptimizing(false)
   }
@@ -334,10 +342,10 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
 
   // Banner content (the guilt-free core)
   const banner = noCommit
-    ? { color: '#39ff14', title: 'NOTHING SCHEDULED', sub: `${fmtDur(plan.freeMinutes)} of open day — it's all yours.` }
+    ? { color: '#39ff14', title: tr('NOTHING SCHEDULED', 'НИЧЕГО НЕ ЗАПЛАНИРОВАНО'), sub: tr(`${fmtDur(plan.freeMinutes)} of open day — it's all yours.`, `${fmtDur(plan.freeMinutes)} свободного дня — всё ваше.`) }
     : allDone
-      ? { color: '#39ff14', title: '✓ DAY CLEARED', sub: `Everything's done. The next ${fmtDur(plan.freeMinutes)} are yours — go enjoy them, guilt-free.` }
-      : { color: NEON, title: `${plan.doneCount}/${plan.committedCount} DONE`, sub: `${fmtDur(plan.freeMinutes)} free once you finish. Knock them out, then relax.` }
+      ? { color: '#39ff14', title: tr('✓ DAY CLEARED', '✓ ДЕНЬ ОЧИЩЕН'), sub: tr(`Everything's done. The next ${fmtDur(plan.freeMinutes)} are yours — go enjoy them, guilt-free.`, `Всё сделано. Следующие ${fmtDur(plan.freeMinutes)} ваши — наслаждайтесь без чувства вины.`) }
+      : { color: NEON, title: `${plan.doneCount}/${plan.committedCount} ${tr('DONE', 'ГОТОВО')}`, sub: tr(`${fmtDur(plan.freeMinutes)} free once you finish. Knock them out, then relax.`, `${fmtDur(plan.freeMinutes)} свободно, как закончите. Разделайтесь — и отдыхайте.`) }
 
   return (
     <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -358,14 +366,14 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
             color: '#39ff14', lineHeight: 1, textShadow: '0 0 12px rgba(57,255,20,0.5)' }}>
             {fmtDur(plan.freeMinutes)}</p>
           <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: 'rgba(57,255,20,0.5)',
-            letterSpacing: '0.12em' }}>FREE TODAY</p>
+            letterSpacing: '0.12em' }}>{tr('FREE TODAY', 'СВОБОДНО СЕГОДНЯ')}</p>
         </div>
-        <button onClick={() => setSheet('event')} title="Something came up (meeting, cinema…)" style={{
+        <button onClick={() => setSheet('event')} title={tr('Something came up (meeting, cinema…)', 'Что-то возникло (встреча, кино…)')} style={{
           width: 28, height: 28, borderRadius: 7, fontSize: 15, color: `${NEON}80`,
           border: `1px solid ${NEON}25`, background: NEON_D, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>+</button>
-        <button onClick={() => setSheet('anchors')} title="Day anchors (wake / sleep / breaks)" style={{
+        <button onClick={() => setSheet('anchors')} title={tr('Day anchors (wake / sleep / breaks)', 'Опоры дня (подъём / сон / перерывы)')} style={{
           width: 28, height: 28, borderRadius: 7, fontSize: 13, color: `${NEON}70`,
           border: `1px solid ${NEON}25`, background: 'transparent', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -377,26 +385,26 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
         <button onClick={() => {
           const d = new Date(); const wk = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
           persist(setOverride(state, today, { wake: wk }))
-        }} title="Reflow today from now" style={{
+        }} title={tr('Reflow today from now', 'Перестроить день с этого момента')} style={{
           flex: 1, padding: '6px', borderRadius: 6, cursor: 'pointer',
           fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
           color: '#ffb13c', border: '1px solid rgba(255,177,60,0.3)', background: 'rgba(255,177,60,0.06)',
-        }}>😴 OVERSLEPT — RESHUFFLE</button>
+        }}>{tr('😴 OVERSLEPT — RESHUFFLE', '😴 ПРОСПАЛ — ПЕРЕСТРОИТЬ')}</button>
         {state.overrides[today] && (
-          <button onClick={() => persist(clearOverride(state, today))} title="Back to normal anchors" style={{
+          <button onClick={() => persist(clearOverride(state, today))} title={tr('Back to normal anchors', 'Вернуть обычные опоры')} style={{
             padding: '6px 9px', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font)',
             fontSize: 7.5, fontWeight: 700, color: 'rgba(148,163,184,0.5)',
             border: '1px solid rgba(255,255,255,0.08)', background: 'transparent',
-          }}>RESET</button>
+          }}>{tr('RESET', 'СБРОС')}</button>
         )}
-        <button onClick={runOptimize} disabled={optimizing} title="Rebalance the week with science" style={{
+        <button onClick={runOptimize} disabled={optimizing} title={tr('Rebalance the week with science', 'Перебалансировать неделю по науке')} style={{
           flex: 1, padding: '6px', borderRadius: 6, cursor: optimizing ? 'default' : 'pointer',
           fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 800, letterSpacing: '0.08em',
           color: optimizing ? `${NEON}50` : NEON, border: `1px solid ${NEON}35`, background: NEON_D,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
         }}>
           <span style={{ animation: optimizing ? 'pulse 1.2s ease-in-out infinite' : 'none' }}>⚡</span>
-          {optimizing ? 'OPTIMIZING…' : 'OPTIMIZE WEEK'}
+          {optimizing ? tr('OPTIMIZING…', 'ОПТИМИЗАЦИЯ…') : tr('OPTIMIZE WEEK', 'ОПТИМИЗИРОВАТЬ НЕДЕЛЮ')}
         </button>
       </div>
 
@@ -484,7 +492,7 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <span style={{ fontSize: 13 }}>⚡</span>
           <p style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900, color: NEON,
-            letterSpacing: '0.2em' }}>WEEK REBALANCED</p>
+            letterSpacing: '0.2em' }}>{tr('WEEK REBALANCED', 'НЕДЕЛЯ ПЕРЕБАЛАНСИРОВАНА')}</p>
           <button onClick={onClose} style={{ fontSize: 15, color: 'rgba(148,163,184,0.4)', cursor: 'pointer' }}>×</button>
         </div>
 
@@ -498,7 +506,7 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
         {result.changes.length > 0 && (
           <>
             <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: `${NEON}45`,
-              letterSpacing: '0.18em', marginBottom: 6 }}>RESCHEDULE IN SCRAP-7</p>
+              letterSpacing: '0.18em', marginBottom: 6 }}>{tr('RESCHEDULE IN SCRAP-7', 'ПЕРЕНЕСТИ В SCRAP-7')}</p>
             {result.changes.map(c => (
               <div key={c.id} style={{ marginBottom: 7, padding: '8px 10px', borderRadius: 8,
                 background: `${NEON}06`, border: `1px solid ${NEON}1f` }}>
@@ -506,7 +514,7 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
                   <p style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                     color: 'rgba(220,250,255,0.9)' }}>{c.label}</p>
                   <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800,
-                    color: periodColor[c.bestTime], letterSpacing: '0.06em', textTransform: 'uppercase' }}>{c.bestTime}</span>
+                    color: periodColor[c.bestTime], letterSpacing: '0.06em', textTransform: 'uppercase' }}>{periodLabel(c.bestTime)}</span>
                   <span style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, color: NEON,
                     letterSpacing: '0.1em' }}>{daysLabel(c.days)}</span>
                 </div>
@@ -515,7 +523,7 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
                   marginTop: 6, width: '100%', padding: '5px', borderRadius: 5, cursor: 'pointer',
                   fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.1em',
                   color: NEON, border: `1px solid ${NEON}35`, background: NEON_D,
-                }}>✓ APPLY</button>
+                }}>{tr('✓ APPLY', '✓ ПРИМЕНИТЬ')}</button>
               </div>
             ))}
           </>
@@ -524,7 +532,7 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
         {result.additions.length > 0 && (
           <>
             <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: '#39ff14',
-              letterSpacing: '0.18em', margin: '10px 0 6px' }}>SUGGESTED ADDITIONS</p>
+              letterSpacing: '0.18em', margin: '10px 0 6px' }}>{tr('SUGGESTED ADDITIONS', 'ПРЕДЛОЖЕННЫЕ ДОБАВЛЕНИЯ')}</p>
             {result.additions.map((a, i) => (
               <div key={i} style={{ marginBottom: 7, padding: '8px 10px', borderRadius: 8,
                 background: 'rgba(57,255,20,0.04)', border: '1px solid rgba(57,255,20,0.18)' }}>
@@ -532,7 +540,7 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
                   <p style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                     color: 'rgba(230,255,235,0.9)' }}>{a.text}</p>
                   <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: 'rgba(57,255,20,0.7)',
-                    letterSpacing: '0.06em' }}>{a.type.toUpperCase()}</span>
+                    letterSpacing: '0.06em' }}>{kindLabel(a.type)}</span>
                   <span style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, color: '#39ff14' }}>{daysLabel(a.days)}</span>
                 </div>
                 {a.note && <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.5)', marginTop: 2 }}>{a.note}</p>}
@@ -540,7 +548,7 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
                   marginTop: 6, width: '100%', padding: '5px', borderRadius: 5, cursor: 'pointer',
                   fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.1em',
                   color: '#39ff14', border: '1px solid rgba(57,255,20,0.35)', background: 'rgba(57,255,20,0.06)',
-                }}>+ ADD TO SCRAP-7</button>
+                }}>{tr('+ ADD TO SCRAP-7', '+ ДОБАВИТЬ В SCRAP-7')}</button>
               </div>
             ))}
           </>
@@ -548,7 +556,7 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
 
         {result.changes.length === 0 && result.additions.length === 0 && (
           <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: `${NEON}60`,
-            textAlign: 'center', padding: '10px' }}>Your week is already well balanced. ✓</p>
+            textAlign: 'center', padding: '10px' }}>{tr('Your week is already well balanced.', 'Ваша неделя уже хорошо сбалансирована.')} ✓</p>
         )}
       </div>
     </div>
@@ -601,13 +609,13 @@ function Timeline({ blocks, wakeMin, sleepMin, nowMin, suggestions, onRemoveEven
           alignItems: 'center', gap: 6, paddingLeft: GUTTER }}>
           <span style={{ fontSize: 9 }}>☀</span>
           <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: `${NEON}50`,
-            letterSpacing: '0.18em' }}>WAKE {fmtClock(wakeMin)}</span>
+            letterSpacing: '0.18em' }}>{tr('WAKE', 'ПОДЪЁМ')} {fmtClock(wakeMin)}</span>
         </div>
         <div style={{ position: 'absolute', top: y(sleepMin) + 4, left: 0, right: 0, display: 'flex',
           alignItems: 'center', gap: 6, paddingLeft: GUTTER }}>
           <span style={{ fontSize: 9 }}>🌙</span>
           <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: `${NEON}50`,
-            letterSpacing: '0.18em' }}>SLEEP {fmtClock(sleepMin)}</span>
+            letterSpacing: '0.18em' }}>{tr('SLEEP', 'СОН')} {fmtClock(sleepMin)}</span>
         </div>
 
         {/* Blocks */}
@@ -656,9 +664,9 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
           <span style={{ fontSize: 11, opacity: 0.55 }}>✦</span>
           <span style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
             color: 'rgba(57,255,20,0.6)', letterSpacing: '0.02em',
-            textShadow: '0 1px 4px rgba(0,0,0,0.55)' }}>Free · {fmtDur(b.end - b.start)}</span>
+            textShadow: '0 1px 4px rgba(0,0,0,0.55)' }}>{tr('Free', 'Свободно')} · {fmtDur(b.end - b.start)}</span>
           <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 800, letterSpacing: '0.14em',
-            color: 'rgba(57,255,20,0.45)', flexShrink: 0 }}>GUILD SUGGESTS</span>
+            color: 'rgba(57,255,20,0.45)', flexShrink: 0 }}>{tr('GUILD SUGGESTS', 'ГИЛЬДИЯ СОВЕТУЕТ')}</span>
         </div>
         {suggestions.map(s => (
           <button key={s.id} onClick={() => onGo?.(s.path)} title={s.detail}
@@ -691,7 +699,7 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
       <div style={{ position: 'absolute', left: GUTTER, right: 0, top, height,
         display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 6, opacity: 0.5 }}>
         <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.5)',
-          letterSpacing: '0.12em', flexShrink: 0 }}>↔ break</span>
+          letterSpacing: '0.12em', flexShrink: 0 }}>↔ {tr('break', 'перерыв')}</span>
         <div style={{ flex: 1, borderTop: '1px dashed rgba(148,163,184,0.18)' }} />
       </div>
     )
@@ -717,7 +725,7 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
       }}>
       {isCommit ? (
         /* Read-only status DOT (not a checkbox) — completion is owned by SCRAP-7; shown here just for tracking */
-        <span title={b.done ? 'Done (marked in SCRAP-7)' : 'Still open — mark it in SCRAP-7'} style={{
+        <span title={b.done ? tr('Done (marked in SCRAP-7)', 'Готово (отмечено в SCRAP-7)') : tr('Still open — mark it in SCRAP-7', 'Ещё не сделано — отметьте в SCRAP-7')} style={{
           width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
           border: `1.5px solid ${b.done ? color : `${color}55`}`,
           background: b.done ? color : 'transparent',
@@ -733,18 +741,18 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
         letterSpacing: '0.02em', textDecoration: b.done ? 'line-through' : 'none',
         textShadow: '0 1px 4px rgba(0,0,0,0.55)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {isFree ? `Free · ${fmtDur(b.end - b.start)}` : b.label}
+        {isFree ? `${tr('Free', 'Свободно')} · ${fmtDur(b.end - b.start)}` : b.label}
       </span>
 
       {isNow && (
         <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 900, color,
           letterSpacing: '0.1em', flexShrink: 0, padding: '1px 5px', borderRadius: 3,
-          border: `1px solid ${color}`, animation: 'pulse 1.8s ease-in-out infinite' }}>● NOW</span>
+          border: `1px solid ${color}`, animation: 'pulse 1.8s ease-in-out infinite' }}>● {tr('NOW', 'СЕЙЧАС')}</span>
       )}
       {isCommit && tall && !isNow && (
         <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 700, color: `${color}90`,
           letterSpacing: '0.1em', flexShrink: 0, padding: '1px 5px', borderRadius: 3, border: `1px solid ${color}30` }}>
-          {b.commitKind === 'habit' ? 'HABIT' : 'DAILY'}
+          {b.commitKind === 'habit' ? tr('HABIT', 'ПРИВЫЧКА') : tr('DAILY', 'ЕЖЕДН.')}
         </span>
       )}
       {!isFree && (

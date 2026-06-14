@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Language } from './types'
 import { suggestTwisters, warmupLang, EXERCISES, CORK_DRILL, type Twister } from './articulation'
+import { t as tr } from '../../i18n'
 
 const NEON     = '#00e4a0'
 const NEON_DIM = 'rgba(0,228,160,0.1)'
@@ -41,12 +42,12 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
       <div style={{ padding: '8px 14px', flexShrink: 0, borderBottom: `1px solid ${NEON}14`,
         background: 'rgba(0,8,5,0.6)', display: 'flex', alignItems: 'center', gap: 10 }}>
         <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}60`,
-          letterSpacing: '0.1em' }}>← BACK</button>
+          letterSpacing: '0.1em' }}>← {tr('BACK', 'НАЗАД')}</button>
         <div style={{ flex: 1 }}>
           <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900, color: NEON,
-            letterSpacing: '0.18em', textShadow: `0 0 10px ${NEON}` }}>🗣 ARTICULATION WARM-UP</p>
+            letterSpacing: '0.18em', textShadow: `0 0 10px ${NEON}` }}>🗣 {tr('ARTICULATION WARM-UP', 'РАЗМИНКА АРТИКУЛЯЦИИ')}</p>
           <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`, letterSpacing: '0.1em' }}>
-            LOOSEN THE VOICE BEFORE YOU DRILL
+            {tr('LOOSEN THE VOICE BEFORE YOU DRILL', 'РАЗОМНИТЕ ГОЛОС ПЕРЕД ОТРАБОТКОЙ')}
           </p>
         </div>
         {/* language toggle */}
@@ -66,7 +67,7 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
         {/* ── Exercises ── */}
         <div>
           <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, color: `${NEON}70`,
-            letterSpacing: '0.14em', marginBottom: 7 }}>① LOOSEN UP · {done.size}/{EXERCISES.length}</p>
+            letterSpacing: '0.14em', marginBottom: 7 }}>① {tr('LOOSEN UP', 'РАЗМИНКА')} · {done.size}/{EXERCISES.length}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             {EXERCISES.map((ex, i) => {
               const on = done.has(i)
@@ -82,7 +83,7 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                       color: 'rgba(225,255,245,0.9)' }}>{ex.name}
-                      <span style={{ fontSize: 7, color: `${NEON}60`, marginLeft: 6 }}>~{ex.seconds}s</span></span>
+                      <span style={{ fontSize: 7, color: `${NEON}60`, marginLeft: 6 }}>~{ex.seconds}{tr('s', 'с')}</span></span>
                     <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: 'rgba(148,163,184,0.6)',
                       lineHeight: 1.5, marginTop: 2 }}>{ex.instruction}</p>
                   </div>
@@ -96,9 +97,9 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
         <div>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 7 }}>
             <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, color: `${NEON}70`,
-              letterSpacing: '0.14em', flex: 1 }}>② TONGUE TWISTERS · {lang === 'RU' ? 'СКОРОГОВОРКИ' : 'DRILL'}</p>
-            <button onClick={reshuffle} title="New set" style={{ fontFamily: 'var(--font)', fontSize: 7.5,
-              fontWeight: 700, color: `${NEON}90`, letterSpacing: '0.08em', cursor: 'pointer' }}>🔀 SHUFFLE</button>
+              letterSpacing: '0.14em', flex: 1 }}>② {tr('TONGUE TWISTERS', 'СКОРОГОВОРКИ')}</p>
+            <button onClick={reshuffle} title={tr('New set', 'Новый набор')} style={{ fontFamily: 'var(--font)', fontSize: 7.5,
+              fontWeight: 700, color: `${NEON}90`, letterSpacing: '0.08em', cursor: 'pointer' }}>🔀 {tr('SHUFFLE', 'ПЕРЕМЕШАТЬ')}</button>
           </div>
 
           {cur && (
@@ -119,7 +120,7 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
                 color: 'rgba(230,255,248,0.95)', textShadow: `0 0 16px ${NEON}30`, marginBottom: 6 }}>{cur.text}</p>
 
               <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}65`, letterSpacing: '0.04em',
-                marginBottom: cork ? 10 : 12 }}>Say it 3× — slow → medium → fast, every sound crisp.</p>
+                marginBottom: cork ? 10 : 12 }}>{tr('Say it 3× — slow → medium → fast, every sound crisp.', 'Скажите 3× — медленно → средне → быстро, каждый звук чётко.')}</p>
 
               {cork && (
                 <div style={{ display: 'flex', gap: 8, padding: '8px 10px', borderRadius: 7, marginBottom: 12,
@@ -132,10 +133,10 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
 
               <div style={{ display: 'flex', gap: 6 }}>
                 <button onClick={prev} style={navBtn}>‹</button>
-                <button onClick={() => speak(cur.text, lang)} style={{ ...pill, flex: 1 }}>🔊 HEAR IT</button>
+                <button onClick={() => speak(cur.text, lang)} style={{ ...pill, flex: 1 }}>🔊 {tr('HEAR IT', 'ПРОСЛУШАТЬ')}</button>
                 <button onClick={() => setCork(c => !c)} style={{ ...pill, flex: 1.4,
                   color: cork ? '#ff8a7a' : `${NEON}b0`, borderColor: cork ? `${WINE}70` : `${NEON}30`,
-                  background: cork ? 'rgba(192,57,43,0.12)' : NEON_DIM }}>🍷 CORK {cork ? 'ON' : 'MODE'}</button>
+                  background: cork ? 'rgba(192,57,43,0.12)' : NEON_DIM }}>🍷 {tr('CORK', 'ПРОБКА')} {cork ? tr('ON', 'ВКЛ') : tr('MODE', 'РЕЖИМ')}</button>
                 <button onClick={next} style={navBtn}>›</button>
               </div>
             </div>
@@ -149,7 +150,7 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
           width: '100%', padding: '12px', borderRadius: 8, cursor: 'pointer',
           fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800, letterSpacing: '0.12em',
           color: NEON, border: `1px solid ${NEON}45`, background: NEON_DIM }}>
-          {onStartLearn ? '✓ WARMED UP — START LEARNING →' : '✓ DONE'}</button>
+          {onStartLearn ? tr('✓ WARMED UP — START LEARNING →', '✓ РАЗМЯЛИСЬ — НАЧАТЬ УЧЁБУ →') : tr('✓ DONE', '✓ ГОТОВО')}</button>
       </div>
     </div>
   )

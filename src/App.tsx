@@ -1,8 +1,8 @@
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
-import { GUILD, type GuildMember } from './guild'
+import { GUILD } from './guild'
 import { hasAccess, type Entitlements } from './entitlements'
 import { loadSettings, saveSettings, applySettings, isTauri, type Settings } from './settings'
 import SettingsPanel from './SettingsPanel'
@@ -24,7 +24,7 @@ const BOOT_LINES = [
   '> WARREN PROTOCOL v1.0.0',
   '> INITIALIZING CORE SYSTEMS...',
   '> CONNECTING TO GUILD NETWORK...',
-  '> SCANNING MODULES [10/10]...',
+  '> SCANNING MODULES [7/7]...',
   '> SUPABASE LINK... ESTABLISHED',
   '> MYSTIC RAVI... ONLINE',
   '> ALL SYSTEMS NOMINAL',
@@ -294,10 +294,10 @@ function NowCard() {
     : isFreeNow ? t('Free time', 'Свободное время')
     : cur!.label
   const sub = !snap.awake
-    ? `${fmtDur(snap.freeMinutes)} of free time today`
+    ? `${fmtDur(snap.freeMinutes)} ${t('of free time today', 'свободного времени сегодня')}`
     : isFreeNow
-      ? (snap.next ? `until ${snap.next.label} at ${fmtClock(snap.next.start)}` : 'rest of the day is yours')
-      : `now → ${fmtClock(cur!.end)} · ${fmtDur(Math.max(0, cur!.end - nowMin))} left`
+      ? (snap.next ? `${t('until', 'до')} ${snap.next.label} ${t('at', 'в')} ${fmtClock(snap.next.start)}` : t('rest of the day is yours', 'остаток дня — ваш'))
+      : `${t('now', 'сейчас')} → ${fmtClock(cur!.end)} · ${fmtDur(Math.max(0, cur!.end - nowMin))} ${t('left', 'осталось')}`
 
   return (
    <div style={{ marginBottom: 16 }}>
@@ -329,7 +329,7 @@ function NowCard() {
           textShadow: '0 0 10px rgba(57,255,20,0.4)' }}>{fmtDur(snap.freeMinutes)}</p>
         <p style={{ fontSize: 7, color: 'rgba(57,255,20,0.5)', letterSpacing: '0.1em', marginTop: 2 }}>{t('FREE TODAY', 'СВОБОДНО СЕГОДНЯ')}</p>
         {snap.committedCount > 0 && (
-          <p style={{ fontSize: 7.5, color: `${INF}70`, marginTop: 3 }}>{snap.doneCount}/{snap.committedCount} done</p>
+          <p style={{ fontSize: 7.5, color: `${INF}70`, marginTop: 3 }}>{snap.doneCount}/{snap.committedCount} {t('done', 'готово')}</p>
         )}
       </div>
     </button>
@@ -441,72 +441,6 @@ function Dashboard({ displayName }: { displayName: string }) {
   )
 }
 
-// ─── Module view ──────────────────────────────────────────────────────────────
-function ModuleView({ member, unlocked }: { member: GuildMember; unlocked: boolean }) {
-  const navigate = useNavigate()
-
-  return (
-    <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <div style={{
-        padding: '13px 16px 11px', flexShrink: 0,
-        borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', gap: 10,
-        background: `${member.neon}04`,
-      }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{ fontSize: 11, color: 'var(--text-muted)', padding: '2px 6px 2px 0' }}
-        >←</button>
-        <span style={{
-          fontFamily: 'var(--font)', fontSize: 11, fontWeight: 900,
-          color: member.neon, textShadow: `0 0 10px ${member.neon}`,
-          letterSpacing: '0.05em', minWidth: 32, textAlign: 'center',
-        }}>{member.unit}</span>
-        <div>
-          <p style={{ fontSize: 10, fontWeight: 700, color: member.neon, textShadow: `0 0 8px ${member.neon}`, letterSpacing: '0.12em' }}>
-            {member.name.toUpperCase()}
-          </p>
-          <p style={{ fontSize: 7.5, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>{member.role}</p>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, padding: 24 }}>
-        {unlocked ? (
-          <>
-            <span style={{ fontSize: 30 }}>🚧</span>
-            <p style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-              In development
-            </p>
-          </>
-        ) : (
-          <>
-            <span style={{ fontSize: 30 }}>🔒</span>
-            <p style={{ fontSize: 10, color: member.neon, fontWeight: 700, letterSpacing: '0.1em', textShadow: `0 0 8px ${member.neon}` }}>
-              {member.name.toUpperCase()}
-            </p>
-            <p style={{ fontSize: 9, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.7, maxWidth: 200 }}>
-              Purchase this module to unlock {member.role.toLowerCase()}.
-            </p>
-            <button
-              style={{
-                marginTop: 6, padding: '8px 22px', borderRadius: 6, fontSize: 9,
-                border: `1px solid ${member.neon}40`, color: member.neon,
-                background: `${member.neon}0c`, letterSpacing: '0.12em',
-                textTransform: 'uppercase', fontWeight: 700,
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = `${member.neon}1a`}
-              onMouseLeave={e => e.currentTarget.style.background = `${member.neon}0c`}
-            >
-              Unlock Module
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
@@ -568,18 +502,8 @@ export default function App() {
             <Route path="/infinity8/*" element={<Infinity8 />} />
             <Route path="/pictures/*"  element={<Pictures />} />
             <Route path="/journal/*"   element={<Journal />} />
-            {GUILD.filter(m => !['scrap7', 'log', 'ardo', 'pomu', 'ravi', 'foxy', 'hoot'].includes(m.id)).map(member => (
-              <Route
-                key={member.id}
-                path={`${member.path}/*`}
-                element={
-                  <ModuleView
-                    member={member}
-                    unlocked={hasAccess(entitlements, member.id, member.free)}
-                  />
-                }
-              />
-            ))}
+            {/* Unbuilt modules are hidden; any stray URL falls back to the Hub */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
 
@@ -595,8 +519,8 @@ export default function App() {
           <SidebarBtn iconId="hub" neon="var(--accent)" active={location.pathname === '/'} title="Warren Hub" onClick={() => navigate('/')} />
           <div style={{ width: 28, height: 1, background: 'var(--border)', margin: '2px 0' }} />
 
-          {/* Modules */}
-          {GUILD.map(member => (
+          {/* Modules — only the ones that are actually shipped */}
+          {GUILD.filter(m => m.built).map(member => (
             <SidebarBtn
               key={member.id}
               iconId={member.id}

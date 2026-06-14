@@ -16,6 +16,7 @@ import { loadLib } from '../pictures/types'
 import { loadArdoState, getTotalDue } from '../ardo/store'
 import { loadLogState } from '../log/store'
 import { loadJournal, todayKey as journalToday } from '../journal/store'
+import { t as tr } from '../../i18n'
 
 export type SuggestTone = 'play' | 'grow' | 'care'
 
@@ -46,8 +47,8 @@ function picturesSuggestions(): Suggestion[] {
     const fresh    = behind > 0 && behind < 100
     out.push({
       id: `pic-tv-${m.id}`, module: 'pictures', icon: m.emoji || '📺',
-      label: `Watch ${m.title}`,
-      detail: fresh ? `${behind} new episode${behind > 1 ? 's' : ''} waiting` : 'pick up where you left off',
+      label: `${tr('Watch', 'Смотреть')} ${m.title}`,
+      detail: fresh ? `${behind} ${tr('new episodes waiting', 'нов. эп. ждут')}` : tr('pick up where you left off', 'продолжите с места остановки'),
       minutes: 45, path: '/pictures', tone: 'play',
       weight: fresh ? 9 : 6,
     })
@@ -57,7 +58,7 @@ function picturesSuggestions(): Suggestion[] {
   for (const m of lib.filter(x => x.type === 'game' && x.status === 'watching').slice(0, 1)) {
     out.push({
       id: `pic-gm-${m.id}`, module: 'pictures', icon: m.emoji || '🎮',
-      label: `Play ${m.title}`, detail: 'jump back in', minutes: 60,
+      label: `${tr('Play', 'Играть')} ${m.title}`, detail: tr('jump back in', 'вернуться в игру'), minutes: 60,
       path: '/pictures', tone: 'play', weight: 7,
     })
   }
@@ -66,8 +67,8 @@ function picturesSuggestions(): Suggestion[] {
   for (const m of lib.filter(x => x.type === 'movie' && x.status === 'watchlist').slice(0, 2)) {
     out.push({
       id: `pic-mv-${m.id}`, module: 'pictures', icon: m.emoji || '🎬',
-      label: `Movie night: ${m.title}`,
-      detail: m.year ? `${m.year} · from your watchlist` : 'from your watchlist',
+      label: `${tr('Movie night:', 'Киновечер:')} ${m.title}`,
+      detail: m.year ? `${m.year} · ${tr('from your watchlist', 'из списка к просмотру')}` : tr('from your watchlist', 'из списка к просмотру'),
       minutes: 120, path: '/pictures', tone: 'play', weight: 5,
     })
   }
@@ -82,8 +83,8 @@ function ardoSuggestions(): Suggestion[] {
   const minutes = Math.min(40, Math.max(10, due * 2))   // ~2 min per due card
   return [{
     id: 'ardo-due', module: 'ardo', icon: '🧠',
-    label: 'Drill your due lines',
-    detail: `${due} card${due > 1 ? 's' : ''} ripe for recall — catch them before they fade`,
+    label: tr('Drill your due lines', 'Повторите строки к сроку'),
+    detail: `${due} ${tr('cards ripe for recall — catch them before they fade', 'карт. готовы к повтору — успейте, пока не забылись')}`,
     minutes, path: '/ardo', tone: 'grow', weight: 8,
   }]
 }
@@ -102,7 +103,7 @@ function logSuggestions(): Suggestion[] {
       if (next) {
         out.push({
           id: `log-${next.id}`, module: 'log', icon: '✦',
-          label: next.text, detail: `advances “${d.title}”`,
+          label: next.text, detail: `${tr('advances', 'двигает')} “${d.title}”`,
           minutes: 30, path: '/log', tone: 'grow', weight: 6,
         })
         break
@@ -114,7 +115,7 @@ function logSuggestions(): Suggestion[] {
   for (const p of (st.constellation?.plan ?? []).filter(x => !x.deployed).slice(0, 1)) {
     out.push({
       id: `log-plan-${p.text}`, module: 'log', icon: '✦',
-      label: p.text, detail: `serves ${p.serves}`,
+      label: p.text, detail: `${tr('serves', 'служит цели')} ${p.serves}`,
       minutes: 30, path: '/log', tone: 'grow', weight: 5,
     })
   }
@@ -128,8 +129,8 @@ function journalSuggestions(): Suggestion[] {
   if (st.entries.some(e => e.date === journalToday())) return []
   return [{
     id: 'journal-today', module: 'journal', icon: '🦉',
-    label: "Write today's page",
-    detail: 'the owl is waiting — tonight is still blank',
+    label: tr("Write today's page", 'Написать сегодняшнюю страницу'),
+    detail: tr('the owl is waiting — tonight is still blank', 'сова ждёт — сегодня ещё пусто'),
     minutes: 15, path: '/journal', tone: 'care', weight: 7,
   }]
 }

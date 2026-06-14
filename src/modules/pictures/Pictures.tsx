@@ -8,6 +8,7 @@ import {
   searchTitles, fetchDetails, fetchSeason, getDiscover, getGames, gameToDiscover,
   tmdbKey, rawgKey, type DiscoverData, type GamesData,
 } from './api'
+import { t as tr } from '../../i18n'
 
 // ─── Galactic Pictures palette — warm cinema over the cyber dark ──────────────
 const C = {
@@ -28,8 +29,17 @@ const C = {
 }
 const FONT = 'var(--font)'
 
+// Review category names double as persistence keys, so they stay English in the
+// data — only their display label is localized here.
+const CAT_RU: Record<string, string> = {
+  Acting: 'Игра актёров', Writing: 'Сценарий', Visuals: 'Визуал', Sound: 'Звук',
+  Direction: 'Режиссура', Pacing: 'Темп', Gameplay: 'Геймплей', Story: 'Сюжет',
+  Graphics: 'Графика', Polish: 'Полировка',
+}
+const catLabel = (name: string) => tr(name, CAT_RU[name] ?? name)
+
 function typeColorOf(t: MediaType) { return t === 'game' ? C.purple : t === 'tv' ? C.blue : C.amber }
-function typeLabelOf(t: MediaType) { return t === 'movie' ? 'FILM' : t === 'game' ? 'GAME' : 'SERIES' }
+function typeLabelOf(t: MediaType) { return t === 'movie' ? tr('FILM', 'ФИЛЬМ') : t === 'game' ? tr('GAME', 'ИГРА') : tr('SERIES', 'СЕРИАЛ') }
 
 // ─── Fox Ragdoll Mascot (kept from Foxy, full animation set) ──────────────────
 function FoxMascot({ size = 64 }: { size?: number }) {
@@ -108,7 +118,7 @@ function DiscoverCard({ item, onAdd, inLibrary }: {
 }) {
   const [hovered, setHovered] = useState(false)
   const tc = typeColorOf(item.type)
-  const tl = item.type === 'game' ? '🎮 GAME' : item.type === 'tv' ? '📺 SERIES' : '🎬 FILM'
+  const tl = item.type === 'game' ? tr('🎮 GAME', '🎮 ИГРА') : item.type === 'tv' ? tr('📺 SERIES', '📺 СЕРИАЛ') : tr('🎬 FILM', '🎬 ФИЛЬМ')
 
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
@@ -154,16 +164,16 @@ function DiscoverCard({ item, onAdd, inLibrary }: {
               <p style={{ fontFamily: FONT, fontSize: 7.5, color: tc, fontWeight: 700 }}>
                 S{item.current_season}
                 {item.episodes_aired != null && item.episodes_total != null
-                  ? ` · E${item.episodes_aired}/${item.episodes_total} aired`
-                  : item.episodes_aired != null ? ` · E${item.episodes_aired} aired` : ''}
+                  ? ` · E${item.episodes_aired}/${item.episodes_total} ${tr('aired', 'вышло')}`
+                  : item.episodes_aired != null ? ` · E${item.episodes_aired} ${tr('aired', 'вышло')}` : ''}
               </p>
             )}
             {item.next_episode_date && (() => {
               const d = daysUntil(item.next_episode_date)
               if (d === null || d < 0) return null
-              const label = d === 0 ? 'Today!' : d === 1 ? 'Tomorrow'
+              const label = d === 0 ? tr('Today!', 'Сегодня!') : d === 1 ? tr('Tomorrow', 'Завтра')
                 : new Date(item.next_episode_date + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-              return <p style={{ fontFamily: FONT, fontSize: 7.5, color: C.amber, fontWeight: 600 }}>📅 Next ep: {label}</p>
+              return <p style={{ fontFamily: FONT, fontSize: 7.5, color: C.amber, fontWeight: 600 }}>📅 {tr('Next ep:', 'След. эп.:')} {label}</p>
             })()}
             {item.air_schedule && <p style={{ fontFamily: FONT, fontSize: 7, color: C.muted, marginTop: 1 }}>{item.air_schedule}</p>}
           </div>
@@ -174,8 +184,8 @@ function DiscoverCard({ item, onAdd, inLibrary }: {
           if (d === null || d < 0) return null
           return (
             <p style={{ fontFamily: FONT, fontSize: 7.5, color: C.amber, fontWeight: 700, marginBottom: 4 }}>
-              🗓 {d === 0 ? 'In cinemas today!' : d === 1 ? 'In cinemas tomorrow!'
-                : `In cinemas ${new Date(item.release_date + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+              🗓 {d === 0 ? tr('In cinemas today!', 'В кино сегодня!') : d === 1 ? tr('In cinemas tomorrow!', 'В кино завтра!')
+                : `${tr('In cinemas', 'В кино')} ${new Date(item.release_date + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
             </p>
           )
         })()}
@@ -192,7 +202,7 @@ function DiscoverCard({ item, onAdd, inLibrary }: {
             border: `1px solid ${inLibrary ? 'rgba(74,222,128,0.3)' : item.mood_color + '50'}`,
             transition: 'all 0.15s', cursor: inLibrary ? 'default' : 'pointer',
           }}>
-          {inLibrary ? '✓ IN LIBRARY' : '+ ADD'}
+          {inLibrary ? tr('✓ IN LIBRARY', '✓ В БИБЛИОТЕКЕ') : tr('+ ADD', '+ ДОБАВИТЬ')}
         </button>
       </div>
     </div>
@@ -237,7 +247,7 @@ function ScrollRow({ title, icon, color, items, lib, onAdd, loading }: {
         <span style={{ fontFamily: FONT, fontSize: 9, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color }}>
           {icon} {title}
         </span>
-        {loading && <span style={{ fontFamily: FONT, fontSize: 8, color: C.muted, animation: 'pulse 1s infinite' }}>loading…</span>}
+        {loading && <span style={{ fontFamily: FONT, fontSize: 8, color: C.muted, animation: 'pulse 1s infinite' }}>{tr('loading…', 'загрузка…')}</span>}
         {!loading && items.length > 0 && (
           <span style={{ fontFamily: FONT, fontSize: 7.5, color: C.muted }}>{items.length}</span>
         )}
@@ -296,7 +306,7 @@ function UpcomingEpisodes({ lib }: { lib: MediaItem[] }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingLeft: 2 }}>
         <div style={{ width: 3, height: 16, borderRadius: 2, background: `linear-gradient(180deg, ${C.green}, ${C.green}44)` }}/>
         <span style={{ fontFamily: FONT, fontSize: 9, fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.green }}>
-          📅 Your Upcoming
+          📅 {tr('Your Upcoming', 'Ваши ближайшие')}
         </span>
       </div>
       <div style={{ display: 'flex', gap: 8, flexDirection: 'column' }}>
@@ -308,7 +318,7 @@ function UpcomingEpisodes({ lib }: { lib: MediaItem[] }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontFamily: FONT, fontSize: 10, fontWeight: 700, color: C.cream }}>{item.title}</p>
               <p style={{ fontFamily: FONT, fontSize: 8.5, color: C.green }}>
-                🍿 {item.episodes_released! - item.progress.episode} new ep{item.episodes_released! - item.progress.episode > 1 ? 's' : ''} to watch · you're on E{item.progress.episode}
+                🍿 {item.episodes_released! - item.progress.episode} {tr('new eps to watch', 'нов. эп. к просмотру')} · {tr("you're on", 'вы на')} E{item.progress.episode}
               </p>
             </div>
             {item.air_schedule && <p style={{ fontFamily: FONT, fontSize: 7.5, color: C.muted, flexShrink: 0 }}>{item.air_schedule}</p>}
@@ -324,7 +334,7 @@ function UpcomingEpisodes({ lib }: { lib: MediaItem[] }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontFamily: FONT, fontSize: 10, fontWeight: 700, color: C.cream }}>{item.title}</p>
                 <p style={{ fontFamily: FONT, fontSize: 8.5, color: C.amber }}>
-                  {d === 0 ? 'New episode today! 🎉' : d === 1 ? 'New episode tomorrow!' : `Next episode in ${d} days`}
+                  {d === 0 ? tr('New episode today! 🎉', 'Новый эпизод сегодня! 🎉') : d === 1 ? tr('New episode tomorrow!', 'Новый эпизод завтра!') : `${tr('Next episode in', 'Новый эпизод через')} ${d} ${tr('days', 'дн.')}`}
                   <span style={{ color: C.muted, marginLeft: 5 }}>
                     ({new Date(item.next_episode_date!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
                   </span>
@@ -362,7 +372,7 @@ function AddModal({ defaultStatus, onClose, onAdd }: {
       const d = await fetchDetails(c)
       setResult(d); setPhase('done')
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to load details'); setPhase('idle')
+      setErr(e instanceof Error ? e.message : tr('Failed to load details', 'Не удалось загрузить данные')); setPhase('idle')
     }
   }, [])
 
@@ -376,10 +386,10 @@ function AddModal({ defaultStatus, onClose, onAdd }: {
         setSelectedKey(keyOf(list[0]))
         await fetchOne(list[0])
       } else {
-        setErr(tmdbKey() ? 'No results found' : 'No results — add a TMDB key in Settings for search')
+        setErr(tmdbKey() ? tr('No results found', 'Ничего не найдено') : tr('No results — add a TMDB key in Settings for search', 'Нет результатов — добавьте ключ TMDB в Настройках для поиска'))
         setPhase('idle')
       }
-    } catch { setErr('Network error'); setPhase('idle') }
+    } catch { setErr(tr('Network error', 'Ошибка сети')); setPhase('idle') }
   }, [fetchOne])
 
   useEffect(() => { ref.current?.focus() }, [])
@@ -438,8 +448,8 @@ function AddModal({ defaultStatus, onClose, onAdd }: {
         <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           borderBottom: `1px solid ${C.faint}` }}>
           <div>
-            <p style={{ fontFamily: FONT, fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.orange }}>🦊 Galactic Pictures · Search</p>
-            <p style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: C.cream, marginTop: 3 }}>Find a movie or show</p>
+            <p style={{ fontFamily: FONT, fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.orange }}>🦊 Galactic Pictures · {tr('Search', 'Поиск')}</p>
+            <p style={{ fontFamily: FONT, fontSize: 11, fontWeight: 700, color: C.cream, marginTop: 3 }}>{tr('Find a movie or show', 'Найдите фильм или сериал')}</p>
           </div>
           <button onClick={onClose} style={{ color: C.muted, fontSize: 16, background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
         </div>
@@ -448,13 +458,13 @@ function AddModal({ defaultStatus, onClose, onAdd }: {
           <div style={{ display: 'flex', gap: 7 }}>
             <input ref={ref} value={query} onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && search(query)}
-              placeholder="Search title…" style={inp}/>
+              placeholder={tr('Search title…', 'Название…')} style={inp}/>
             <button onClick={() => search(query)} disabled={isLoading || !query.trim()}
               style={{
                 padding: '8px 16px', borderRadius: 8, fontFamily: FONT, fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer',
                 background: isLoading ? C.raised : C.orange, color: isLoading ? C.muted : '#fff',
                 border: 'none', opacity: !query.trim() ? 0.4 : 1, transition: 'all 0.15s',
-              }}>{isLoading ? '…' : 'FIND'}</button>
+              }}>{isLoading ? '…' : tr('FIND', 'НАЙТИ')}</button>
           </div>
 
           {!result && (
@@ -473,8 +483,8 @@ function AddModal({ defaultStatus, onClose, onAdd }: {
             </div>
           )}
 
-          {phase === 'searching' && <p style={{ fontFamily: FONT, fontSize: 9, color: C.amber }}>🔍 Searching…</p>}
-          {phase === 'loading' && <p style={{ fontFamily: FONT, fontSize: 9, color: C.amber }}>📡 Loading details…</p>}
+          {phase === 'searching' && <p style={{ fontFamily: FONT, fontSize: 9, color: C.amber }}>🔍 {tr('Searching…', 'Поиск…')}</p>}
+          {phase === 'loading' && <p style={{ fontFamily: FONT, fontSize: 9, color: C.amber }}>📡 {tr('Loading details…', 'Загрузка данных…')}</p>}
           {err && <p style={{ fontFamily: FONT, fontSize: 9, color: C.red }}>{err}</p>}
 
           {candidates.length > 1 && (
@@ -490,7 +500,7 @@ function AddModal({ defaultStatus, onClose, onAdd }: {
                       border: `1px solid ${selectedKey === k ? 'rgba(255,107,0,0.4)' : C.faint}`,
                       transition: 'all 0.15s',
                     }}>
-                    {c.title}{c.year ? ` (${c.year})` : ''} · {c.type === 'tv' ? 'Series' : 'Film'}
+                    {c.title}{c.year ? ` (${c.year})` : ''} · {c.type === 'tv' ? tr('Series', 'Сериал') : tr('Film', 'Фильм')}
                   </button>
                 )
               })}
@@ -530,7 +540,7 @@ function AddModal({ defaultStatus, onClose, onAdd }: {
                 <div style={{ padding: '10px 14px', background: C.card }}>
                   <p style={{ fontFamily: FONT, fontSize: 9.5, color: C.muted, lineHeight: 1.6 }}>{r.synopsis}</p>
                   <p style={{ fontFamily: FONT, fontSize: 8.5, color: 'rgba(240,234,214,0.25)', marginTop: 6 }}>
-                    {r.director ? `Dir. ${r.director}` : r.creator ? `By ${r.creator}` : ''}
+                    {r.director ? `${tr('Dir.', 'Реж.')} ${r.director}` : r.creator ? `${tr('By', 'Автор')} ${r.creator}` : ''}
                     {(r.cast ?? []).length > 0 ? ` · ${r.cast.slice(0, 3).join(', ')}` : ''}
                   </p>
                   {r.air_schedule && <p style={{ fontFamily: FONT, fontSize: 8, color: 'rgba(240,234,214,0.2)', marginTop: 4 }}>📅 {r.air_schedule}</p>}
@@ -538,7 +548,7 @@ function AddModal({ defaultStatus, onClose, onAdd }: {
                 <div style={{ padding: '10px 14px', background: C.raised, borderTop: `1px solid ${C.faint}` }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 9 }}>
                     {(['watchlist', 'watching', 'watched', 'coming-soon'] as Status[]).map(s => {
-                      const labels: Record<Status, string> = { watchlist: 'Want to watch', watching: 'Watching now', watched: 'Already watched', 'coming-soon': 'Coming soon' }
+                      const labels: Record<Status, string> = { watchlist: tr('Want to watch', 'Хочу посмотреть'), watching: tr('Watching now', 'Смотрю сейчас'), watched: tr('Already watched', 'Уже посмотрел'), 'coming-soon': tr('Coming soon', 'Скоро') }
                       return (
                         <button key={s} onClick={() => setTargetStatus(s)} style={{
                           padding: '6px 9px', borderRadius: 7, fontFamily: FONT, fontSize: 8.5, fontWeight: 600, textAlign: 'left',
@@ -554,7 +564,7 @@ function AddModal({ defaultStatus, onClose, onAdd }: {
                     width: '100%', padding: '10px 0', borderRadius: 9, fontFamily: FONT, fontSize: 'var(--fs-sm)', fontWeight: 700,
                     background: C.orange, color: '#fff', border: 'none', cursor: 'pointer',
                     boxShadow: '0 4px 20px rgba(255,107,0,0.4)',
-                  }}>ADD TO LIBRARY</button>
+                  }}>{tr('ADD TO LIBRARY', 'ДОБАВИТЬ В БИБЛИОТЕКУ')}</button>
                 </div>
               </div>
             )
@@ -609,7 +619,7 @@ function RatingModal({ item, onSubmit, onSkip }: {
                 : item.emoji}
             </div>
             <div style={{ flex: 1 }}>
-              <p style={{ fontFamily: FONT, fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.orange }}>🏆 Your Review</p>
+              <p style={{ fontFamily: FONT, fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.orange }}>🏆 {tr('Your Review', 'Ваш отзыв')}</p>
               <p style={{ fontFamily: FONT, fontSize: 13, fontWeight: 800, color: C.cream, margin: '3px 0 2px' }}>{item.title}</p>
               <p style={{ fontFamily: FONT, fontSize: 8.5, color: C.muted }}>{item.year} · {typeLabelOf(item.type)}</p>
             </div>
@@ -620,7 +630,7 @@ function RatingModal({ item, onSubmit, onSkip }: {
           {cats.map((cat, i) => (
             <div key={cat.name}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ fontFamily: FONT, fontSize: 9.5, fontWeight: 700, color: C.cream }}>{cat.emoji} {cat.name}</span>
+                <span style={{ fontFamily: FONT, fontSize: 9.5, fontWeight: 700, color: C.cream }}>{cat.emoji} {catLabel(cat.name)}</span>
                 {scores[i] > 0 && (
                   <span style={{ fontFamily: FONT, fontSize: 12, fontWeight: 900, color: scoreColor(scores[i]) }}>
                     {scores[i]}<span style={{ fontSize: 8, color: C.muted }}>/10</span>
@@ -650,15 +660,15 @@ function RatingModal({ item, onSubmit, onSkip }: {
               <p style={{ fontFamily: FONT, fontSize: 30, fontWeight: 900, color: scoreColor(overall), lineHeight: 1 }}>
                 {overall.toFixed(1)}</p>
               <p style={{ fontFamily: FONT, fontSize: 8, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: 4 }}>
-                Your Overall Score</p>
+                {tr('Your Overall Score', 'Ваша общая оценка')}</p>
               <p style={{ fontFamily: FONT, fontSize: 9, color: scoreColor(overall), marginTop: 4 }}>
-                {overall >= 9 ? 'Masterpiece 🏆' : overall >= 8 ? 'Excellent 🌟' : overall >= 7 ? 'Really Good 👍'
-                  : overall >= 6 ? 'Decent 😐' : overall >= 5 ? 'Average 🤷' : 'Not for me 👎'}</p>
+                {overall >= 9 ? tr('Masterpiece 🏆', 'Шедевр 🏆') : overall >= 8 ? tr('Excellent 🌟', 'Отлично 🌟') : overall >= 7 ? tr('Really Good 👍', 'Очень хорошо 👍')
+                  : overall >= 6 ? tr('Decent 😐', 'Неплохо 😐') : overall >= 5 ? tr('Average 🤷', 'Средне 🤷') : tr('Not for me 👎', 'Не моё 👎')}</p>
             </div>
           )}
 
           <textarea value={comment} onChange={e => setComment(e.target.value)}
-            placeholder="Your thoughts… (optional)" rows={3}
+            placeholder={tr('Your thoughts… (optional)', 'Ваши мысли… (необязательно)')} rows={3}
             style={{ width: '100%', padding: '9px 12px', borderRadius: 9, fontFamily: FONT, fontSize: 'var(--fs-sm)',
               background: C.raised, border: `1px solid ${C.faint}`, color: C.cream,
               outline: 'none', resize: 'none', boxSizing: 'border-box', userSelect: 'text', WebkitUserSelect: 'text' }}/>
@@ -666,14 +676,14 @@ function RatingModal({ item, onSubmit, onSkip }: {
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={onSkip} style={{
               flex: 1, padding: '10px 0', borderRadius: 9, fontFamily: FONT, fontSize: 9.5, fontWeight: 700,
-              background: 'transparent', color: C.muted, border: `1px solid ${C.faint}`, cursor: 'pointer' }}>Skip for now</button>
+              background: 'transparent', color: C.muted, border: `1px solid ${C.faint}`, cursor: 'pointer' }}>{tr('Skip for now', 'Пока пропустить')}</button>
             <button onClick={submit} disabled={filled < 5} style={{
               flex: 2, padding: '10px 0', borderRadius: 9, fontFamily: FONT, fontSize: 'var(--fs-sm)', fontWeight: 700,
               background: filled < 5 ? 'rgba(255,107,0,0.15)' : C.orange,
               color: filled < 5 ? 'rgba(240,234,214,0.3)' : '#fff',
               border: 'none', cursor: filled < 5 ? 'default' : 'pointer',
               boxShadow: filled === 5 ? '0 4px 20px rgba(255,107,0,0.4)' : 'none', transition: 'all 0.2s' }}>
-              {filled < 5 ? `Rate all 5 categories (${filled}/5)` : '✓ Submit Review'}</button>
+              {filled < 5 ? `${tr('Rate all 5 categories', 'Оцените все 5 категорий')} (${filled}/5)` : tr('✓ Submit Review', '✓ Отправить отзыв')}</button>
           </div>
         </div>
       </div>
@@ -761,15 +771,15 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
       if (d.poster_url) patch.poster_url = d.poster_url
       onUpdate(item.id, patch)
     } catch (e) {
-      setRefreshErr(e instanceof Error ? e.message : 'Refresh failed')
+      setRefreshErr(e instanceof Error ? e.message : tr('Refresh failed', 'Не удалось обновить'))
     } finally { setRefreshing(false) }
   }, [item, onUpdate])
 
   const MOVES = ([
-    { s: 'watchlist' as Status, l: 'Watchlist' },
-    { s: 'watching' as Status, l: 'Watching' },
-    { s: 'watched' as Status, l: 'Watched' },
-    { s: 'coming-soon' as Status, l: 'Coming Soon' },
+    { s: 'watchlist' as Status, l: tr('Watchlist', 'К просмотру') },
+    { s: 'watching' as Status, l: tr('Watching', 'Смотрю') },
+    { s: 'watched' as Status, l: tr('Watched', 'Просмотрено') },
+    { s: 'coming-soon' as Status, l: tr('Coming Soon', 'Скоро') },
   ]).filter(o => o.s !== item.status)
 
   return (
@@ -843,7 +853,7 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
                 if (d === null || d < 0) return null
                 return (
                   <p style={{ fontFamily: FONT, fontSize: 8, fontWeight: 700, color: C.amber }}>
-                    📅 {d === 0 ? 'Today!' : d === 1 ? 'Tomorrow'
+                    📅 {d === 0 ? tr('Today!', 'Сегодня!') : d === 1 ? tr('Tomorrow', 'Завтра')
                       : new Date(item.next_episode_date + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </p>
                 )
@@ -860,13 +870,13 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
               <span style={{ fontFamily: FONT, fontSize: 7, color: C.muted }}>/ 10</span>
               <div style={{ display: 'flex', gap: 2, marginLeft: 2 }}>
                 {item.review.categories.map(c => (
-                  <span key={c.name} title={`${c.name}: ${c.score}`} style={{ fontSize: 8 }}>{c.emoji}</span>
+                  <span key={c.name} title={`${catLabel(c.name)}: ${c.score}`} style={{ fontSize: 8 }}>{c.emoji}</span>
                 ))}
               </div>
             </div>
           )}
           {isUpcoming && <p style={{ fontFamily: FONT, fontSize: 8.5, color: C.amber, marginTop: 4, fontWeight: 700 }}>
-            {days === 0 ? 'Today!' : days === 1 ? 'Tomorrow' : `In ${days} days`}</p>}
+            {days === 0 ? tr('Today!', 'Сегодня!') : days === 1 ? tr('Tomorrow', 'Завтра') : `${tr('In', 'Через')} ${days} ${tr('days', 'дн.')}`}</p>}
         </div>
         <span style={{ fontSize: 9, color: C.muted, flexShrink: 0, marginTop: 4, transition: 'transform 0.2s',
           transform: expanded ? 'rotate(180deg)' : 'none' }}>▾</span>
@@ -884,7 +894,7 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
                   <div style={{ flex: 1, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                     {item.review.categories.map(c => (
                       <span key={c.name} style={{ fontFamily: FONT, fontSize: 8, color: C.muted }}>
-                        {c.emoji} {c.name} <span style={{ color: scoreColor(c.score), fontWeight: 700 }}>{c.score}</span>
+                        {c.emoji} {catLabel(c.name)} <span style={{ color: scoreColor(c.score), fontWeight: 700 }}>{c.score}</span>
                       </span>
                     ))}
                   </div>
@@ -897,10 +907,10 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
             {item.tagline && item.tagline !== 'No tagline available' && (
               <p style={{ fontFamily: FONT, fontSize: 8.5, fontStyle: 'italic', color: C.muted, marginBottom: 4 }}>"{item.tagline}"</p>
             )}
-            <p style={{ fontFamily: FONT, fontSize: 9.5, lineHeight: 1.6, color: 'rgba(240,234,214,0.6)' }}>{item.synopsis || 'No synopsis.'}</p>
+            <p style={{ fontFamily: FONT, fontSize: 9.5, lineHeight: 1.6, color: 'rgba(240,234,214,0.6)' }}>{item.synopsis || tr('No synopsis.', 'Нет описания.')}</p>
             {(item.director || item.creator || item.cast.length > 0) && (
               <p style={{ fontFamily: FONT, fontSize: 8, color: 'rgba(240,234,214,0.25)', marginTop: 6 }}>
-                {item.director ? `Dir. ${item.director}` : item.creator ? `By ${item.creator}` : ''}
+                {item.director ? `${tr('Dir.', 'Реж.')} ${item.director}` : item.creator ? `${tr('By', 'Автор')} ${item.creator}` : ''}
                 {item.cast.length > 0 ? ` · ${item.cast.slice(0, 3).join(', ')}` : ''}
               </p>
             )}
@@ -919,7 +929,7 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
               <button onClick={e => { e.stopPropagation(); refresh() }} disabled={refreshing}
                 style={{ fontFamily: FONT, fontSize: 8, padding: '3px 9px', borderRadius: 6, cursor: 'pointer',
                   color: C.cyan, background: 'rgba(34,211,238,0.06)', border: '1px solid rgba(34,211,238,0.2)' }}>
-                {refreshing ? '↻ Refreshing…' : '↻ Refresh data'}</button>
+                {refreshing ? tr('↻ Refreshing…', '↻ Обновление…') : tr('↻ Refresh data', '↻ Обновить данные')}</button>
               {refreshErr && <span style={{ fontFamily: FONT, fontSize: 8, color: C.red }}>{refreshErr}</span>}
             </div>
 
@@ -932,7 +942,7 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
 
               if (!tmdbKey()) {
                 return <p style={{ fontFamily: FONT, fontSize: 8.5, color: C.muted }}>
-                  Add a TMDB key in Settings to track episodes</p>
+                  {tr('Add a TMDB key in Settings to track episodes', 'Добавьте ключ TMDB в Настройках, чтобы отслеживать эпизоды')}</p>
               }
 
               return (
@@ -954,9 +964,9 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
                   </div>
 
                   {loadingEps ? (
-                    <p style={{ fontFamily: FONT, fontSize: 8.5, color: C.muted, padding: '8px 0', textAlign: 'center' }}>Loading episodes…</p>
+                    <p style={{ fontFamily: FONT, fontSize: 8.5, color: C.muted, padding: '8px 0', textAlign: 'center' }}>{tr('Loading episodes…', 'Загрузка эпизодов…')}</p>
                   ) : episodes.length === 0 ? (
-                    <p style={{ fontFamily: FONT, fontSize: 8.5, color: C.muted, padding: '6px 0' }}>No episode data available</p>
+                    <p style={{ fontFamily: FONT, fontSize: 8.5, color: C.muted, padding: '6px 0' }}>{tr('No episode data available', 'Нет данных об эпизодах')}</p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       {visibleEps.map(ep => {
@@ -967,9 +977,9 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
                         const epKey = `S${epSeason}E${ep.episode_number}`
                         const epRating = item.epRatings?.[epKey] ?? 0
                         const d = ep.air_date ? daysUntil(ep.air_date) : null
-                        const dateLabel = !ep.air_date ? 'TBA'
+                        const dateLabel = !ep.air_date ? tr('TBA', 'Скоро')
                           : isAired ? new Date(ep.air_date + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                          : d === 0 ? 'Today' : d === 1 ? 'Tomorrow'
+                          : d === 0 ? tr('Today', 'Сегодня') : d === 1 ? tr('Tomorrow', 'Завтра')
                           : new Date(ep.air_date + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
                         const toggleWatched = (e: React.MouseEvent) => {
@@ -1005,7 +1015,7 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
                             onMouseEnter={e => { if (isAired) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.04)' }}
                             onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}>
                             <button onClick={toggleWatched}
-                              title={isWatched ? 'Mark unwatched' : isAired ? 'Mark watched' : 'Not aired yet'}
+                              title={isWatched ? tr('Mark unwatched', 'Снять отметку') : isAired ? tr('Mark watched', 'Отметить просмотренным') : tr('Not aired yet', 'Ещё не вышло')}
                               style={{
                                 width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
                                 border: `1.5px solid ${isWatched ? 'rgba(74,222,128,0.6)' : isAired ? 'rgba(240,234,214,0.25)' : 'rgba(240,234,214,0.1)'}`,
@@ -1024,7 +1034,7 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
                                 {[1, 2, 3, 4, 5].map(s => (
                                   <button key={s}
                                     onClick={e => { e.stopPropagation(); onUpdate(item.id, { epRatings: { ...item.epRatings, [epKey]: s === epRating ? 0 : s } }) }}
-                                    title={`Rate episode ${s}/5`}
+                                    title={`${tr('Rate episode', 'Оценить эпизод')} ${s}/5`}
                                     style={{ width: 7, height: 7, borderRadius: '50%', padding: 0, cursor: 'pointer', border: 'none',
                                       background: s <= epRating ? 'rgba(245,166,35,0.8)' : 'rgba(240,234,214,0.15)' }}/>
                                 ))}
@@ -1038,12 +1048,12 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
                       {upcoming.length > 3 && !showAllEps && (
                         <button onClick={e => { e.stopPropagation(); setShowAllEps(true) }}
                           style={{ fontFamily: FONT, fontSize: 8, color: C.muted, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', textAlign: 'left' }}>
-                          + {upcoming.length - 3} more upcoming</button>
+                          + {upcoming.length - 3} {tr('more upcoming', 'ещё впереди')}</button>
                       )}
                       {showAllEps && upcoming.length > 3 && (
                         <button onClick={e => { e.stopPropagation(); setShowAllEps(false) }}
                           style={{ fontFamily: FONT, fontSize: 8, color: C.muted, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', textAlign: 'left' }}>
-                          Show less</button>
+                          {tr('Show less', 'Свернуть')}</button>
                       )}
                     </div>
                   )}
@@ -1056,8 +1066,8 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
                       <span style={{ fontSize: 10 }}>{episodes.some(e => !e.air_date || e.air_date > today) ? '✅' : '🎉'}</span>
                       <span style={{ fontFamily: FONT, fontSize: 8.5, fontWeight: 700, color: 'rgba(74,222,128,0.9)' }}>
                         {episodes.some(e => !e.air_date || e.air_date > today)
-                          ? `Caught up on Season ${seasonRatingPending}!` : `Season ${seasonRatingPending} done!`}</span>
-                      <span style={{ fontFamily: FONT, fontSize: 8, color: C.muted }}>Rate it:</span>
+                          ? `${tr('Caught up on Season', 'Догнали сезон')} ${seasonRatingPending}!` : `${tr('Season', 'Сезон')} ${seasonRatingPending} ${tr('done!', 'завершён!')}`}</span>
+                      <span style={{ fontFamily: FONT, fontSize: 8, color: C.muted }}>{tr('Rate it:', 'Оцените:')}</span>
                       <div style={{ display: 'flex', gap: 2 }}>
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
                           const cur = item.seasonRatings?.[seasonRatingPending] ?? 0
@@ -1077,7 +1087,7 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
                         })}
                       </div>
                       <button onClick={e => { e.stopPropagation(); setSeasonRatingPending(null) }}
-                        style={{ fontFamily: FONT, fontSize: 8, color: C.muted, background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}>skip</button>
+                        style={{ fontFamily: FONT, fontSize: 8, color: C.muted, background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}>{tr('skip', 'пропустить')}</button>
                     </div>
                   )}
 
@@ -1087,13 +1097,13 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
                       background: 'rgba(255,107,0,0.09)', border: '1px solid rgba(255,107,0,0.28)',
                       display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 12 }}>🏁</span>
-                      <span style={{ fontFamily: FONT, fontSize: 8.5, fontWeight: 700, color: C.orange }}>You finished {item.title}!</span>
+                      <span style={{ fontFamily: FONT, fontSize: 8.5, fontWeight: 700, color: C.orange }}>{tr('You finished', 'Вы досмотрели')} {item.title}!</span>
                       <button onClick={e => { e.stopPropagation(); setShowFinishedBanner(false); onMove(item.id, 'watched') }}
                         style={{ fontFamily: FONT, fontSize: 8, padding: '3px 10px', borderRadius: 6, cursor: 'pointer',
                           background: 'rgba(255,107,0,0.15)', color: C.orange, border: '1px solid rgba(255,107,0,0.35)', fontWeight: 700 }}>
-                        → Mark as Watched</button>
+                        → {tr('Mark as Watched', 'Отметить просмотренным')}</button>
                       <button onClick={e => { e.stopPropagation(); setShowFinishedBanner(false) }}
-                        style={{ fontFamily: FONT, fontSize: 8, color: C.muted, background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}>not yet</button>
+                        style={{ fontFamily: FONT, fontSize: 8, color: C.muted, background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}>{tr('not yet', 'ещё нет')}</button>
                     </div>
                   )}
                 </div>
@@ -1103,23 +1113,23 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
             {/* Star rating (watched) */}
             {item.status === 'watched' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} onClick={e => e.stopPropagation()}>
-                <span style={{ fontFamily: FONT, fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted }}>Rating</span>
+                <span style={{ fontFamily: FONT, fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted }}>{tr('Rating', 'Оценка')}</span>
                 <StarRating value={item.rating} onChange={r => onUpdate(item.id, { rating: r })}/>
                 {item.rating > 0 && <span style={{ fontFamily: FONT, fontSize: 8, color: C.muted }}>
-                  {['', 'Waste of time', 'Meh', 'Decent', 'Really good', 'Masterpiece'][item.rating]}</span>}
+                  {['', tr('Waste of time', 'Зря потратил время'), tr('Meh', 'Так себе'), tr('Decent', 'Неплохо'), tr('Really good', 'Очень хорошо'), tr('Masterpiece', 'Шедевр')][item.rating]}</span>}
               </div>
             )}
 
             {/* Notes */}
             <input value={item.notes} onClick={e => e.stopPropagation()}
-              onChange={e => onUpdate(item.id, { notes: e.target.value })} placeholder="Add a note…"
+              onChange={e => onUpdate(item.id, { notes: e.target.value })} placeholder={tr('Add a note…', 'Добавить заметку…')}
               style={{ width: '100%', padding: '7px 10px', borderRadius: 8, fontFamily: FONT, fontSize: 9, outline: 'none',
                 background: C.card, border: `1px solid ${C.faint}`, color: C.cream, boxSizing: 'border-box',
                 userSelect: 'text', WebkitUserSelect: 'text' }}/>
 
             {/* Type toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }} onClick={e => e.stopPropagation()}>
-              <span style={{ fontFamily: FONT, fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted }}>Type</span>
+              <span style={{ fontFamily: FONT, fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.muted }}>{tr('Type', 'Тип')}</span>
               <div style={{ display: 'flex', gap: 5 }}>
                 {(['movie', 'tv', 'game'] as MediaType[]).map(t => {
                   const tcc = typeColorOf(t)
@@ -1128,7 +1138,7 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
                       fontFamily: FONT, fontSize: 8, padding: '3px 9px', borderRadius: 6, cursor: 'pointer', transition: 'all 0.15s',
                       background: item.type === t ? `${tcc}20` : C.card, color: item.type === t ? tcc : C.muted,
                       border: `1px solid ${item.type === t ? tcc + '40' : C.faint}`,
-                    }}>{t === 'movie' ? '🎬 Film' : t === 'game' ? '🎮 Game' : '📺 Series'}</button>
+                    }}>{t === 'movie' ? tr('🎬 Film', '🎬 Фильм') : t === 'game' ? tr('🎮 Game', '🎮 Игра') : tr('📺 Series', '📺 Сериал')}</button>
                   )
                 })}
               </div>
@@ -1150,7 +1160,7 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
               <button onClick={() => onRemove(item.id)} style={{ fontFamily: FONT, fontSize: 8, color: C.red,
                 background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5 }}
                 onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}>Remove</button>
+                onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}>{tr('Remove', 'Удалить')}</button>
             </div>
           </div>
         </div>
@@ -1174,15 +1184,15 @@ function LibraryView({ lib, onUpdate, onRemove, onMove, onRequestReview }: {
   const fil = q ? lib.filter(x => x.title.toLowerCase().includes(q)) : lib
 
   const SECS = [
-    { id: 'watching', label: 'Now Watching', icon: '▶', color: C.green,
+    { id: 'watching', label: tr('Now Watching', 'Сейчас смотрю'), icon: '▶', color: C.green,
       items: fil.filter(x => x.status === 'watching' && x.type !== 'game') },
-    { id: 'watchlist', label: 'Watchlist', icon: '🎬', color: C.amber,
+    { id: 'watchlist', label: tr('Watchlist', 'К просмотру'), icon: '🎬', color: C.amber,
       items: fil.filter(x => x.status === 'watchlist' && x.type !== 'game') },
-    { id: 'watched', label: 'Finished', icon: '✅', color: C.blue,
+    { id: 'watched', label: tr('Finished', 'Просмотрено'), icon: '✅', color: C.blue,
       items: fil.filter(x => x.status === 'watched') },
-    { id: 'coming-soon', label: 'Coming Soon', icon: '🗓', color: C.orange,
+    { id: 'coming-soon', label: tr('Coming Soon', 'Скоро'), icon: '🗓', color: C.orange,
       items: fil.filter(x => x.status === 'coming-soon') },
-    { id: 'games', label: 'My Games', icon: '🎮', color: C.purple,
+    { id: 'games', label: tr('My Games', 'Мои игры'), icon: '🎮', color: C.purple,
       items: fil.filter(x => x.type === 'game') },
   ]
 
@@ -1204,10 +1214,10 @@ function LibraryView({ lib, onUpdate, onRemove, onMove, onRequestReview }: {
       {/* Stats bar */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 7, marginBottom: 14 }}>
         {[
-          { v: lib.filter(x => x.status === 'watching' && x.type !== 'game').length, l: 'Watching', c: C.green },
-          { v: lib.filter(x => x.status === 'watchlist' && x.type !== 'game').length, l: 'Watchlist', c: C.amber },
-          { v: lib.filter(x => x.status === 'watched').length, l: 'Finished', c: C.blue },
-          { v: lib.filter(x => x.type === 'game').length, l: 'Games', c: C.purple },
+          { v: lib.filter(x => x.status === 'watching' && x.type !== 'game').length, l: tr('Watching', 'Смотрю'), c: C.green },
+          { v: lib.filter(x => x.status === 'watchlist' && x.type !== 'game').length, l: tr('Watchlist', 'К просмотру'), c: C.amber },
+          { v: lib.filter(x => x.status === 'watched').length, l: tr('Finished', 'Просмотрено'), c: C.blue },
+          { v: lib.filter(x => x.type === 'game').length, l: tr('Games', 'Игры'), c: C.purple },
         ].map(s => (
           <div key={s.l} style={{ padding: '8px 4px', borderRadius: 10, textAlign: 'center',
             background: 'rgba(8,5,2,0.8)', border: `1px solid ${s.c}25` }}>
@@ -1220,7 +1230,7 @@ function LibraryView({ lib, onUpdate, onRemove, onMove, onRequestReview }: {
       {/* Search */}
       {lib.length > 3 && (
         <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="🔍  Search your library…"
+          placeholder={tr('🔍  Search your library…', '🔍  Поиск по библиотеке…')}
           style={{ width: '100%', padding: '8px 12px', borderRadius: 9, fontFamily: FONT, fontSize: 'var(--fs-sm)', marginBottom: 12,
             background: C.raised, border: `1px solid ${C.faint}`, color: C.cream,
             outline: 'none', boxSizing: 'border-box', userSelect: 'text', WebkitUserSelect: 'text' }}/>
@@ -1229,13 +1239,13 @@ function LibraryView({ lib, onUpdate, onRemove, onMove, onRequestReview }: {
       {lib.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><FoxMascot size={72}/></div>
-          <p style={{ fontFamily: FONT, fontSize: 'var(--fs-md)', color: C.muted }}>Your library is empty</p>
+          <p style={{ fontFamily: FONT, fontSize: 'var(--fs-md)', color: C.muted }}>{tr('Your library is empty', 'Ваша библиотека пуста')}</p>
           <p style={{ fontFamily: FONT, fontSize: 9, color: 'rgba(240,234,214,0.2)', marginTop: 4 }}>
-            Discover and add movies, shows & games</p>
+            {tr('Discover and add movies, shows & games', 'Открывайте и добавляйте фильмы, сериалы и игры')}</p>
         </div>
       ) : active.length === 0 ? (
         <p style={{ textAlign: 'center', padding: '30px 0', fontFamily: FONT, fontSize: 10, color: C.muted }}>
-          No results for "{search}"</p>
+          {tr('No results for', 'Ничего не найдено по')} "{search}"</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {active.map(sec => {
@@ -1278,7 +1288,7 @@ function LibraryView({ lib, onUpdate, onRemove, onMove, onRequestReview }: {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
                               <div style={{ width: 2, height: 11, borderRadius: 1, background: C.amber }}/>
                               <span style={{ fontFamily: FONT, fontSize: 7.5, fontWeight: 700, color: C.amber,
-                                textTransform: 'uppercase', letterSpacing: '0.14em' }}>🎬 Films · {films.length}</span>
+                                textTransform: 'uppercase', letterSpacing: '0.14em' }}>🎬 {tr('Films', 'Фильмы')} · {films.length}</span>
                             </div>
                             {renderCards(films)}
                           </div>
@@ -1288,7 +1298,7 @@ function LibraryView({ lib, onUpdate, onRemove, onMove, onRequestReview }: {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
                               <div style={{ width: 2, height: 11, borderRadius: 1, background: C.blue }}/>
                               <span style={{ fontFamily: FONT, fontSize: 7.5, fontWeight: 700, color: C.blue,
-                                textTransform: 'uppercase', letterSpacing: '0.14em' }}>📺 Series · {series.length}</span>
+                                textTransform: 'uppercase', letterSpacing: '0.14em' }}>📺 {tr('Series', 'Сериалы')} · {series.length}</span>
                             </div>
                             {renderCards(series)}
                           </div>
@@ -1307,12 +1317,12 @@ function LibraryView({ lib, onUpdate, onRemove, onMove, onRequestReview }: {
                           display: 'flex', alignItems: 'center', gap: 12 }}>
                           <div style={{ textAlign: 'center' }}>
                             <p style={{ fontFamily: FONT, fontSize: 17, fontWeight: 900, color: scoreColor(avg) }}>{avg.toFixed(1)}</p>
-                            <p style={{ fontFamily: FONT, fontSize: 6.5, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 2 }}>avg score</p>
+                            <p style={{ fontFamily: FONT, fontSize: 6.5, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 2 }}>{tr('avg score', 'ср. оценка')}</p>
                           </div>
                           <div style={{ flex: 1 }}>
-                            <p style={{ fontFamily: FONT, fontSize: 8.5, color: C.muted }}>{reviewed.length} of {sec.items.length} reviewed</p>
+                            <p style={{ fontFamily: FONT, fontSize: 8.5, color: C.muted }}>{reviewed.length} {tr('of', 'из')} {sec.items.length} {tr('reviewed', 'с отзывом')}</p>
                             <p style={{ fontFamily: FONT, fontSize: 8, color: 'rgba(240,234,214,0.25)', marginTop: 2 }}>
-                              Films: {reviewed.filter(x => x.type === 'movie').length} · Series: {reviewed.filter(x => x.type === 'tv').length}</p>
+                              {tr('Films', 'Фильмы')}: {reviewed.filter(x => x.type === 'movie').length} · {tr('Series', 'Сериалы')}: {reviewed.filter(x => x.type === 'tv').length}</p>
                           </div>
                         </div>
                       )
@@ -1348,7 +1358,7 @@ function GamesView({ lib, onAdd }: { lib: MediaItem[]; onAdd: (item: DiscoverIte
         display: 'flex', alignItems: 'center', gap: 9 }}>
         <span style={{ fontSize: 16 }}>🎮</span>
         <p style={{ fontFamily: FONT, fontSize: 8.5, color: C.muted, lineHeight: 1.5 }}>
-          Add a free <span style={{ color: C.purple }}>RAWG key</span> in Settings → Data Sources to see game releases with Metacritic scores (rawg.io/apidocs)
+          {tr('Add a free', 'Добавьте бесплатный')} <span style={{ color: C.purple }}>{tr('RAWG key', 'ключ RAWG')}</span> {tr('in Settings → Data Sources to see game releases with Metacritic scores (rawg.io/apidocs)', 'в Настройках → Источники данных, чтобы видеть релизы игр с оценками Metacritic (rawg.io/apidocs)')}
         </p>
       </div>
     )
@@ -1360,11 +1370,11 @@ function GamesView({ lib, onAdd }: { lib: MediaItem[]; onAdd: (item: DiscoverIte
 
   return (
     <div>
-      <ScrollRow title="Top Rated Games" icon="🔥" color={C.purple}
+      <ScrollRow title={tr('Top Rated Games', 'Топ игр по оценкам')} icon="🔥" color={C.purple}
         items={topSellers} lib={lib} onAdd={onAdd} loading={loading}/>
-      <ScrollRow title="New Releases" icon="🆕" color={C.cyan}
+      <ScrollRow title={tr('New Releases', 'Новые релизы')} icon="🆕" color={C.cyan}
         items={newReleases} lib={lib} onAdd={onAdd} loading={loading}/>
-      <ScrollRow title="Coming Soon" icon="📅" color={C.orange}
+      <ScrollRow title={tr('Coming Soon', 'Скоро')} icon="📅" color={C.orange}
         items={comingSoon} lib={lib} onAdd={onAdd} loading={loading}/>
     </div>
   )
@@ -1424,8 +1434,8 @@ export default function Pictures() {
   const watchingTv = lib.filter(x => x.status === 'watching' && x.type === 'tv')
 
   const MAIN_TABS = [
-    { id: 'discover' as const, label: 'DISCOVER', icon: '🎬', color: C.amber },
-    { id: 'library' as const, label: 'MY LIBRARY', icon: '📚', color: C.blue },
+    { id: 'discover' as const, label: tr('DISCOVER', 'ОБЗОР'), icon: '🎬', color: C.amber },
+    { id: 'library' as const, label: tr('MY LIBRARY', 'МОЯ БИБЛИОТЕКА'), icon: '📚', color: C.blue },
   ]
 
   return (
@@ -1440,15 +1450,15 @@ export default function Pictures() {
           <p style={{ fontFamily: FONT, fontSize: 11, fontWeight: 900, color: C.orange,
             letterSpacing: '0.18em', textShadow: `0 0 12px ${C.orange}` }}>GALACTIC PICTURES</p>
           <p style={{ fontFamily: FONT, fontSize: 6.5, color: 'rgba(255,107,0,0.45)', letterSpacing: '0.12em' }}>
-            MOVIES · SHOWS · GAMES · RELEASES
+            {tr('MOVIES · SHOWS · GAMES · RELEASES', 'ФИЛЬМЫ · СЕРИАЛЫ · ИГРЫ · РЕЛИЗЫ')}
           </p>
         </div>
         {/* Quick stats */}
         <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
           {[
-            { v: lib.filter(x => x.status === 'watching' && x.type !== 'game').length, l: 'WATCHING', c: C.blue },
-            { v: watchingTv.filter(x => x.episodes_released !== null && x.progress.episode < x.episodes_released!).length, l: 'CATCH UP', c: C.green },
-            { v: lib.filter(x => x.type === 'game').length, l: 'GAMES', c: C.purple },
+            { v: lib.filter(x => x.status === 'watching' && x.type !== 'game').length, l: tr('WATCHING', 'СМОТРЮ'), c: C.blue },
+            { v: watchingTv.filter(x => x.episodes_released !== null && x.progress.episode < x.episodes_released!).length, l: tr('CATCH UP', 'ДОГНАТЬ'), c: C.green },
+            { v: lib.filter(x => x.type === 'game').length, l: tr('GAMES', 'ИГРЫ'), c: C.purple },
           ].map(s => (
             <div key={s.l} style={{ textAlign: 'right' }}>
               <p style={{ fontFamily: FONT, fontSize: 13, fontWeight: 900, color: s.c, lineHeight: 1 }}>{s.v}</p>
@@ -1493,20 +1503,20 @@ export default function Pictures() {
                 <span style={{ fontSize: 15 }}>🎬</span>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontFamily: FONT, fontSize: 9, color: C.amber, fontWeight: 600 }}>
-                    Add a TMDB key for posters, search & live data</p>
+                    {tr('Add a TMDB key for posters, search & live data', 'Добавьте ключ TMDB для постеров, поиска и живых данных')}</p>
                   <p style={{ fontFamily: FONT, fontSize: 7.5, color: C.muted, marginTop: 2 }}>
-                    Free at themoviedb.org/settings/api → Settings → Data Sources</p>
+                    {tr('Free at themoviedb.org/settings/api → Settings → Data Sources', 'Бесплатно: themoviedb.org/settings/api → Настройки → Источники данных')}</p>
                 </div>
               </div>
             )}
             <UpcomingEpisodes lib={lib}/>
-            <ScrollRow title="Now in Cinemas" icon="🎥" color={C.amber}
+            <ScrollRow title={tr('Now in Cinemas', 'Сейчас в кино')} icon="🎥" color={C.amber}
               items={discover?.cinema ?? []} lib={lib}
               onAdd={item => addFromDiscover(item, 'watchlist')} loading={discoverLoading}/>
-            <ScrollRow title="Coming Soon This Month" icon="🗓" color={C.orange}
+            <ScrollRow title={tr('Coming Soon This Month', 'Скоро в этом месяце')} icon="🗓" color={C.orange}
               items={discover?.comingSoon ?? []} lib={lib}
               onAdd={item => addFromDiscover(item, 'coming-soon')} loading={discoverLoading}/>
-            <ScrollRow title="Trending on Streaming" icon="📡" color={C.blue}
+            <ScrollRow title={tr('Trending on Streaming', 'В тренде на стримингах')} icon="📡" color={C.blue}
               items={discover?.streaming ?? []} lib={lib}
               onAdd={item => addFromDiscover(item, 'watchlist')} loading={discoverLoading}/>
             <GamesView lib={lib} onAdd={item => addFromDiscover(item, 'watchlist')}/>
