@@ -104,6 +104,38 @@ describe('buildDay scheduler', () => {
     expect(plan.blocks.some(b => b.kind === 'meal' && b.start === toMin('19:00'))).toBe(true)
   })
 
+  // ── Live plan (nowMin given): the day must never claim free time it doesn't have ──
+  it('live: reschedules undone commitments from now, so "now" is not free', () => {
+    const evening = toMin('21:00')
+    const plan = buildDay(anchors, [mk('a', 'Sing', 20), mk('b', 'Stretch', 20)], [], evening)
+    const atNow = plan.blocks.find(b => evening >= b.start && evening < b.end)!
+    expect(atNow.kind).toBe('commitment')
+    expect(atNow.label).toBe('Sing')
+  })
+
+  it('live: free minutes count only the time still ahead', () => {
+    const evening = toMin('21:00')                       // 2h left before 23:00 bedtime
+    const plan = buildDay(anchors, [], [], evening)
+    expect(plan.freeMinutes).toBe(120)
+    // the static view still sees the whole awake window
+    expect(buildDay(anchors, [], []).freeMinutes).toBe(15 * 60)
+  })
+
+  it('live: finished commitments are not rescheduled', () => {
+    const evening = toMin('21:00')
+    const plan = buildDay(anchors, [{ ...mk('a', 'Done thing', 20), done: true }], [], evening)
+    expect(plan.blocks.some(b => b.kind === 'commitment')).toBe(false)
+    expect(plan.doneCount).toBe(1)
+    expect(plan.committedCount).toBe(1)
+  })
+
+  it('live: overdue work that no longer fits overflows past bedtime', () => {
+    const late = toMin('22:30')                          // 30 min left, 3 × 30-min tasks
+    const plan = buildDay(anchors, [mk('a', 'A', 30), mk('b', 'B', 30), mk('c', 'C', 30)], [], late)
+    expect(plan.blocks.some(b => b.kind === 'commitment' && b.start >= toMin('23:00'))).toBe(true)
+    expect(plan.freeMinutes).toBe(0)
+  })
+
   it('places a post-midnight meal in the overnight tail', () => {
     const night: Anchors = { ...anchors, wake: '11:00', sleep: '03:00', dinner: '01:00' } // 1 AM supper
     const plan = buildDay(night, [], [])

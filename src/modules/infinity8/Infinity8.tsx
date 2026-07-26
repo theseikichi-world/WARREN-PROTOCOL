@@ -246,8 +246,9 @@ export default function Infinity8() {
   const navigate = useNavigate()
 
   const commitments = useMemo(() => getTodayCommitments(state.durations, state.prefTime), [state.durations, state.prefTime, refresh])
-  const plan = useMemo(() => buildDay(eff, commitments, state.events[today] ?? []),
-    [eff, commitments, state.events, today])
+  // LIVE plan — undone commitments reflow from now, free time = time still ahead
+  const plan = useMemo(() => buildDay(eff, commitments, state.events[today] ?? [], nowMin),
+    [eff, commitments, state.events, today, nowMin])
 
   // Overnight schedules (bedtime past midnight): roll sleep + the "now" marker
   // past 24:00 so they land in the same awake window the timeline draws.

@@ -309,15 +309,22 @@ function NowCard() {
   }, [])
 
   const cur = snap.current
-  const isFreeNow = !snap.awake || !cur || cur.kind === 'free' || cur.kind === 'break'
+  // "Free" only counts when nothing is scheduled AND nothing is still open —
+  // unfinished quests mean the day isn't yours yet.
+  const idleNow    = !snap.awake || !cur || cur.kind === 'free' || cur.kind === 'break'
+  const isFreeNow  = idleNow && snap.pendingCount === 0
   const headline = !snap.awake ? t('Off the clock', 'Вне графика')
-    : isFreeNow ? t('Free time', 'Свободное время')
-    : cur!.label
+    : !idleNow ? cur!.label
+    : snap.pendingCount > 0
+      ? `${snap.pendingCount} ${t('quests still open', 'заданий не закрыто')}`
+      : t('Free time', 'Свободное время')
   const sub = !snap.awake
-    ? `${fmtDur(snap.freeMinutes)} ${t('of free time today', 'свободного времени сегодня')}`
-    : isFreeNow
-      ? (snap.next ? `${t('until', 'до')} ${snap.next.label} ${t('at', 'в')} ${fmtClock(snap.next.start)}` : t('rest of the day is yours', 'остаток дня — ваш'))
-      : `${t('now', 'сейчас')} → ${fmtClock(cur!.end)} · ${fmtDur(Math.max(0, cur!.end - nowMin))} ${t('left', 'осталось')}`
+    ? `${fmtDur(snap.freeMinutes)} ${t('of free time left', 'свободного времени осталось')}`
+    : !idleNow
+      ? `${t('now', 'сейчас')} → ${fmtClock(cur!.end)} · ${fmtDur(Math.max(0, cur!.end - nowMin))} ${t('left', 'осталось')}`
+      : snap.pendingCount > 0
+        ? `${fmtDur(snap.freeMinutes)} ${t('left today — knock them out', 'осталось сегодня — разделайтесь с ними')}`
+        : (snap.next ? `${t('until', 'до')} ${snap.next.label} ${t('at', 'в')} ${fmtClock(snap.next.start)}` : t('rest of the day is yours', 'остаток дня — ваш'))
 
   return (
    <div style={{ marginBottom: 16 }}>
@@ -335,8 +342,10 @@ function NowCard() {
         animation: 'pulse 2.4s ease-in-out infinite' }}>∞</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: 7.5, fontWeight: 700, letterSpacing: '0.18em',
-          color: isFreeNow ? 'rgba(57,255,20,0.7)' : INF }}>
-          {isFreeNow ? t('● FREE NOW', '● СЕЙЧАС СВОБОДНО') : t('● HAPPENING NOW', '● ИДЁТ СЕЙЧАС')}
+          color: isFreeNow ? 'rgba(57,255,20,0.7)' : idleNow ? 'rgba(255,215,0,0.75)' : INF }}>
+          {isFreeNow ? t('● FREE NOW', '● СЕЙЧАС СВОБОДНО')
+            : idleNow ? t('● QUESTS OPEN', '● ЕСТЬ ЗАДАНИЯ')
+            : t('● HAPPENING NOW', '● ИДЁТ СЕЙЧАС')}
         </p>
         <p style={{ fontSize: 14, fontWeight: 800, color: 'rgba(225,250,255,0.95)',
           letterSpacing: '0.02em', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -347,7 +356,7 @@ function NowCard() {
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
         <p style={{ fontSize: 16, fontWeight: 900, color: '#39ff14', lineHeight: 1,
           textShadow: '0 0 10px rgba(57,255,20,0.4)' }}>{fmtDur(snap.freeMinutes)}</p>
-        <p style={{ fontSize: 7, color: 'rgba(57,255,20,0.5)', letterSpacing: '0.1em', marginTop: 2 }}>{t('FREE TODAY', 'СВОБОДНО СЕГОДНЯ')}</p>
+        <p style={{ fontSize: 7, color: 'rgba(57,255,20,0.5)', letterSpacing: '0.1em', marginTop: 2 }}>{t('FREE LEFT', 'СВОБОДНО ОСТАЛОСЬ')}</p>
         {snap.committedCount > 0 && (
           <p style={{ fontSize: 7.5, color: `${INF}70`, marginTop: 3 }}>{snap.doneCount}/{snap.committedCount} {t('done', 'готово')}</p>
         )}

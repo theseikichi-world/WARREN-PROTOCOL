@@ -192,7 +192,18 @@ interface Busy { start: number; end: number; block: Block }
 
 /** Lay meals/work/events as fixed, fill gaps with commitments (circadian-ordered,
  *  with rest breaks between them), surface free time. */
-export function buildDay(anchors: Anchors, commitments: Commitment[], events: DayEvent[]): DayPlan {
+/**
+ * Lay out the day.
+ *
+ * Pass `nowMin` for a LIVE plan: time already spent is treated as gone, only
+ * unfinished commitments are scheduled (from now forward), and `freeMinutes`
+ * counts the time still ahead of you. Without it the plan is the static
+ * whole-day view (used by tests and previews).
+ *
+ * The live form is what the UI must use — otherwise a day whose tasks were
+ * planned at 08:00 and never done still reports "free time" at 21:00.
+ */
+export function buildDay(anchors: Anchors, commitments: Commitment[], events: DayEvent[], nowMin?: number): DayPlan {
   const wake  = toMin(anchors.wake)
   let   sleep = toMin(anchors.sleep)
   // Overnight schedules: a bedtime at/before wake-up means it's the NEXT day
@@ -231,13 +242,25 @@ export function buildDay(anchors: Anchors, commitments: Commitment[], events: Da
   }
   if (cursor < sleep) gaps.push({ start: cursor, end: sleep })
 
+  // Live plan: schedule forward from now, and only what's still outstanding.
+  const live     = nowMin != null
+  const planFrom = live ? Math.max(wake, within(nowMin)) : wake
+
   // Circadian order: morning-suited first → they land in earlier gaps
-  const queue = [...commitments].sort((a, b) => PERIOD_RANK[a.period] - PERIOD_RANK[b.period])
+  const queue = (live ? commitments.filter(c => !c.done) : [...commitments])
+    .sort((a, b) => PERIOD_RANK[a.period] - PERIOD_RANK[b.period])
 
   const placed: Block[] = []
   for (const g of gaps) {
     let c = g.start
     let placedInGap = 0
+
+    // Time already behind us in this gap is spent — mark it free and plan after it
+    if (live && planFrom > c) {
+      const spentEnd = Math.min(planFrom, g.end)
+      placed.push({ id: `free-past-${g.start}`, kind: 'free', label: tr('Free', 'Свободно'), start: c, end: spentEnd })
+      c = spentEnd
+    }
     while (queue.length && c + queue[0].duration <= g.end) {
       // insert a rest break between consecutive activities (not before the first)
       if (placedInGap > 0 && brk > 0 && c + brk + queue[0].duration <= g.end) {
@@ -263,7 +286,10 @@ export function buildDay(anchors: Anchors, commitments: Commitment[], events: Da
   }
 
   const blocks = [...fixed.map(f => f.block), ...placed].sort((a, b) => a.start - b.start)
-  const freeMinutes = placed.filter(b => b.kind === 'free').reduce((s, b) => s + (b.end - b.start), 0)
+  // Live: only the free time still AHEAD counts — "13h free" at 21:00 is a lie.
+  const freeMinutes = placed
+    .filter(b => b.kind === 'free')
+    .reduce((s, b) => s + Math.max(0, b.end - (live ? Math.max(b.start, planFrom) : b.start)), 0)
 
   return {
     blocks,
@@ -311,9 +337,10 @@ export function setPrefTimes(state: Inf8State, map: Record<string, Period>): Inf
 export interface NowSnapshot {
   current:        Block | null   // block containing "now" (may be free)
   next:           Block | null   // next commitment / meal / event after now
-  freeMinutes:    number
+  freeMinutes:    number         // free time still AHEAD today
   committedCount: number
   doneCount:      number
+  pendingCount:   number         // commitments still open — free time isn't free while > 0
   awake:          boolean
 }
 
@@ -322,7 +349,6 @@ export function getNowSnapshot(): NowSnapshot {
   const today = todayKey()
   const anchors = effectiveAnchors(state, today)
   const commitments = getTodayCommitments(state.durations, state.prefTime)
-  const plan = buildDay(anchors, commitments, state.events[today] ?? [])
 
   const wake = toMin(anchors.wake)
   let sleep  = toMin(anchors.sleep)
@@ -330,6 +356,9 @@ export function getNowSnapshot(): NowSnapshot {
   const d = new Date()
   let now = d.getHours() * 60 + d.getMinutes()
   if (sleep > 1440 && now < wake) now += 1440      // map small-hours "now" into the window
+
+  // LIVE plan — outstanding work is rescheduled from now, so "free" means free
+  const plan = buildDay(anchors, commitments, state.events[today] ?? [], now)
 
   const current = plan.blocks.find(b => now >= b.start && now < b.end) ?? null
   const next = plan.blocks.find(b => b.start >= now &&
@@ -340,6 +369,7 @@ export function getNowSnapshot(): NowSnapshot {
     freeMinutes: plan.freeMinutes,
     committedCount: plan.committedCount,
     doneCount: plan.doneCount,
+    pendingCount: plan.committedCount - plan.doneCount,
     awake: now >= wake && now < sleep,
   }
 }

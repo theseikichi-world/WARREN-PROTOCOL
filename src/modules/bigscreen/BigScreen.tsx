@@ -7,12 +7,13 @@ import { GUILD } from '../../guild'
 import { CyberIcon } from '../../components/CyberIcon'
 import { getHubStats, type HubStats } from '../../hubStats'
 import {
-  getNowSnapshot, getTodayCommitments, loadInf8State, saveInf8State, removeEvent,
+  getNowSnapshot, getTodayCommitments, loadInf8State,
   effectiveAnchors, buildDay, todayKey, toMin,
-  fmtDur, fmtClock, type Commitment, type Inf8State,
+  fmtDur, type Commitment, type Inf8State,
 } from '../infinity8/store'
-import { gatherSuggestions, assignToFreeBlocks, type Suggestion } from '../infinity8/suggestions'
-import Infinity8, { Timeline } from '../infinity8/Infinity8'
+import { gatherSuggestions, type Suggestion } from '../infinity8/suggestions'
+import { DayRibbon } from './DayRibbon'
+import Infinity8 from '../infinity8/Infinity8'
 import Scrap7   from '../scrap7/Scrap7'
 import Log      from '../log/Log'
 import Ardo     from '../ardo/Ardo'
@@ -357,18 +358,13 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
   // ── Day timeline (the dashboard's spine) — same math as the INFINITY-8 module ──
   const today = todayKey()
   const eff   = useMemo(() => effectiveAnchors(inf8, today), [inf8, today])
-  const plan  = useMemo(() => buildDay(eff, commitments, inf8.events[today] ?? []),
-    [eff, commitments, inf8.events, today])
+  // LIVE plan — outstanding work reflows from now, free time means time left
+  const plan  = useMemo(() => buildDay(eff, commitments, inf8.events[today] ?? [], nowMin),
+    [eff, commitments, inf8.events, today, nowMin])
   const wakeRaw   = toMin(eff.wake)
   const overnight = toMin(eff.sleep) <= wakeRaw
   const sleepAdj  = overnight ? toMin(eff.sleep) + 1440 : toMin(eff.sleep)
   const nowAdj    = overnight && nowMin < wakeRaw ? nowMin + 1440 : nowMin
-  const freeSuggestions = useMemo(() => {
-    const free = plan.blocks
-      .filter(b => b.kind === 'free' && b.end > nowAdj && (b.end - b.start) >= 25)
-      .map(b => ({ id: b.id, minutes: b.end - b.start }))
-    return assignToFreeBlocks(free, suggestions)
-  }, [plan, suggestions, nowAdj])
 
   const hour = new Date().getHours()
   const greeting = hour < 5 ? tr('STILL UP', 'ЕЩЁ НЕ СПИШЬ') : hour < 12 ? tr('GOOD MORNING', 'ДОБРОЕ УТРО')
@@ -456,51 +452,27 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           {/* Main stage */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '22px 30px 28px', ...STAGE_BG }}>
-            {/* Greeting + NOW, side by side */}
-            <div style={{ display: 'flex', gap: 20, alignItems: 'stretch', flexWrap: 'wrap' }}>
-              <div style={{ flex: '1 1 240px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 23, fontWeight: 900,
-                  color: 'rgba(235,250,255,0.95)', letterSpacing: '0.05em' }}>
-                  {greeting}{name ? `, ${name.toUpperCase()}` : ''}
-                  <span style={{ color: NEON, textShadow: `0 0 14px ${NEON}` }}> _</span></p>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, color: 'rgba(148,163,184,0.5)',
-                  letterSpacing: '0.16em', marginTop: 6, textTransform: 'uppercase' }}>
-                  {tr('The guild is assembled · your day awaits', 'Гильдия в сборе · день ждёт')}</p>
-              </div>
+            {/* Greeting */}
+            <p style={{ fontFamily: 'var(--font)', fontSize: 23, fontWeight: 900,
+              color: 'rgba(235,250,255,0.95)', letterSpacing: '0.05em' }}>
+              {greeting}{name ? `, ${name.toUpperCase()}` : ''}
+              <span style={{ color: NEON, textShadow: `0 0 14px ${NEON}` }}> _</span></p>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, color: 'rgba(148,163,184,0.5)',
+              letterSpacing: '0.16em', marginTop: 5, textTransform: 'uppercase' }}>
+              {tr('The guild is assembled · your day awaits', 'Гильдия в сборе · день ждёт')}</p>
 
-              {/* NOW strip — tap for full INFINITY-8 config (anchors, optimize) */}
-              <button onClick={() => setView('/infinity8')} style={{
-                flex: '1 1 360px', padding: '13px 18px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
-                background: 'linear-gradient(135deg, rgba(34,211,238,0.09), rgba(57,255,20,0.03))',
-                border: '1px solid rgba(34,211,238,0.25)', display: 'flex', alignItems: 'center', gap: 15,
-                transition: 'border-color 0.15s',
-              }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(34,211,238,0.55)'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(34,211,238,0.25)'}>
-                <span style={{ fontSize: 24, filter: 'drop-shadow(0 0 10px #22d3ee)',
-                  animation: 'pulse 2.4s ease-in-out infinite' }}>∞</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.2em',
-                    color: isFreeNow ? 'rgba(57,255,20,0.75)' : '#22d3ee' }}>
-                    {isFreeNow ? tr('● FREE NOW', '● СЕЙЧАС СВОБОДНО') : tr('● HAPPENING NOW', '● ИДЁТ СЕЙЧАС')}</p>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 800,
-                    color: 'rgba(225,250,255,0.95)', marginTop: 3,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {!snap.awake ? tr('Off the clock', 'Вне графика')
-                      : isFreeNow ? tr('Free time', 'Свободное время') : cur!.label}</p>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, color: 'rgba(148,163,184,0.6)', marginTop: 2 }}>
-                    {snap.awake && !isFreeNow && cur
-                      ? `${tr('until', 'до')} ${fmtClock(cur.end)}`
-                      : snap.next ? `${tr('next:', 'далее:')} ${snap.next.label} · ${fmtClock(snap.next.start)}` : ''}</p>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 20, fontWeight: 900, color: '#39ff14',
-                    lineHeight: 1, textShadow: '0 0 14px rgba(57,255,20,0.5)' }}>{fmtDur(snap.freeMinutes)}</p>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(57,255,20,0.55)',
-                    letterSpacing: '0.14em', marginTop: 4 }}>{tr('FREE TODAY', 'СВОБОДНО СЕГОДНЯ')}</p>
-                </div>
-              </button>
-            </div>
+            {/* The day, as one horizontal ribbon */}
+            <DayRibbon
+              blocks={plan.blocks}
+              wakeMin={wakeRaw}
+              sleepMin={sleepAdj}
+              nowMin={nowAdj}
+              freeMinutes={plan.freeMinutes}
+              current={snap.current}
+              pendingCount={snap.pendingCount}
+              onOpenConfig={() => setView('/infinity8')}
+              onGo={p => setView(p)}
+            />
 
             {/* Status tiles */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 16 }}>
@@ -593,35 +565,6 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
                 {tr('Pin programs with the ★ in All Programs — they land here.',
                     'Закрепляйте программы звёздочкой ★ в «Все программы» — они появятся здесь.')}</p>
             )}
-          </div>
-
-          {/* Day timeline column — INFINITY-8 dissolved into the dashboard */}
-          <div style={{ width: 400, flexShrink: 0, display: 'flex', flexDirection: 'column',
-            borderLeft: '1px solid rgba(34,211,238,0.12)', overflow: 'hidden' }}>
-            <div style={{ padding: '18px 20px 10px', flexShrink: 0, display: 'flex',
-              alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 15, filter: 'drop-shadow(0 0 8px #22d3ee)' }}>∞</span>
-              <p style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
-                color: 'rgba(34,211,238,0.8)', letterSpacing: '0.2em' }}>
-                {tr("TODAY'S FLOW", 'ПОТОК ДНЯ')}</p>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900, color: '#39ff14',
-                textShadow: '0 0 8px rgba(57,255,20,0.5)' }}>{fmtDur(plan.freeMinutes)}</span>
-              <button onClick={() => setView('/infinity8')}
-                title={tr('Day anchors & weekly optimize', 'Опоры дня и оптимизация недели')} style={{
-                width: 26, height: 26, borderRadius: 7, fontSize: 12, cursor: 'pointer',
-                color: 'rgba(34,211,238,0.6)', border: '1px solid rgba(34,211,238,0.25)',
-                background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>⚙</button>
-            </div>
-            <Timeline
-              blocks={plan.blocks}
-              wakeMin={wakeRaw}
-              sleepMin={sleepAdj}
-              nowMin={nowAdj}
-              suggestions={freeSuggestions}
-              onRemoveEvent={id => { const s = removeEvent(inf8, today, id); saveInf8State(s); setInf8(s) }}
-              onGo={path => setView(path)}
-            />
           </div>
 
           {/* Quest rail */}
