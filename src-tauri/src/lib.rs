@@ -78,6 +78,47 @@ fn list_apps() -> Vec<AppEntry> {
     apps
 }
 
+/// Names (lower-case, no ".exe") of processes running right now, so the
+/// launcher can show what's already open. Read-only: shells out to the stock
+/// `tasklist` utility with no console window — no extra dependency, and
+/// nothing about other processes leaves the machine.
+#[tauri::command]
+fn running_processes() -> Vec<String> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+        let Ok(out) = std::process::Command::new("tasklist")
+            .args(["/fo", "csv", "/nh"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+        else {
+            return Vec::new();
+        };
+
+        // Rows look like: "chrome.exe","1234","Console","1","250,000 K"
+        let mut names: Vec<String> = String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix('"'))
+            .filter_map(|rest| rest.split('"').next())
+            .map(|name| {
+                name.trim_end_matches(".exe")
+                    .trim_end_matches(".EXE")
+                    .to_lowercase()
+            })
+            .filter(|n| !n.is_empty())
+            .collect();
+        names.sort();
+        names.dedup();
+        names
+    }
+    #[cfg(not(windows))]
+    {
+        Vec::new()
+    }
+}
+
 /// Launch a Start Menu shortcut. Refuses anything that is not a .lnk inside
 /// the scanned Start Menu folders, so the frontend can never run arbitrary paths.
 #[tauri::command]
@@ -108,7 +149,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![])))
-        .invoke_handler(tauri::generate_handler![get_username, list_apps, launch_app])
+        .invoke_handler(tauri::generate_handler![get_username, list_apps, launch_app, running_processes])
         .run(tauri::generate_context!())
         .expect("error while running Warren");
 }

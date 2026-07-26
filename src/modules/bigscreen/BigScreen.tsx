@@ -22,7 +22,10 @@ import Pictures from '../pictures/Pictures'
 import Journal  from '../journal/Journal'
 import {
   filterApps, monogram, tileNeon, groupByLetter,
-  loadFavs, saveFavs, toggleFav, type AppEntry,
+  loadFavs, saveFavs, toggleFav,
+  loadLaunchStats, saveLaunchStats, recordLaunch, mostUsed, recentlyUsed,
+  fmtAgo, isRunning,
+  type AppEntry, type LaunchStats,
 } from './apps'
 
 const NEON = '#00f5ff'
@@ -207,29 +210,37 @@ function QuestLog({ commitments, suggestions, onOpenModule }: {
   )
 }
 
-// ─── App tile (used in favorites row + full library) ──────────────────────────
-function AppTile({ app, onLaunch, fav, onToggleFav }: {
+// ─── App tile — icon, name, and what Warren knows about your use of it ────────
+function AppTile({ app, onLaunch, fav, onToggleFav, stat, running }: {
   app: AppEntry
   onLaunch: (a: AppEntry) => void
   fav: boolean
   onToggleFav: (a: AppEntry) => void
+  stat?: { count: number; last: string }
+  running?: boolean
 }) {
   const [hov, setHov] = useState(false)
   const neon = tileNeon(app.name)
+  const meta = running
+    ? tr('running', 'запущено')
+    : stat
+      ? `${stat.count}× · ${fmtAgo(stat.last)}`
+      : null
+
   return (
     <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ position: 'relative', minWidth: 0 }}>
       <button onClick={() => onLaunch(app)} title={app.name}
         style={{
-          width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-          padding: '13px 8px 9px', borderRadius: 12, cursor: 'pointer',
-          background: hov ? `${neon}10` : 'rgba(13,24,48,0.45)',
-          border: `1px solid ${hov ? `${neon}55` : 'rgba(255,255,255,0.06)'}`,
+          width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
+          padding: '13px 8px 10px', borderRadius: 12, cursor: 'pointer',
+          background: hov ? `${neon}10` : running ? 'rgba(57,255,20,0.05)' : 'rgba(13,24,48,0.45)',
+          border: `1px solid ${hov ? `${neon}55` : running ? 'rgba(57,255,20,0.28)' : 'rgba(255,255,255,0.06)'}`,
           boxShadow: hov ? `0 0 18px ${neon}25` : 'none',
           transition: 'all 0.15s',
         }}>
         <div style={{
-          width: 50, height: 50, borderRadius: 13, flexShrink: 0,
+          width: 48, height: 48, borderRadius: 13, flexShrink: 0, position: 'relative',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: `linear-gradient(135deg, ${neon}22, ${neon}08)`,
           border: `1px solid ${neon}45`,
@@ -237,12 +248,26 @@ function AppTile({ app, onLaunch, fav, onToggleFav }: {
           textShadow: `0 0 10px ${neon}`,
           boxShadow: hov ? `0 0 14px ${neon}40` : `inset 0 0 10px ${neon}10`,
           transition: 'box-shadow 0.15s',
-        }}>{monogram(app.name)}</div>
+        }}>
+          {monogram(app.name)}
+          {running && (
+            <span className="pulse" style={{
+              position: 'absolute', top: -3, right: -3, width: 9, height: 9, borderRadius: '50%',
+              background: '#39ff14', boxShadow: '0 0 8px #39ff14',
+              border: '1.5px solid rgba(3,7,14,0.9)',
+            }} />
+          )}
+        </div>
         <span style={{
           fontFamily: 'var(--font)', fontSize: 8.5, fontWeight: 600, letterSpacing: '0.03em',
           color: hov ? 'rgba(230,250,255,0.95)' : 'rgba(200,220,235,0.6)',
           maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{app.name}</span>
+        <span style={{
+          fontFamily: 'var(--font)', fontSize: 6.5, letterSpacing: '0.06em', height: 8,
+          color: running ? 'rgba(57,255,20,0.8)' : 'rgba(148,163,184,0.4)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%',
+        }}>{meta ?? ''}</span>
       </button>
       {/* Pin star — visible on hover, or always when pinned */}
       {(hov || fav) && (
@@ -268,6 +293,8 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
   const [view, setView]       = useState<string>('home')
   const [apps, setApps]       = useState<AppEntry[]>([])
   const [favs, setFavs]       = useState<string[]>(() => loadFavs())
+  const [stats, setStats]     = useState<LaunchStats>(() => loadLaunchStats())
+  const [procs, setProcs]     = useState<string[]>([])
   const [query, setQuery]     = useState('')
   const [appsError, setAppsError] = useState('')
   const [appsLoading, setAppsLoading] = useState(true)
@@ -319,6 +346,16 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
       .finally(() => setAppsLoading(false))
   }, [])
 
+  // What's running right now — polled gently, and refreshed when you come back
+  useEffect(() => {
+    if (!isTauri()) return
+    const scan = () => { invoke<string[]>('running_processes').then(setProcs).catch(() => {}) }
+    scan()
+    const id = setInterval(scan, 20000)
+    window.addEventListener('focus', scan)
+    return () => { clearInterval(id); window.removeEventListener('focus', scan) }
+  }, [])
+
   // Esc: module / programs → HOME → widget mode
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -333,6 +370,7 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
   const launch = (app: AppEntry) => {
     invoke('launch_app', { path: app.path })
       .then(() => {
+        setStats(prev => { const next = recordLaunch(prev, app.path); saveLaunchStats(next); return next })
         setToast(`▶ ${app.name}`)
         setTimeout(() => setToast(''), 2500)
         if (isTauri()) void getCurrentWindow().setFullscreen(false)
@@ -352,6 +390,18 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
   const favApps  = useMemo(
     () => favs.map(p => apps.find(a => a.path === p)).filter((a): a is AppEntry => !!a),
     [favs, apps])
+  const runningApps = useMemo(
+    () => (procs.length ? apps.filter(a => isRunning(a.name, procs)).slice(0, 12) : []),
+    [apps, procs])
+  // "Recent" fills the section for people who haven't pinned anything yet
+  const recentApps = useMemo(() => {
+    const shown = new Set([...favs, ...runningApps.map(a => a.path)])
+    return recentlyUsed(apps, stats, 12).filter(a => !shown.has(a.path)).slice(0, 6)
+  }, [apps, stats, favs, runningApps])
+  const suggestedApps = useMemo(() => {
+    if (favApps.length > 0) return []
+    return mostUsed(apps, stats, 6)
+  }, [apps, stats, favApps])
   // INFINITY-8 lives ON the dashboard now (timeline column) — no guild card for it
   const builtModules = useMemo(() => GUILD.filter(m => m.built && m.id !== 'ravi'), [])
 
@@ -463,13 +513,34 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
               ))}
             </div>
 
+            {/* Running now — what's already open on this machine */}
+            {runningApps.length > 0 && (
+              <>
+                <SectionLabel icon="●" text={`${tr('RUNNING NOW', 'СЕЙЧАС ЗАПУЩЕНО')} · ${runningApps.length}`} color="#39ff14" />
+                <div style={{ display: 'grid', gap: 10,
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(108px, 1fr))' }}>
+                  {runningApps.map(app => (
+                    <AppTile key={app.path} app={app} onLaunch={launch} running
+                      fav={favs.includes(app.path)} onToggleFav={handleToggleFav}
+                      stat={stats[app.path]} />
+                  ))}
+                </div>
+              </>
+            )}
+
             {/* Favorite programs */}
             <SectionLabel icon="★" text={tr('FAVORITE PROGRAMS', 'ИЗБРАННЫЕ ПРОГРАММЫ')} color={GOLD} />
             <div style={{ display: 'grid', gap: 10,
               gridTemplateColumns: 'repeat(auto-fill, minmax(108px, 1fr))' }}>
               {favApps.map(app => (
                 <AppTile key={app.path} app={app} onLaunch={launch}
-                  fav onToggleFav={handleToggleFav} />
+                  fav onToggleFav={handleToggleFav}
+                  stat={stats[app.path]} running={isRunning(app.name, procs)} />
+              ))}
+              {suggestedApps.map(app => (
+                <AppTile key={app.path} app={app} onLaunch={launch}
+                  fav={false} onToggleFav={handleToggleFav}
+                  stat={stats[app.path]} running={isRunning(app.name, procs)} />
               ))}
               {/* Drill into the full library */}
               <button onClick={() => setView('apps')} style={{
@@ -489,8 +560,26 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
             {favApps.length === 0 && (
               <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, color: 'rgba(148,163,184,0.4)',
                 marginTop: 10, letterSpacing: '0.04em' }}>
-                {tr('Pin programs with the ★ in All Programs — they land here.',
-                    'Закрепляйте программы звёздочкой ★ в «Все программы» — они появятся здесь.')}</p>
+                {suggestedApps.length > 0
+                  ? tr('Your most-used programs — pin any with ★ to keep it here.',
+                       'Ваши самые запускаемые программы — закрепите любую звёздочкой ★.')
+                  : tr('Pin programs with the ★ in All Programs — they land here.',
+                       'Закрепляйте программы звёздочкой ★ в «Все программы» — они появятся здесь.')}</p>
+            )}
+
+            {/* Recently opened */}
+            {recentApps.length > 0 && (
+              <>
+                <SectionLabel icon="🕘" text={tr('RECENT', 'НЕДАВНИЕ')} />
+                <div style={{ display: 'grid', gap: 10,
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(108px, 1fr))' }}>
+                  {recentApps.map(app => (
+                    <AppTile key={app.path} app={app} onLaunch={launch}
+                      fav={favs.includes(app.path)} onToggleFav={handleToggleFav}
+                      stat={stats[app.path]} running={isRunning(app.name, procs)} />
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
@@ -569,7 +658,8 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
                   gridTemplateColumns: 'repeat(auto-fill, minmax(118px, 1fr))' }}>
                   {groupApps.map(app => (
                     <AppTile key={app.path} app={app} onLaunch={launch}
-                      fav={favs.includes(app.path)} onToggleFav={handleToggleFav} />
+                      fav={favs.includes(app.path)} onToggleFav={handleToggleFav}
+                      stat={stats[app.path]} running={isRunning(app.name, procs)} />
                   ))}
                 </div>
               </div>
