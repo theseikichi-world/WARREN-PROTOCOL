@@ -13,6 +13,7 @@ import Solaris   from './modules/solaris/Solaris'
 import Infinity8 from './modules/infinity8/Infinity8'
 import Pictures  from './modules/pictures/Pictures'
 import Journal   from './modules/journal/Journal'
+import BigScreen from './modules/bigscreen/BigScreen'
 import { getNowSnapshot, fmtClock, fmtDur } from './modules/infinity8/store'
 import { gatherSuggestions, topSuggestion, type Suggestion } from './modules/infinity8/suggestions'
 import { getHubStats, type HubStats } from './hubStats'
@@ -152,6 +153,11 @@ function Clock() {
 
 // ─── Title bar ────────────────────────────────────────────────────────────────
 function TitleBar() {
+  const navigate = useNavigate()
+  const enterBigScreen = async () => {
+    if (isTauri()) { try { await getCurrentWindow().setFullscreen(true) } catch { /* ignore */ } }
+    navigate('/bigscreen')
+  }
   return (
     <div
       data-tauri-drag-region
@@ -186,6 +192,20 @@ function TitleBar() {
 
       {/* Right: clock + controls */}
       <div data-tauri-drag-region style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        {isTauri() && (
+          <button onClick={enterBigScreen} title={t('Big Screen — fullscreen launcher', 'Большой экран — полноэкранный лаунчер')}
+            style={{
+              height: 24, padding: '0 10px', borderRadius: 6, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 5,
+              color: 'rgba(0,245,255,0.55)', border: '1px solid rgba(0,245,255,0.2)',
+              background: 'rgba(0,245,255,0.05)', transition: 'all 0.15s',
+              fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.1em',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#00f5ff'; e.currentTarget.style.borderColor = 'rgba(0,245,255,0.5)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(0,245,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(0,245,255,0.2)' }}>
+            ⛶ {t('BIG SCREEN', 'БОЛЬШОЙ ЭКРАН')}
+          </button>
+        )}
         <Clock />
         {isTauri() && (
         <div style={{ display: 'flex', gap: 5, marginLeft: 4 }}>
@@ -459,6 +479,16 @@ export default function App() {
   const activeModule = GUILD.find(m => location.pathname.startsWith(m.path)) ?? null
 
   const bgColor = `rgba(6, 11, 22, ${settings.opacity})`
+
+  // Big Screen (Warren OS mode) is immersive — no title bar, no sidebar.
+  if (location.pathname.startsWith('/bigscreen')) {
+    return (
+      <BigScreen onExit={() => {
+        if (isTauri()) { void getCurrentWindow().setFullscreen(false).catch(() => {}) }
+        navigate('/')
+      }} />
+    )
+  }
 
   return (
     <div style={{
