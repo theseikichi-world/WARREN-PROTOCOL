@@ -498,10 +498,6 @@ export default function App() {
           <IntroScreen onDone={() => setIntro(false)} displayName={settings.displayName} />
         )}
         <BigScreen
-          onOpenModule={path => {
-            if (isTauri()) { void getCurrentWindow().setFullscreen(false).catch(() => {}) }
-            navigate(path)
-          }}
           onExit={() => {
             if (isTauri()) { void getCurrentWindow().setFullscreen(false).catch(() => {}) }
             navigate('/')

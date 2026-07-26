@@ -7,10 +7,18 @@ import { GUILD } from '../../guild'
 import { CyberIcon } from '../../components/CyberIcon'
 import { getHubStats, type HubStats } from '../../hubStats'
 import {
-  getNowSnapshot, getTodayCommitments, loadInf8State,
-  fmtDur, fmtClock, type Commitment,
+  getNowSnapshot, getTodayCommitments, loadInf8State, saveInf8State, removeEvent,
+  effectiveAnchors, buildDay, todayKey, toMin,
+  fmtDur, fmtClock, type Commitment, type Inf8State,
 } from '../infinity8/store'
-import { gatherSuggestions, type Suggestion } from '../infinity8/suggestions'
+import { gatherSuggestions, assignToFreeBlocks, type Suggestion } from '../infinity8/suggestions'
+import Infinity8, { Timeline } from '../infinity8/Infinity8'
+import Scrap7   from '../scrap7/Scrap7'
+import Log      from '../log/Log'
+import Ardo     from '../ardo/Ardo'
+import Solaris  from '../solaris/Solaris'
+import Pictures from '../pictures/Pictures'
+import Journal  from '../journal/Journal'
 import {
   filterApps, monogram, tileNeon, groupByLetter,
   loadFavs, saveFavs, toggleFav, type AppEntry,
@@ -28,6 +36,18 @@ const STAGE_BG: React.CSSProperties = {
 
 const TONE: Record<Suggestion['tone'], string> = {
   play: '#ff8a4c', grow: '#8b9bff', care: '#ffd76b',
+}
+
+// Modules hosted INSIDE Warren OS — clicking a guild card opens them here,
+// fullscreen, with the quest rail still visible. Never drops to the widget.
+const MODULES: Record<string, React.ComponentType> = {
+  '/scrap7':    Scrap7,
+  '/log':       Log,
+  '/ardo':      Ardo,
+  '/solaris':   Solaris,
+  '/infinity8': Infinity8,
+  '/pictures':  Pictures,
+  '/journal':   Journal,
 }
 
 // ─── Clock ────────────────────────────────────────────────────────────────────
@@ -75,8 +95,8 @@ function QuestLog({ commitments, suggestions, onOpenModule }: {
 
   return (
     <aside style={{
-      width: 360, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14,
-      padding: '22px 24px', overflowY: 'auto',
+      width: 340, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 14,
+      padding: '20px 22px', overflowY: 'auto',
       borderLeft: `1px solid ${GOLD}1a`,
       background: 'linear-gradient(180deg, rgba(255,215,0,0.03), rgba(0,0,0,0))',
     }}>
@@ -242,11 +262,9 @@ function AppTile({ app, onLaunch, fav, onToggleFav }: {
 }
 
 // ─── Big Screen — Warren OS mode ──────────────────────────────────────────────
-export default function BigScreen({ onExit, onOpenModule }: {
-  onExit: () => void
-  onOpenModule: (path: string) => void
-}) {
-  const [view, setView]       = useState<'home' | 'apps'>('home')
+export default function BigScreen({ onExit }: { onExit: () => void }) {
+  // 'home' | 'apps' | a module path ('/scrap7', '/solaris', …)
+  const [view, setView]       = useState<string>('home')
   const [apps, setApps]       = useState<AppEntry[]>([])
   const [favs, setFavs]       = useState<string[]>(() => loadFavs())
   const [query, setQuery]     = useState('')
@@ -260,13 +278,17 @@ export default function BigScreen({ onExit, onOpenModule }: {
   const [snap, setSnap]             = useState(() => getNowSnapshot())
   const [commitments, setCommitments] = useState<Commitment[]>([])
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [inf8, setInf8]             = useState<Inf8State>(() => loadInf8State())
+  const [nowMin, setNowMin]         = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() })
 
   const refresh = useCallback(() => {
     setStats(getHubStats())
     setSnap(getNowSnapshot())
-    const inf8 = loadInf8State()
-    setCommitments(getTodayCommitments(inf8.durations, inf8.prefTime))
+    const s = loadInf8State()
+    setInf8(s)
+    setCommitments(getTodayCommitments(s.durations, s.prefTime))
     setSuggestions(gatherSuggestions())
+    const d = new Date(); setNowMin(d.getHours() * 60 + d.getMinutes())
   }, [])
 
   useEffect(() => {
@@ -276,6 +298,9 @@ export default function BigScreen({ onExit, onOpenModule }: {
     window.addEventListener('focus', refresh)
     return () => { clearInterval(id); window.removeEventListener('warren:sync', refresh); window.removeEventListener('focus', refresh) }
   }, [refresh])
+
+  // Leaving a hosted module → data may have changed; refresh immediately
+  useEffect(() => { refresh() }, [view, refresh])
 
   // Greeting name: settings → OS username fallback
   useEffect(() => {
@@ -293,11 +318,11 @@ export default function BigScreen({ onExit, onOpenModule }: {
       .finally(() => setAppsLoading(false))
   }, [])
 
-  // Esc: PROGRAMS → HOME → widget mode
+  // Esc: module / programs → HOME → widget mode
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      if (view === 'apps') setView('home')
+      if (view !== 'home') setView('home')
       else onExit()
     }
     window.addEventListener('keydown', onKey)
@@ -326,7 +351,24 @@ export default function BigScreen({ onExit, onOpenModule }: {
   const favApps  = useMemo(
     () => favs.map(p => apps.find(a => a.path === p)).filter((a): a is AppEntry => !!a),
     [favs, apps])
-  const builtModules = useMemo(() => GUILD.filter(m => m.built), [])
+  // INFINITY-8 lives ON the dashboard now (timeline column) — no guild card for it
+  const builtModules = useMemo(() => GUILD.filter(m => m.built && m.id !== 'ravi'), [])
+
+  // ── Day timeline (the dashboard's spine) — same math as the INFINITY-8 module ──
+  const today = todayKey()
+  const eff   = useMemo(() => effectiveAnchors(inf8, today), [inf8, today])
+  const plan  = useMemo(() => buildDay(eff, commitments, inf8.events[today] ?? []),
+    [eff, commitments, inf8.events, today])
+  const wakeRaw   = toMin(eff.wake)
+  const overnight = toMin(eff.sleep) <= wakeRaw
+  const sleepAdj  = overnight ? toMin(eff.sleep) + 1440 : toMin(eff.sleep)
+  const nowAdj    = overnight && nowMin < wakeRaw ? nowMin + 1440 : nowMin
+  const freeSuggestions = useMemo(() => {
+    const free = plan.blocks
+      .filter(b => b.kind === 'free' && b.end > nowAdj && (b.end - b.start) >= 25)
+      .map(b => ({ id: b.id, minutes: b.end - b.start }))
+    return assignToFreeBlocks(free, suggestions)
+  }, [plan, suggestions, nowAdj])
 
   const hour = new Date().getHours()
   const greeting = hour < 5 ? tr('STILL UP', 'ЕЩЁ НЕ СПИШЬ') : hour < 12 ? tr('GOOD MORNING', 'ДОБРОЕ УТРО')
@@ -348,10 +390,12 @@ export default function BigScreen({ onExit, onOpenModule }: {
       case 'scrap7': return stats.tasksDue > 0 ? String(stats.tasksDue) : null
       case 'log':    return stats.activeGoals > 0 ? String(stats.activeGoals) : null
       case 'pomu':   return stats.caloriesLeft !== null ? String(stats.caloriesLeft) : null
-      case 'ravi':   return fmtDur(snap.freeMinutes)
       default:       return null
     }
   }
+
+  const HostedModule = MODULES[view]
+  const hostedMember = GUILD.find(m => m.path === view)
 
   return (
     <div className="fade-in" style={{ height: '100vh', display: 'flex', flexDirection: 'column',
@@ -378,13 +422,19 @@ export default function BigScreen({ onExit, onOpenModule }: {
             {tr('ALL SYSTEMS NOMINAL', 'ВСЕ СИСТЕМЫ В НОРМЕ')}</p>
         </div>
 
-        {view === 'apps' && (
+        {view !== 'home' && (
           <button onClick={() => setView('home')} style={{
             marginLeft: 22, padding: '10px 18px', borderRadius: 9, cursor: 'pointer',
             fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800, letterSpacing: '0.14em',
             color: NEON, border: '1px solid rgba(0,245,255,0.35)',
             background: 'rgba(0,245,255,0.07)', transition: 'all 0.15s',
           }}>← {tr('HOME', 'ГЛАВНАЯ')}</button>
+        )}
+        {hostedMember && (
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 900,
+            color: hostedMember.neon, letterSpacing: '0.14em',
+            textShadow: `0 0 10px ${hostedMember.neon}` }}>
+            {hostedMember.name}</span>
         )}
 
         <div style={{ flex: 1 }} />
@@ -401,15 +451,15 @@ export default function BigScreen({ onExit, onOpenModule }: {
           ⊟ {tr('WIDGET MODE', 'РЕЖИМ ВИДЖЕТА')}</button>
       </div>
 
-      {/* ── HOME — statuses + guild + favorites + quest log ── */}
+      {/* ── HOME — statuses + guild + favorites + timeline + quest log ── */}
       {view === 'home' && (
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           {/* Main stage */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 30px', ...STAGE_BG }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '22px 30px 28px', ...STAGE_BG }}>
             {/* Greeting + NOW, side by side */}
             <div style={{ display: 'flex', gap: 20, alignItems: 'stretch', flexWrap: 'wrap' }}>
-              <div style={{ flex: '1 1 260px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 24, fontWeight: 900,
+              <div style={{ flex: '1 1 240px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 23, fontWeight: 900,
                   color: 'rgba(235,250,255,0.95)', letterSpacing: '0.05em' }}>
                   {greeting}{name ? `, ${name.toUpperCase()}` : ''}
                   <span style={{ color: NEON, textShadow: `0 0 14px ${NEON}` }}> _</span></p>
@@ -418,22 +468,22 @@ export default function BigScreen({ onExit, onOpenModule }: {
                   {tr('The guild is assembled · your day awaits', 'Гильдия в сборе · день ждёт')}</p>
               </div>
 
-              {/* NOW panel */}
-              <button onClick={() => onOpenModule('/infinity8')} style={{
-                flex: '1 1 380px', padding: '14px 20px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
+              {/* NOW strip — tap for full INFINITY-8 config (anchors, optimize) */}
+              <button onClick={() => setView('/infinity8')} style={{
+                flex: '1 1 360px', padding: '13px 18px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
                 background: 'linear-gradient(135deg, rgba(34,211,238,0.09), rgba(57,255,20,0.03))',
-                border: '1px solid rgba(34,211,238,0.25)', display: 'flex', alignItems: 'center', gap: 16,
+                border: '1px solid rgba(34,211,238,0.25)', display: 'flex', alignItems: 'center', gap: 15,
                 transition: 'border-color 0.15s',
               }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(34,211,238,0.55)'}
                 onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(34,211,238,0.25)'}>
-                <span style={{ fontSize: 26, filter: 'drop-shadow(0 0 10px #22d3ee)',
+                <span style={{ fontSize: 24, filter: 'drop-shadow(0 0 10px #22d3ee)',
                   animation: 'pulse 2.4s ease-in-out infinite' }}>∞</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.2em',
                     color: isFreeNow ? 'rgba(57,255,20,0.75)' : '#22d3ee' }}>
                     {isFreeNow ? tr('● FREE NOW', '● СЕЙЧАС СВОБОДНО') : tr('● HAPPENING NOW', '● ИДЁТ СЕЙЧАС')}</p>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 15, fontWeight: 800,
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 800,
                     color: 'rgba(225,250,255,0.95)', marginTop: 3,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {!snap.awake ? tr('Off the clock', 'Вне графика')
@@ -444,7 +494,7 @@ export default function BigScreen({ onExit, onOpenModule }: {
                       : snap.next ? `${tr('next:', 'далее:')} ${snap.next.label} · ${fmtClock(snap.next.start)}` : ''}</p>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 21, fontWeight: 900, color: '#39ff14',
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 20, fontWeight: 900, color: '#39ff14',
                     lineHeight: 1, textShadow: '0 0 14px rgba(57,255,20,0.5)' }}>{fmtDur(snap.freeMinutes)}</p>
                   <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(57,255,20,0.55)',
                     letterSpacing: '0.14em', marginTop: 4 }}>{tr('FREE TODAY', 'СВОБОДНО СЕГОДНЯ')}</p>
@@ -453,9 +503,9 @@ export default function BigScreen({ onExit, onOpenModule }: {
             </div>
 
             {/* Status tiles */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 18 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 16 }}>
               {tiles.map(({ label, value, neon, emoji, path }) => (
-                <button key={label} onClick={() => onOpenModule(path)} style={{
+                <button key={label} onClick={() => setView(path)} style={{
                   padding: '12px 16px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
                   background: 'rgba(13,24,48,0.5)', border: '1px solid rgba(255,255,255,0.06)',
                   display: 'flex', alignItems: 'center', gap: 12, transition: 'all 0.15s',
@@ -480,7 +530,7 @@ export default function BigScreen({ onExit, onOpenModule }: {
               {builtModules.map(m => {
                 const badge = moduleBadge(m.id)
                 return (
-                  <button key={m.id} onClick={() => onOpenModule(m.path)} style={{
+                  <button key={m.id} onClick={() => setView(m.path)} style={{
                     display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', cursor: 'pointer',
                     padding: '13px 14px', borderRadius: 13,
                     background: `linear-gradient(135deg, ${m.neon}0c, rgba(13,24,48,0.4))`,
@@ -545,8 +595,55 @@ export default function BigScreen({ onExit, onOpenModule }: {
             )}
           </div>
 
+          {/* Day timeline column — INFINITY-8 dissolved into the dashboard */}
+          <div style={{ width: 400, flexShrink: 0, display: 'flex', flexDirection: 'column',
+            borderLeft: '1px solid rgba(34,211,238,0.12)', overflow: 'hidden' }}>
+            <div style={{ padding: '18px 20px 10px', flexShrink: 0, display: 'flex',
+              alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 15, filter: 'drop-shadow(0 0 8px #22d3ee)' }}>∞</span>
+              <p style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+                color: 'rgba(34,211,238,0.8)', letterSpacing: '0.2em' }}>
+                {tr("TODAY'S FLOW", 'ПОТОК ДНЯ')}</p>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900, color: '#39ff14',
+                textShadow: '0 0 8px rgba(57,255,20,0.5)' }}>{fmtDur(plan.freeMinutes)}</span>
+              <button onClick={() => setView('/infinity8')}
+                title={tr('Day anchors & weekly optimize', 'Опоры дня и оптимизация недели')} style={{
+                width: 26, height: 26, borderRadius: 7, fontSize: 12, cursor: 'pointer',
+                color: 'rgba(34,211,238,0.6)', border: '1px solid rgba(34,211,238,0.25)',
+                background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>⚙</button>
+            </div>
+            <Timeline
+              blocks={plan.blocks}
+              wakeMin={wakeRaw}
+              sleepMin={sleepAdj}
+              nowMin={nowAdj}
+              suggestions={freeSuggestions}
+              onRemoveEvent={id => { const s = removeEvent(inf8, today, id); saveInf8State(s); setInf8(s) }}
+              onGo={path => setView(path)}
+            />
+          </div>
+
           {/* Quest rail */}
-          <QuestLog commitments={commitments} suggestions={suggestions} onOpenModule={onOpenModule} />
+          <QuestLog commitments={commitments} suggestions={suggestions} onOpenModule={p => setView(p)} />
+        </div>
+      )}
+
+      {/* ── HOSTED MODULE — fullscreen inside Warren OS, quest rail stays ── */}
+      {HostedModule && (
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center',
+            padding: '16px 24px 20px', overflow: 'hidden', ...STAGE_BG }}>
+            <div style={{
+              width: '100%', maxWidth: 760, height: '100%', borderRadius: 16, overflow: 'hidden',
+              border: `1px solid ${hostedMember ? `${hostedMember.neon}30` : 'rgba(0,245,255,0.15)'}`,
+              background: 'rgba(6,11,22,0.72)',
+              boxShadow: `0 0 40px ${hostedMember ? `${hostedMember.neon}12` : 'rgba(0,245,255,0.06)'}`,
+            }}>
+              <HostedModule />
+            </div>
+          </div>
+          <QuestLog commitments={commitments} suggestions={suggestions} onOpenModule={p => setView(p)} />
         </div>
       )}
 

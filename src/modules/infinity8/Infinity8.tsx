@@ -569,7 +569,7 @@ const PPM    = 1.75           // pixels per minute (1 hour ≈ 105px; 20 min ≈
 const GUTTER = 42             // left hour-label column
 const TOP_PAD = 18           // room above for the WAKE cap
 
-function Timeline({ blocks, wakeMin, sleepMin, nowMin, suggestions, onRemoveEvent, onGo }: {
+export function Timeline({ blocks, wakeMin, sleepMin, nowMin, suggestions, onRemoveEvent, onGo }: {
   blocks: Block[]
   wakeMin: number; sleepMin: number; nowMin: number
   suggestions: Record<string, Suggestion[]>
