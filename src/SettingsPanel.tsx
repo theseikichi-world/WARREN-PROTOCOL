@@ -276,6 +276,13 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
             <Toggle on={settings.showIntro} onChange={v => update({ showIntro: v })} accent={acc} />
           </Row>
 
+          {isTauri() && (
+            <Row label={t('Boot into Big Screen', 'Запуск в Большой экран')}
+              sub={t('Open fullscreen Warren OS on launch', 'Открывать полноэкранный Warren OS при запуске')}>
+              <Toggle on={settings.bootBigScreen} onChange={v => update({ bootBigScreen: v })} accent={acc} />
+            </Row>
+          )}
+
           {/* ── Profile ── */}
           <Section label={t('Profile', 'Профиль')} />
 

@@ -57,6 +57,7 @@ export interface Settings {
   alwaysOnTop:    boolean
   startOnStartup: boolean
   showIntro:      boolean
+  bootBigScreen:  boolean                   // desktop: launch straight into fullscreen Warren OS
   displayName:    string
   // AI — Claude only
   aiApiKey:       string
@@ -84,6 +85,7 @@ export const DEFAULT_SETTINGS: Settings = {
   alwaysOnTop:    false,
   startOnStartup: false,
   showIntro:      true,
+  bootBigScreen:  true,
   displayName:    '',
   aiApiKey:       '',
   aiModel:        DEFAULT_MODEL,

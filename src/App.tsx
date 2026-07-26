@@ -476,17 +476,37 @@ export default function App() {
   // Apply settings on mount and whenever they change
   useEffect(() => { applySettings(settings) }, [settings])
 
+  // Desktop: boot straight into fullscreen Warren OS (the intro plays on top)
+  useEffect(() => {
+    if (isTauri() && loadSettings().bootBigScreen) {
+      void getCurrentWindow().setFullscreen(true).catch(() => {})
+      navigate('/bigscreen')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const activeModule = GUILD.find(m => location.pathname.startsWith(m.path)) ?? null
 
   const bgColor = `rgba(6, 11, 22, ${settings.opacity})`
 
   // Big Screen (Warren OS mode) is immersive — no title bar, no sidebar.
+  // The initiation-protocol intro plays on top of it, fullscreen.
   if (location.pathname.startsWith('/bigscreen')) {
     return (
-      <BigScreen onExit={() => {
-        if (isTauri()) { void getCurrentWindow().setFullscreen(false).catch(() => {}) }
-        navigate('/')
-      }} />
+      <>
+        {intro && settings.showIntro && (
+          <IntroScreen onDone={() => setIntro(false)} displayName={settings.displayName} />
+        )}
+        <BigScreen
+          onOpenModule={path => {
+            if (isTauri()) { void getCurrentWindow().setFullscreen(false).catch(() => {}) }
+            navigate(path)
+          }}
+          onExit={() => {
+            if (isTauri()) { void getCurrentWindow().setFullscreen(false).catch(() => {}) }
+            navigate('/')
+          }} />
+      </>
     )
   }
 
