@@ -4,8 +4,6 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { isTauri, loadSettings } from '../../settings'
 import { t as tr } from '../../i18n'
 import { GUILD } from '../../guild'
-import { CyberIcon } from '../../components/CyberIcon'
-import { getHubStats, type HubStats } from '../../hubStats'
 import {
   getNowSnapshot, getTodayCommitments, loadInf8State,
   effectiveAnchors, buildDay, todayKey, toMin,
@@ -13,6 +11,8 @@ import {
 } from '../infinity8/store'
 import { gatherSuggestions, type Suggestion } from '../infinity8/suggestions'
 import { DayRibbon } from './DayRibbon'
+import { ModuleCard } from './ModuleCard'
+import { getModuleSummaries, type ModuleSummaries } from './moduleStats'
 import Infinity8 from '../infinity8/Infinity8'
 import Scrap7   from '../scrap7/Scrap7'
 import Log      from '../log/Log'
@@ -275,20 +275,20 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
   const [name, setName]       = useState(() => loadSettings().displayName)
 
   // Live day data — same engines the Hub uses
-  const [stats, setStats]           = useState<HubStats>(() => getHubStats())
   const [snap, setSnap]             = useState(() => getNowSnapshot())
   const [commitments, setCommitments] = useState<Commitment[]>([])
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [inf8, setInf8]             = useState<Inf8State>(() => loadInf8State())
+  const [sums, setSums]             = useState<ModuleSummaries>(() => getModuleSummaries())
   const [nowMin, setNowMin]         = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() })
 
   const refresh = useCallback(() => {
-    setStats(getHubStats())
     setSnap(getNowSnapshot())
     const s = loadInf8State()
     setInf8(s)
     setCommitments(getTodayCommitments(s.durations, s.prefTime))
     setSuggestions(gatherSuggestions())
+    setSums(getModuleSummaries())
     const d = new Date(); setNowMin(d.getHours() * 60 + d.getMinutes())
   }, [])
 
@@ -369,26 +369,6 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
   const hour = new Date().getHours()
   const greeting = hour < 5 ? tr('STILL UP', 'ЕЩЁ НЕ СПИШЬ') : hour < 12 ? tr('GOOD MORNING', 'ДОБРОЕ УТРО')
     : hour < 17 ? tr('GOOD AFTERNOON', 'ДОБРЫЙ ДЕНЬ') : tr('GOOD EVENING', 'ДОБРЫЙ ВЕЧЕР')
-
-  const cur = snap.current
-  const isFreeNow = !snap.awake || !cur || cur.kind === 'free' || cur.kind === 'break'
-
-  const tiles = [
-    { label: tr('TASKS DUE', 'ЗАДАЧ СЕГОДНЯ'),   value: String(stats.tasksDue),    neon: '#00b4ff', emoji: '🦝', path: '/scrap7' },
-    { label: tr('ACTIVE GOALS', 'АКТИВНЫХ ЦЕЛЕЙ'), value: String(stats.activeGoals), neon: '#c084fc', emoji: '🦫', path: '/log' },
-    { label: tr('KCAL LEFT', 'ККАЛ ОСТАЛОСЬ'),   value: stats.caloriesLeft === null ? '—' : String(stats.caloriesLeft), neon: '#ff006e', emoji: '🐼', path: '/solaris' },
-    { label: tr('BEST STREAK', 'ЛУЧШАЯ СЕРИЯ'),  value: stats.streak > 0 ? `${stats.streak}🔥` : '0', neon: '#39ff14', emoji: '🔥', path: '/scrap7' },
-  ]
-
-  /** Live badge per guild module — a number that makes the card feel alive. */
-  const moduleBadge = (id: string): string | null => {
-    switch (id) {
-      case 'scrap7': return stats.tasksDue > 0 ? String(stats.tasksDue) : null
-      case 'log':    return stats.activeGoals > 0 ? String(stats.activeGoals) : null
-      case 'pomu':   return stats.caloriesLeft !== null ? String(stats.caloriesLeft) : null
-      default:       return null
-    }
-  }
 
   const HostedModule = MODULES[view]
   const hostedMember = GUILD.find(m => m.path === view)
@@ -474,66 +454,13 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
               onGo={p => setView(p)}
             />
 
-            {/* Status tiles */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 16 }}>
-              {tiles.map(({ label, value, neon, emoji, path }) => (
-                <button key={label} onClick={() => setView(path)} style={{
-                  padding: '12px 16px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
-                  background: 'rgba(13,24,48,0.5)', border: '1px solid rgba(255,255,255,0.06)',
-                  display: 'flex', alignItems: 'center', gap: 12, transition: 'all 0.15s',
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = `${neon}55`; e.currentTarget.style.boxShadow = `0 0 18px ${neon}18` }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.boxShadow = 'none' }}>
-                  <span style={{ fontSize: 18 }}>{emoji}</span>
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ fontFamily: 'var(--font)', fontSize: 19, fontWeight: 900, color: neon,
-                      lineHeight: 1, textShadow: `0 0 12px ${neon}60` }}>{value}</p>
-                    <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.55)',
-                      letterSpacing: '0.1em', marginTop: 5, whiteSpace: 'nowrap' }}>{label}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Guild modules */}
+            {/* Guild modules — living cards carry the numbers now */}
             <SectionLabel icon="⬡" text={tr('THE GUILD', 'ГИЛЬДИЯ')} />
             <div style={{ display: 'grid', gap: 12,
-              gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
-              {builtModules.map(m => {
-                const badge = moduleBadge(m.id)
-                return (
-                  <button key={m.id} onClick={() => setView(m.path)} style={{
-                    display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', cursor: 'pointer',
-                    padding: '13px 14px', borderRadius: 13,
-                    background: `linear-gradient(135deg, ${m.neon}0c, rgba(13,24,48,0.4))`,
-                    border: `1px solid ${m.neon}22`, transition: 'all 0.15s', minWidth: 0,
-                  }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = `${m.neon}60`; e.currentTarget.style.boxShadow = `0 0 20px ${m.neon}1f` }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = `${m.neon}22`; e.currentTarget.style.boxShadow = 'none' }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: `${m.neon}10`, border: `1px solid ${m.neon}35`,
-                    }}>
-                      <CyberIcon id={m.id} size={20} color={m.neon} glow />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900, color: m.neon,
-                        letterSpacing: '0.08em', textShadow: `0 0 8px ${m.neon}50`,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
-                      <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(148,163,184,0.55)',
-                        letterSpacing: '0.05em', marginTop: 3,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.role}</p>
-                    </div>
-                    {badge && (
-                      <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900, flexShrink: 0,
-                        color: m.neon, padding: '3px 8px', borderRadius: 7,
-                        background: `${m.neon}14`, border: `1px solid ${m.neon}35`,
-                        textShadow: `0 0 6px ${m.neon}60` }}>{badge}</span>
-                    )}
-                  </button>
-                )
-              })}
+              gridTemplateColumns: 'repeat(auto-fill, minmax(272px, 1fr))' }}>
+              {builtModules.map(m => (
+                <ModuleCard key={m.id} member={m} sums={sums} onOpen={() => setView(m.path)} />
+              ))}
             </div>
 
             {/* Favorite programs */}
