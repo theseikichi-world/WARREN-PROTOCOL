@@ -3,17 +3,28 @@ import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { isTauri, loadSettings } from '../../settings'
 import { t as tr } from '../../i18n'
+import { GUILD } from '../../guild'
+import { CyberIcon } from '../../components/CyberIcon'
 import { getHubStats, type HubStats } from '../../hubStats'
 import {
   getNowSnapshot, getTodayCommitments, loadInf8State,
   fmtDur, fmtClock, type Commitment,
 } from '../infinity8/store'
 import { gatherSuggestions, type Suggestion } from '../infinity8/suggestions'
-import { filterApps, monogram, tileNeon, groupByLetter, type AppEntry } from './apps'
+import {
+  filterApps, monogram, tileNeon, groupByLetter,
+  loadFavs, saveFavs, toggleFav, type AppEntry,
+} from './apps'
 
 const NEON = '#00f5ff'
 const GOLD = '#ffd700'
 const BG   = 'rgb(3,7,14)'   // fully opaque — Warren OS covers the desktop completely
+
+// Cyber dot-grid backdrop for the main stage — fills the void without noise
+const STAGE_BG: React.CSSProperties = {
+  backgroundImage: 'radial-gradient(rgba(0,245,255,0.05) 1px, transparent 1px)',
+  backgroundSize: '26px 26px',
+}
 
 const TONE: Record<Suggestion['tone'], string> = {
   play: '#ff8a4c', grow: '#8b9bff', care: '#ffd76b',
@@ -36,6 +47,17 @@ function BigClock() {
         letterSpacing: '0.14em', marginTop: 4, textTransform: 'uppercase' }}>
         {now.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short' })}
       </p>
+    </div>
+  )
+}
+
+// ─── Section label ────────────────────────────────────────────────────────────
+function SectionLabel({ icon, text, color = NEON }: { icon: string; text: string; color?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '22px 0 12px' }}>
+      <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+        color: `${color}90`, letterSpacing: '0.22em' }}>{icon} {text}</span>
+      <div style={{ flex: 1, height: 1, background: `${color}12` }} />
     </div>
   )
 }
@@ -164,38 +186,58 @@ function QuestLog({ commitments, suggestions, onOpenModule }: {
   )
 }
 
-// ─── App tile ─────────────────────────────────────────────────────────────────
-function AppTile({ app, onLaunch }: { app: AppEntry; onLaunch: (a: AppEntry) => void }) {
+// ─── App tile (used in favorites row + full library) ──────────────────────────
+function AppTile({ app, onLaunch, fav, onToggleFav }: {
+  app: AppEntry
+  onLaunch: (a: AppEntry) => void
+  fav: boolean
+  onToggleFav: (a: AppEntry) => void
+}) {
   const [hov, setHov] = useState(false)
   const neon = tileNeon(app.name)
   return (
-    <button onClick={() => onLaunch(app)}
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      title={app.name}
-      style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-        padding: '14px 8px 10px', borderRadius: 12, cursor: 'pointer',
-        background: hov ? `${neon}10` : 'rgba(13,24,48,0.45)',
-        border: `1px solid ${hov ? `${neon}55` : 'rgba(255,255,255,0.06)'}`,
-        boxShadow: hov ? `0 0 18px ${neon}25` : 'none',
-        transition: 'all 0.15s', minWidth: 0,
-      }}>
-      <div style={{
-        width: 52, height: 52, borderRadius: 13, flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: `linear-gradient(135deg, ${neon}22, ${neon}08)`,
-        border: `1px solid ${neon}45`,
-        fontFamily: 'var(--font)', fontSize: 17, fontWeight: 900, color: neon,
-        textShadow: `0 0 10px ${neon}`,
-        boxShadow: hov ? `0 0 14px ${neon}40` : `inset 0 0 10px ${neon}10`,
-        transition: 'box-shadow 0.15s',
-      }}>{monogram(app.name)}</div>
-      <span style={{
-        fontFamily: 'var(--font)', fontSize: 8.5, fontWeight: 600, letterSpacing: '0.03em',
-        color: hov ? 'rgba(230,250,255,0.95)' : 'rgba(200,220,235,0.6)',
-        maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>{app.name}</span>
-    </button>
+    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ position: 'relative', minWidth: 0 }}>
+      <button onClick={() => onLaunch(app)} title={app.name}
+        style={{
+          width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+          padding: '13px 8px 9px', borderRadius: 12, cursor: 'pointer',
+          background: hov ? `${neon}10` : 'rgba(13,24,48,0.45)',
+          border: `1px solid ${hov ? `${neon}55` : 'rgba(255,255,255,0.06)'}`,
+          boxShadow: hov ? `0 0 18px ${neon}25` : 'none',
+          transition: 'all 0.15s',
+        }}>
+        <div style={{
+          width: 50, height: 50, borderRadius: 13, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: `linear-gradient(135deg, ${neon}22, ${neon}08)`,
+          border: `1px solid ${neon}45`,
+          fontFamily: 'var(--font)', fontSize: 16, fontWeight: 900, color: neon,
+          textShadow: `0 0 10px ${neon}`,
+          boxShadow: hov ? `0 0 14px ${neon}40` : `inset 0 0 10px ${neon}10`,
+          transition: 'box-shadow 0.15s',
+        }}>{monogram(app.name)}</div>
+        <span style={{
+          fontFamily: 'var(--font)', fontSize: 8.5, fontWeight: 600, letterSpacing: '0.03em',
+          color: hov ? 'rgba(230,250,255,0.95)' : 'rgba(200,220,235,0.6)',
+          maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{app.name}</span>
+      </button>
+      {/* Pin star — visible on hover, or always when pinned */}
+      {(hov || fav) && (
+        <button onClick={e => { e.stopPropagation(); onToggleFav(app) }}
+          title={fav ? tr('Unpin from home', 'Открепить с главной') : tr('Pin to home', 'Закрепить на главной')}
+          style={{
+            position: 'absolute', top: 5, right: 5, width: 20, height: 20,
+            borderRadius: 6, cursor: 'pointer', fontSize: 11, lineHeight: 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: fav ? GOLD : 'rgba(148,163,184,0.5)',
+            background: 'rgba(4,10,18,0.85)',
+            border: `1px solid ${fav ? `${GOLD}50` : 'rgba(255,255,255,0.1)'}`,
+            textShadow: fav ? `0 0 6px ${GOLD}` : 'none',
+          }}>{fav ? '★' : '☆'}</button>
+      )}
+    </div>
   )
 }
 
@@ -206,6 +248,7 @@ export default function BigScreen({ onExit, onOpenModule }: {
 }) {
   const [view, setView]       = useState<'home' | 'apps'>('home')
   const [apps, setApps]       = useState<AppEntry[]>([])
+  const [favs, setFavs]       = useState<string[]>(() => loadFavs())
   const [query, setQuery]     = useState('')
   const [appsError, setAppsError] = useState('')
   const [appsLoading, setAppsLoading] = useState(true)
@@ -250,7 +293,7 @@ export default function BigScreen({ onExit, onOpenModule }: {
       .finally(() => setAppsLoading(false))
   }, [])
 
-  // Esc: PROGRAMS → HOME → exit to Windows
+  // Esc: PROGRAMS → HOME → widget mode
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
@@ -274,8 +317,16 @@ export default function BigScreen({ onExit, onOpenModule }: {
       })
   }
 
+  const handleToggleFav = (app: AppEntry) => {
+    setFavs(prev => { const next = toggleFav(prev, app.path); saveFavs(next); return next })
+  }
+
   const filtered = useMemo(() => filterApps(apps, query), [apps, query])
   const groups   = useMemo(() => groupByLetter(filtered), [filtered])
+  const favApps  = useMemo(
+    () => favs.map(p => apps.find(a => a.path === p)).filter((a): a is AppEntry => !!a),
+    [favs, apps])
+  const builtModules = useMemo(() => GUILD.filter(m => m.built), [])
 
   const hour = new Date().getHours()
   const greeting = hour < 5 ? tr('STILL UP', 'ЕЩЁ НЕ СПИШЬ') : hour < 12 ? tr('GOOD MORNING', 'ДОБРОЕ УТРО')
@@ -291,22 +342,23 @@ export default function BigScreen({ onExit, onOpenModule }: {
     { label: tr('BEST STREAK', 'ЛУЧШАЯ СЕРИЯ'),  value: stats.streak > 0 ? `${stats.streak}🔥` : '0', neon: '#39ff14', emoji: '🔥', path: '/scrap7' },
   ]
 
-  const navBtn = (active: boolean): React.CSSProperties => ({
-    padding: '10px 18px', borderRadius: 9, cursor: 'pointer',
-    fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800, letterSpacing: '0.14em',
-    color: active ? NEON : 'rgba(148,163,184,0.5)',
-    border: `1px solid ${active ? 'rgba(0,245,255,0.4)' : 'rgba(255,255,255,0.08)'}`,
-    background: active ? 'rgba(0,245,255,0.08)' : 'transparent',
-    textShadow: active ? `0 0 10px ${NEON}` : 'none',
-    transition: 'all 0.15s',
-  })
+  /** Live badge per guild module — a number that makes the card feel alive. */
+  const moduleBadge = (id: string): string | null => {
+    switch (id) {
+      case 'scrap7': return stats.tasksDue > 0 ? String(stats.tasksDue) : null
+      case 'log':    return stats.activeGoals > 0 ? String(stats.activeGoals) : null
+      case 'pomu':   return stats.caloriesLeft !== null ? String(stats.caloriesLeft) : null
+      case 'ravi':   return fmtDur(snap.freeMinutes)
+      default:       return null
+    }
+  }
 
   return (
     <div className="fade-in" style={{ height: '100vh', display: 'flex', flexDirection: 'column',
       overflow: 'hidden', background: BG }}>
 
       {/* Header */}
-      <div style={{ padding: '20px 30px 16px', flexShrink: 0, display: 'flex',
+      <div style={{ padding: '18px 30px 14px', flexShrink: 0, display: 'flex',
         alignItems: 'center', gap: 18, borderBottom: '1px solid rgba(0,245,255,0.12)' }}>
         <div style={{
           width: 42, height: 42, borderRadius: 11,
@@ -326,89 +378,171 @@ export default function BigScreen({ onExit, onOpenModule }: {
             {tr('ALL SYSTEMS NOMINAL', 'ВСЕ СИСТЕМЫ В НОРМЕ')}</p>
         </div>
 
-        {/* View nav */}
-        <div style={{ display: 'flex', gap: 8, marginLeft: 26 }}>
-          <button style={navBtn(view === 'home')} onClick={() => setView('home')}>
-            ⌂ {tr('HOME', 'ГЛАВНАЯ')}</button>
-          <button style={navBtn(view === 'apps')} onClick={() => setView('apps')}>
-            ⊞ {tr('PROGRAMS', 'ПРОГРАММЫ')}</button>
-        </div>
+        {view === 'apps' && (
+          <button onClick={() => setView('home')} style={{
+            marginLeft: 22, padding: '10px 18px', borderRadius: 9, cursor: 'pointer',
+            fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800, letterSpacing: '0.14em',
+            color: NEON, border: '1px solid rgba(0,245,255,0.35)',
+            background: 'rgba(0,245,255,0.07)', transition: 'all 0.15s',
+          }}>← {tr('HOME', 'ГЛАВНАЯ')}</button>
+        )}
 
         <div style={{ flex: 1 }} />
         <BigClock />
-        <button onClick={onExit} title={tr('Exit Big Screen (Esc)', 'Выйти из Большого экрана (Esc)')} style={{
+        {/* Not an exit — Warren shrinks back to the compact widget */}
+        <button onClick={onExit} title={tr('Back to the compact widget (Esc)', 'Вернуться к компактному виджету (Esc)')} style={{
           padding: '11px 18px', borderRadius: 9, cursor: 'pointer', marginLeft: 8,
           fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 800, letterSpacing: '0.12em',
-          color: 'rgba(255,120,120,0.85)', border: '1px solid rgba(255,68,68,0.35)',
-          background: 'rgba(255,68,68,0.07)', transition: 'all 0.15s',
+          color: 'rgba(0,245,255,0.65)', border: '1px solid rgba(0,245,255,0.25)',
+          background: 'rgba(0,245,255,0.05)', transition: 'all 0.15s',
         }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,68,68,0.15)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,68,68,0.07)'}>
-          ⏏ {tr('EXIT TO WINDOWS', 'ВЫЙТИ В WINDOWS')}</button>
+          onMouseEnter={e => { e.currentTarget.style.color = NEON; e.currentTarget.style.borderColor = 'rgba(0,245,255,0.55)' }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(0,245,255,0.65)'; e.currentTarget.style.borderColor = 'rgba(0,245,255,0.25)' }}>
+          ⊟ {tr('WIDGET MODE', 'РЕЖИМ ВИДЖЕТА')}</button>
       </div>
 
-      {/* ── HOME — statuses + quest log ── */}
+      {/* ── HOME — statuses + guild + favorites + quest log ── */}
       {view === 'home' && (
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           {/* Main stage */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '30px 34px' }}>
-            {/* Greeting */}
-            <p style={{ fontFamily: 'var(--font)', fontSize: 26, fontWeight: 900,
-              color: 'rgba(235,250,255,0.95)', letterSpacing: '0.06em' }}>
-              {greeting}{name ? `, ${name.toUpperCase()}` : ''}
-              <span style={{ color: NEON, textShadow: `0 0 14px ${NEON}` }}> _</span></p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 9, color: 'rgba(148,163,184,0.5)',
-              letterSpacing: '0.16em', marginTop: 6, textTransform: 'uppercase' }}>
-              {tr('The guild is assembled · your day awaits', 'Гильдия в сборе · день ждёт')}</p>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 30px', ...STAGE_BG }}>
+            {/* Greeting + NOW, side by side */}
+            <div style={{ display: 'flex', gap: 20, alignItems: 'stretch', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 260px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 24, fontWeight: 900,
+                  color: 'rgba(235,250,255,0.95)', letterSpacing: '0.05em' }}>
+                  {greeting}{name ? `, ${name.toUpperCase()}` : ''}
+                  <span style={{ color: NEON, textShadow: `0 0 14px ${NEON}` }}> _</span></p>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, color: 'rgba(148,163,184,0.5)',
+                  letterSpacing: '0.16em', marginTop: 6, textTransform: 'uppercase' }}>
+                  {tr('The guild is assembled · your day awaits', 'Гильдия в сборе · день ждёт')}</p>
+              </div>
 
-            {/* NOW panel */}
-            <div style={{ marginTop: 26, padding: '18px 22px', borderRadius: 14,
-              background: 'linear-gradient(135deg, rgba(34,211,238,0.09), rgba(57,255,20,0.03))',
-              border: '1px solid rgba(34,211,238,0.25)', display: 'flex', alignItems: 'center', gap: 18 }}>
-              <span style={{ fontSize: 30, filter: 'drop-shadow(0 0 10px #22d3ee)',
-                animation: 'pulse 2.4s ease-in-out infinite' }}>∞</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, fontWeight: 800, letterSpacing: '0.2em',
-                  color: isFreeNow ? 'rgba(57,255,20,0.75)' : '#22d3ee' }}>
-                  {isFreeNow ? tr('● FREE NOW', '● СЕЙЧАС СВОБОДНО') : tr('● HAPPENING NOW', '● ИДЁТ СЕЙЧАС')}</p>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 18, fontWeight: 800,
-                  color: 'rgba(225,250,255,0.95)', marginTop: 4,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {!snap.awake ? tr('Off the clock', 'Вне графика')
-                    : isFreeNow ? tr('Free time', 'Свободное время') : cur!.label}</p>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 9.5, color: 'rgba(148,163,184,0.6)', marginTop: 3 }}>
-                  {snap.awake && !isFreeNow && cur
-                    ? `${tr('until', 'до')} ${fmtClock(cur.end)}`
-                    : snap.next ? `${tr('next:', 'далее:')} ${snap.next.label} · ${fmtClock(snap.next.start)}` : ''}</p>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 24, fontWeight: 900, color: '#39ff14',
-                  lineHeight: 1, textShadow: '0 0 14px rgba(57,255,20,0.5)' }}>{fmtDur(snap.freeMinutes)}</p>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(57,255,20,0.55)',
-                  letterSpacing: '0.14em', marginTop: 4 }}>{tr('FREE TODAY', 'СВОБОДНО СЕГОДНЯ')}</p>
-              </div>
+              {/* NOW panel */}
+              <button onClick={() => onOpenModule('/infinity8')} style={{
+                flex: '1 1 380px', padding: '14px 20px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
+                background: 'linear-gradient(135deg, rgba(34,211,238,0.09), rgba(57,255,20,0.03))',
+                border: '1px solid rgba(34,211,238,0.25)', display: 'flex', alignItems: 'center', gap: 16,
+                transition: 'border-color 0.15s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(34,211,238,0.55)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(34,211,238,0.25)'}>
+                <span style={{ fontSize: 26, filter: 'drop-shadow(0 0 10px #22d3ee)',
+                  animation: 'pulse 2.4s ease-in-out infinite' }}>∞</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.2em',
+                    color: isFreeNow ? 'rgba(57,255,20,0.75)' : '#22d3ee' }}>
+                    {isFreeNow ? tr('● FREE NOW', '● СЕЙЧАС СВОБОДНО') : tr('● HAPPENING NOW', '● ИДЁТ СЕЙЧАС')}</p>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 15, fontWeight: 800,
+                    color: 'rgba(225,250,255,0.95)', marginTop: 3,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {!snap.awake ? tr('Off the clock', 'Вне графика')
+                      : isFreeNow ? tr('Free time', 'Свободное время') : cur!.label}</p>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, color: 'rgba(148,163,184,0.6)', marginTop: 2 }}>
+                    {snap.awake && !isFreeNow && cur
+                      ? `${tr('until', 'до')} ${fmtClock(cur.end)}`
+                      : snap.next ? `${tr('next:', 'далее:')} ${snap.next.label} · ${fmtClock(snap.next.start)}` : ''}</p>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 21, fontWeight: 900, color: '#39ff14',
+                    lineHeight: 1, textShadow: '0 0 14px rgba(57,255,20,0.5)' }}>{fmtDur(snap.freeMinutes)}</p>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(57,255,20,0.55)',
+                    letterSpacing: '0.14em', marginTop: 4 }}>{tr('FREE TODAY', 'СВОБОДНО СЕГОДНЯ')}</p>
+                </div>
+              </button>
             </div>
 
             {/* Status tiles */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginTop: 18 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 18 }}>
               {tiles.map(({ label, value, neon, emoji, path }) => (
                 <button key={label} onClick={() => onOpenModule(path)} style={{
-                  padding: '16px 18px', borderRadius: 13, cursor: 'pointer', textAlign: 'left',
+                  padding: '12px 16px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
                   background: 'rgba(13,24,48,0.5)', border: '1px solid rgba(255,255,255,0.06)',
-                  transition: 'all 0.15s',
+                  display: 'flex', alignItems: 'center', gap: 12, transition: 'all 0.15s',
                 }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = `${neon}55`; e.currentTarget.style.boxShadow = `0 0 18px ${neon}18` }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.boxShadow = 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 20 }}>{emoji}</span>
-                    <span style={{ fontFamily: 'var(--font)', fontSize: 24, fontWeight: 900, color: neon,
-                      textShadow: `0 0 12px ${neon}60` }}>{value}</span>
+                  <span style={{ fontSize: 18 }}>{emoji}</span>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontFamily: 'var(--font)', fontSize: 19, fontWeight: 900, color: neon,
+                      lineHeight: 1, textShadow: `0 0 12px ${neon}60` }}>{value}</p>
+                    <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.55)',
+                      letterSpacing: '0.1em', marginTop: 5, whiteSpace: 'nowrap' }}>{label}</p>
                   </div>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: 'rgba(148,163,184,0.55)',
-                    letterSpacing: '0.12em', marginTop: 10 }}>{label}</p>
                 </button>
               ))}
             </div>
+
+            {/* Guild modules */}
+            <SectionLabel icon="⬡" text={tr('THE GUILD', 'ГИЛЬДИЯ')} />
+            <div style={{ display: 'grid', gap: 12,
+              gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+              {builtModules.map(m => {
+                const badge = moduleBadge(m.id)
+                return (
+                  <button key={m.id} onClick={() => onOpenModule(m.path)} style={{
+                    display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', cursor: 'pointer',
+                    padding: '13px 14px', borderRadius: 13,
+                    background: `linear-gradient(135deg, ${m.neon}0c, rgba(13,24,48,0.4))`,
+                    border: `1px solid ${m.neon}22`, transition: 'all 0.15s', minWidth: 0,
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = `${m.neon}60`; e.currentTarget.style.boxShadow = `0 0 20px ${m.neon}1f` }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = `${m.neon}22`; e.currentTarget.style.boxShadow = 'none' }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: `${m.neon}10`, border: `1px solid ${m.neon}35`,
+                    }}>
+                      <CyberIcon id={m.id} size={20} color={m.neon} glow />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900, color: m.neon,
+                        letterSpacing: '0.08em', textShadow: `0 0 8px ${m.neon}50`,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</p>
+                      <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(148,163,184,0.55)',
+                        letterSpacing: '0.05em', marginTop: 3,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.role}</p>
+                    </div>
+                    {badge && (
+                      <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900, flexShrink: 0,
+                        color: m.neon, padding: '3px 8px', borderRadius: 7,
+                        background: `${m.neon}14`, border: `1px solid ${m.neon}35`,
+                        textShadow: `0 0 6px ${m.neon}60` }}>{badge}</span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Favorite programs */}
+            <SectionLabel icon="★" text={tr('FAVORITE PROGRAMS', 'ИЗБРАННЫЕ ПРОГРАММЫ')} color={GOLD} />
+            <div style={{ display: 'grid', gap: 10,
+              gridTemplateColumns: 'repeat(auto-fill, minmax(108px, 1fr))' }}>
+              {favApps.map(app => (
+                <AppTile key={app.path} app={app} onLaunch={launch}
+                  fav onToggleFav={handleToggleFav} />
+              ))}
+              {/* Drill into the full library */}
+              <button onClick={() => setView('apps')} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: 8, padding: '13px 8px 9px', borderRadius: 12, cursor: 'pointer', minHeight: 96,
+                background: 'transparent', border: '1px dashed rgba(0,245,255,0.25)',
+                transition: 'all 0.15s',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(0,245,255,0.55)'; e.currentTarget.style.background = 'rgba(0,245,255,0.04)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,245,255,0.25)'; e.currentTarget.style.background = 'transparent' }}>
+                <span style={{ fontSize: 20, color: 'rgba(0,245,255,0.6)' }}>⊞</span>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800,
+                  color: 'rgba(0,245,255,0.6)', letterSpacing: '0.1em' }}>
+                  {tr('ALL PROGRAMS', 'ВСЕ ПРОГРАММЫ')}</span>
+              </button>
+            </div>
+            {favApps.length === 0 && (
+              <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, color: 'rgba(148,163,184,0.4)',
+                marginTop: 10, letterSpacing: '0.04em' }}>
+                {tr('Pin programs with the ★ in All Programs — they land here.',
+                    'Закрепляйте программы звёздочкой ★ в «Все программы» — они появятся здесь.')}</p>
+            )}
           </div>
 
           {/* Quest rail */}
@@ -416,7 +550,7 @@ export default function BigScreen({ onExit, onOpenModule }: {
         </div>
       )}
 
-      {/* ── PROGRAMS — launcher grid ── */}
+      {/* ── ALL PROGRAMS — full library ── */}
       {view === 'apps' && (
         <>
           <div style={{ padding: '16px 34px 4px', flexShrink: 0 }}>
@@ -433,7 +567,7 @@ export default function BigScreen({ onExit, onOpenModule }: {
               onBlur={e => e.target.style.borderColor = 'rgba(0,245,255,0.2)'} />
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: '10px 34px 30px' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '10px 34px 30px', ...STAGE_BG }}>
             {!isTauri() && (
               <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(148,163,184,0.55)',
                 textAlign: 'center', padding: '60px 20px', lineHeight: 1.8 }}>
@@ -466,7 +600,10 @@ export default function BigScreen({ onExit, onOpenModule }: {
                 </div>
                 <div style={{ display: 'grid', gap: 10,
                   gridTemplateColumns: 'repeat(auto-fill, minmax(118px, 1fr))' }}>
-                  {groupApps.map(app => <AppTile key={app.path} app={app} onLaunch={launch} />)}
+                  {groupApps.map(app => (
+                    <AppTile key={app.path} app={app} onLaunch={launch}
+                      fav={favs.includes(app.path)} onToggleFav={handleToggleFav} />
+                  ))}
                 </div>
               </div>
             ))}

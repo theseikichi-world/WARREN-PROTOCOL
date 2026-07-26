@@ -36,6 +36,26 @@ export function tileNeon(name: string): string {
   return TILE_NEONS[h % TILE_NEONS.length]
 }
 
+// ─── Favorites — pinned programs shown on the Warren OS home screen ───────────
+const FAVS_KEY = 'bigscreen_favs_v1'
+
+export function loadFavs(): string[] {
+  try {
+    const raw = localStorage.getItem(FAVS_KEY)
+    const parsed: unknown = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : []
+  } catch { return [] }
+}
+
+export function saveFavs(favs: string[]): void {
+  try { localStorage.setItem(FAVS_KEY, JSON.stringify(favs)) } catch { /* quota — favorites are optional */ }
+}
+
+/** Pure toggle — append if missing, remove if present (order preserved). */
+export function toggleFav(favs: string[], path: string): string[] {
+  return favs.includes(path) ? favs.filter(p => p !== path) : [...favs, path]
+}
+
 /** Group apps under their first letter (digits and symbols pool under '#'). */
 export function groupByLetter(apps: AppEntry[]): { letter: string; apps: AppEntry[] }[] {
   const groups = new Map<string, AppEntry[]>()

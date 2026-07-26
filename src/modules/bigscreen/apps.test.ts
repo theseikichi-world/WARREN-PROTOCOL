@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filterApps, monogram, tileNeon, groupByLetter, type AppEntry } from './apps'
+import { filterApps, monogram, tileNeon, groupByLetter, toggleFav, type AppEntry } from './apps'
 
 const APPS: AppEntry[] = [
   { name: 'Steam', path: 'C:\\sm\\Steam.lnk' },
@@ -37,6 +37,17 @@ describe('tileNeon', () => {
   it('is deterministic and returns a hex color', () => {
     expect(tileNeon('Steam')).toBe(tileNeon('Steam'))
     expect(tileNeon('Steam')).toMatch(/^#[0-9a-f]{6}$/i)
+  })
+})
+
+describe('toggleFav', () => {
+  it('appends a missing path and removes a present one', () => {
+    const once = toggleFav([], 'a.lnk')
+    expect(once).toEqual(['a.lnk'])
+    expect(toggleFav(once, 'a.lnk')).toEqual([])
+  })
+  it('preserves order of the others', () => {
+    expect(toggleFav(['a', 'b', 'c'], 'b')).toEqual(['a', 'c'])
   })
 })
 
