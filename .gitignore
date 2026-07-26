@@ -17,3 +17,5 @@ src-tauri/gen
 # misc
 *.local
 .DS_Store
+
+.vercel

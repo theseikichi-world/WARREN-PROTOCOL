@@ -14,6 +14,21 @@ export interface BackupFile {
 /** Volatile caches — pointless to back up, refetched automatically. */
 const SKIP = [/^pictures_discover_/, /^pictures_games_/]
 
+/** Secret fields inside warren_settings — stripped from every export so a shared
+ *  backup file can never leak the user's Anthropic / TMDB / RAWG keys. */
+const SECRET_FIELDS = ['aiApiKey', 'tmdbApiKey', 'rawgApiKey'] as const
+const SETTINGS_KEY = 'warren_settings'
+
+function stripSecrets(settingsJson: string): string {
+  try {
+    const s = JSON.parse(settingsJson) as Record<string, unknown>
+    for (const f of SECRET_FIELDS) delete s[f]
+    return JSON.stringify(s)
+  } catch {
+    return settingsJson   // unparsable — exported as-is, validated on import anyway
+  }
+}
+
 export function exportAll(): BackupFile {
   const data: Record<string, string> = {}
   for (let i = 0; i < localStorage.length; i++) {
@@ -21,7 +36,8 @@ export function exportAll(): BackupFile {
     if (!key) continue
     if (SKIP.some(re => re.test(key))) continue
     const val = localStorage.getItem(key)
-    if (val !== null) data[key] = val
+    if (val === null) continue
+    data[key] = key === SETTINGS_KEY ? stripSecrets(val) : val
   }
   return { app: 'warren', version: 1, exportedAt: new Date().toISOString(), data }
 }
@@ -61,6 +77,21 @@ export function importBackup(json: string): number {
     try { JSON.parse(val) } catch { throw new Error(`Corrupted data for key "${key}".`) }
   }
 
-  for (const [key, val] of entries) localStorage.setItem(key, val)
+  for (const [key, val] of entries) {
+    // Backups carry no API keys (stripped on export) — when restoring settings,
+    // keep whatever keys this device already has instead of blanking them.
+    if (key === SETTINGS_KEY) {
+      try {
+        const incoming = JSON.parse(val) as Record<string, unknown>
+        const current  = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') as Record<string, unknown>
+        for (const f of SECRET_FIELDS) {
+          if (!incoming[f] && typeof current[f] === 'string') incoming[f] = current[f]
+        }
+        localStorage.setItem(key, JSON.stringify(incoming))
+        continue
+      } catch { /* fall through to raw write */ }
+    }
+    localStorage.setItem(key, val)
+  }
   return entries.length
 }

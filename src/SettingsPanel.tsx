@@ -462,8 +462,8 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           <Section label={t('Backup', 'Резервная копия')} />
           <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
             lineHeight: 1.6, marginBottom: 10 }}>
-            All Warren data lives on this machine. Export a backup file regularly —
-            habits, goals, texts, journal, library, everything.
+            {t('All Warren data lives on this machine. Export a backup file regularly — habits, goals, texts, journal, library, everything. API keys are never included in backups.',
+               'Все данные Warren хранятся на этой машине. Регулярно выгружайте резервную копию — привычки, цели, тексты, журнал, библиотека, всё. API-ключи в копию никогда не попадают.')}
           </p>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             <button onClick={() => { try { downloadBackup(); setBackupMsg('✓ Backup downloaded') } catch { setBackupMsg('Download failed — use Copy') } }}
