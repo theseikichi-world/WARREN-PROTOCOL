@@ -78,6 +78,203 @@ fn list_apps() -> Vec<AppEntry> {
     apps
 }
 
+// ─── Files — a Проводник inside Warren ────────────────────────────────────────
+// Read-only browsing of the user's own machine, plus "open" which hands a
+// file to its default program exactly like a double-click in Explorer.
+// Every path the UI can act on came from one of these listings.
+
+#[derive(serde::Serialize)]
+struct FileEntry {
+    name:   String,
+    path:   String,
+    is_dir: bool,
+    size:   u64,
+    ext:    String,
+}
+
+fn entry_of(path: &Path, name: String, is_dir: bool, size: u64) -> FileEntry {
+    FileEntry {
+        ext: if is_dir {
+            String::new()
+        } else {
+            path.extension()
+                .map(|e| e.to_string_lossy().to_lowercase())
+                .unwrap_or_default()
+        },
+        name,
+        path: path.to_string_lossy().into_owned(),
+        is_dir,
+        size,
+    }
+}
+
+/// Drive roots that actually exist (C:\, D:\ …).
+#[tauri::command]
+fn list_drives() -> Vec<FileEntry> {
+    let mut out = Vec::new();
+    #[cfg(windows)]
+    for letter in b'A'..=b'Z' {
+        let root = format!("{}:\\", letter as char);
+        let p = PathBuf::from(&root);
+        if p.exists() {
+            out.push(entry_of(&p, root.clone(), true, 0));
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let p = PathBuf::from("/");
+        out.push(entry_of(&p, "/".into(), true, 0));
+    }
+    out
+}
+
+/// Desktop / Documents / Downloads / … — the places people actually keep things.
+#[tauri::command]
+fn quick_places() -> Vec<FileEntry> {
+    let home = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .unwrap_or_default();
+    if home.is_empty() {
+        return Vec::new();
+    }
+    let base = PathBuf::from(&home);
+    let mut out = vec![entry_of(&base, "Home".into(), true, 0)];
+    for name in ["Desktop", "Documents", "Downloads", "Pictures", "Music", "Videos"] {
+        let p = base.join(name);
+        if p.is_dir() {
+            out.push(entry_of(&p, name.to_string(), true, 0));
+        }
+    }
+    out
+}
+
+/// One directory, folders first. Hidden and system entries are skipped so the
+/// view stays as calm as Explorer's default.
+#[tauri::command]
+fn list_dir(path: String) -> Result<Vec<FileEntry>, String> {
+    let dir = PathBuf::from(&path);
+    if !dir.is_dir() {
+        return Err("Not a folder.".into());
+    }
+    let entries = std::fs::read_dir(&dir).map_err(|e| e.to_string())?;
+
+    let mut out: Vec<FileEntry> = Vec::new();
+    for entry in entries.flatten() {
+        let Ok(meta) = entry.metadata() else { continue };
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            const HIDDEN: u32 = 0x2;
+            const SYSTEM: u32 = 0x4;
+            if meta.file_attributes() & (HIDDEN | SYSTEM) != 0 {
+                continue;
+            }
+        }
+
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if name.starts_with('.') {
+            continue;
+        }
+        out.push(entry_of(&entry.path(), name, meta.is_dir(), meta.len()));
+    }
+
+    out.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+    });
+    Ok(out)
+}
+
+/// Open a file or folder with its default program — the same thing a
+/// double-click in Explorer does. Only ever called for an entry the user
+/// clicked in a listing above.
+#[tauri::command]
+fn open_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    if !Path::new(&path).exists() {
+        return Err("That path no longer exists.".into());
+    }
+    app.opener()
+        .open_path(&path, None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
+/// Real Windows icons for the given shortcuts, as base64 PNGs (same order as
+/// the input; an empty string means "no icon, use the fallback"). Uses the
+/// stock PowerShell + .NET pipeline so no extra crates are needed.
+#[tauri::command]
+fn app_icons(paths: Vec<String>) -> Vec<String> {
+    let empty: Vec<String> = paths.iter().map(|_| String::new()).collect();
+    if paths.is_empty() {
+        return empty;
+    }
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+        // Paths go in as a here-string block so quoting can't break the script.
+        let joined = paths.join("\n");
+        let script = r#"
+$ErrorActionPreference = 'SilentlyContinue'
+Add-Type -AssemblyName System.Drawing
+$shell = New-Object -ComObject WScript.Shell
+$input | ForEach-Object {
+  $p = $_
+  $out = ''
+  try {
+    $target = $p
+    if ($p -like '*.lnk') {
+      $t = $shell.CreateShortcut($p).TargetPath
+      if ($t -and (Test-Path -LiteralPath $t)) { $target = $t }
+    }
+    $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($target)
+    if ($icon) {
+      $bmp = $icon.ToBitmap()
+      $ms  = New-Object System.IO.MemoryStream
+      $bmp.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png)
+      $out = [Convert]::ToBase64String($ms.ToArray())
+      $ms.Dispose(); $bmp.Dispose(); $icon.Dispose()
+    }
+  } catch { $out = '' }
+  Write-Output $out
+}
+"#;
+
+        let mut child = match std::process::Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command", script])
+            .creation_flags(CREATE_NO_WINDOW)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+        {
+            Ok(c) => c,
+            Err(_) => return empty,
+        };
+
+        if let Some(stdin) = child.stdin.as_mut() {
+            use std::io::Write;
+            let _ = stdin.write_all(joined.as_bytes());
+        }
+        let Ok(out) = child.wait_with_output() else { return empty };
+
+        let mut icons: Vec<String> = String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .map(|l| l.trim().to_string())
+            .collect();
+        icons.resize(paths.len(), String::new());
+        icons
+    }
+    #[cfg(not(windows))]
+    {
+        empty
+    }
+}
+
 /// Names (lower-case, no ".exe") of processes running right now, so the
 /// launcher can show what's already open. Read-only: shells out to the stock
 /// `tasklist` utility with no console window — no extra dependency, and
@@ -149,7 +346,10 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![])))
-        .invoke_handler(tauri::generate_handler![get_username, list_apps, launch_app, running_processes])
+        .invoke_handler(tauri::generate_handler![
+            get_username, list_apps, launch_app, running_processes,
+            list_drives, quick_places, list_dir, open_path, app_icons,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running Warren");
 }
