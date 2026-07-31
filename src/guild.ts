@@ -19,7 +19,7 @@ export const GUILD: GuildMember[] = [
   {
     id: 'ravi',  name: 'INFINITY-8',    unit: '∞8',  animal: 'Raven',
     role: 'Time Protocol',
-    neon: '#22d3ee', path: '/infinity8', free: false, built: true,
+    neon: '#22d3ee', path: '/infinity8', free: false, built: false,
     desc: 'The day that flows endlessly. Reads every module, lays your day on the line, and guards your free time.',
   },
   {

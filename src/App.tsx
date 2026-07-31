@@ -17,8 +17,18 @@ import BigScreen from './modules/bigscreen/BigScreen'
 import { getNowSnapshot, fmtClock, fmtDur } from './modules/infinity8/store'
 import { gatherSuggestions, topSuggestion, type Suggestion } from './modules/infinity8/suggestions'
 import { getHubStats, type HubStats } from './hubStats'
+import { ReleaseRadar } from './modules/pictures/ReleaseRadar'
 import { useLocale, t } from './i18n'
 import { CyberIcon } from './components/CyberIcon'
+
+// ─── Dormant surfaces ─────────────────────────────────────────────────────────
+// Warren OS (fullscreen launcher, file browser, quest log) is parked while the
+// progression system lands — it doesn't serve the goal loop. Code and data stay
+// untouched; only navigation drops it. INFINITY-8 is parked the same way via its
+// `built: false` in guild.ts, and may return later as a scheduling layer once
+// routines carry fixed time-of-day anchors.
+const WARREN_OS_ENABLED = false
+const INF8_ENABLED = GUILD.some(m => m.id === 'ravi' && m.built)
 
 // ─── Matrix intro ─────────────────────────────────────────────────────────────
 const BOOT_LINES = [
@@ -192,7 +202,7 @@ function TitleBar() {
 
       {/* Right: clock + controls */}
       <div data-tauri-drag-region style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        {isTauri() && (
+        {WARREN_OS_ENABLED && isTauri() && (
           <button onClick={enterBigScreen} title={t('Big Screen — fullscreen launcher', 'Большой экран — полноэкранный лаунчер')}
             style={{
               height: 24, padding: '0 10px', borderRadius: 6, cursor: 'pointer',
@@ -430,8 +440,11 @@ function Dashboard({ displayName }: { displayName: string }) {
         </p>
       </div>
 
-      {/* Live now card (INFINITY-8) */}
-      <NowCard />
+      {/* Live now card — only while INFINITY-8 is in service */}
+      {INF8_ENABLED && <NowCard />}
+
+      {/* What's landing soon, from the titles already tracked */}
+      <ReleaseRadar />
 
       {/* Quick stats row — live, tap to open the module */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
@@ -487,7 +500,7 @@ export default function App() {
 
   // Desktop: boot straight into fullscreen Warren OS (the intro plays on top)
   useEffect(() => {
-    if (isTauri() && loadSettings().bootBigScreen) {
+    if (WARREN_OS_ENABLED && isTauri() && loadSettings().bootBigScreen) {
       void getCurrentWindow().setFullscreen(true).catch(() => {})
       navigate('/bigscreen')
     }
