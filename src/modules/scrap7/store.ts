@@ -1,9 +1,14 @@
 import {
   type Task, type Scrap7State, type ChatMessage, type Schedule, type Priority, type Direction,
-  DEFAULT_CATEGORIES, HABIT_MILESTONES, todayKey,
+  type TaskOrigin,
+  DEFAULT_CATEGORIES, HABIT_MILESTONES, todayKey, taskOrigin,
 } from './types'
 
-const KEY = 'scrap7_v3'
+// v4 adds Task.origin. The v3 record is read once and then left untouched, so
+// it stays as an automatic rollback point — accumulated `score` is the single
+// most valuable thing in this app and must never depend on one migration.
+const KEY        = 'scrap7_v4'
+const LEGACY_KEY = 'scrap7_v3'
 
 // Exponential smoothing factor — matches Loop Habit Tracker's curve:
 // ~5% after day 1, ~30% after 1 week, ~80% after 1 month, ~96% after 2 months
@@ -29,17 +34,19 @@ const INITIAL: Scrap7State = {
 
 export function loadState(): Scrap7State {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(KEY) ?? localStorage.getItem(LEGACY_KEY)
     if (!raw) return { ...INITIAL, chatHistory: [makeInitialGreeting()] }
     const parsed = JSON.parse(raw)
 
-    // Migrate old strength (0-100 int) → score (0.0-1.0 float)
     const tasks = (parsed.tasks ?? []).map((t: Task & { strength?: number }) => {
-      if (t.taskType === 'habit' && t.score === undefined) {
-        const oldStrength = t.strength ?? 0
-        return { ...t, score: oldStrength / 100, strength: undefined }
+      let next = t
+      // Migrate old strength (0-100 int) → score (0.0-1.0 float)
+      if (next.taskType === 'habit' && next.score === undefined) {
+        next = { ...next, score: (next.strength ?? 0) / 100, strength: undefined }
       }
-      return t
+      // Stamp provenance on tasks that predate the field
+      if (!next.origin) next = { ...next, origin: taskOrigin(next) }
+      return next
     })
 
     return { ...INITIAL, ...parsed, tasks }
@@ -130,6 +137,7 @@ function buildTask(data: NewTaskData, overrides: Partial<Task> = {}): Task {
     taskType:  data.taskType,
     completed: false,
     createdAt: new Date().toISOString(),
+    origin:    'manual',
   }
 
   if (data.taskType === 'habit') {
@@ -178,6 +186,8 @@ export interface ExternalTaskData extends NewTaskData {
   /** Provenance shown/stored on the task (e.g. mission + dream titles). */
   logMission?: string
   logDream?:   string
+  /** Who owns this task. Defaults to 'log' — the only caller today is L.O.G sync. */
+  origin?:     TaskOrigin
 }
 
 export function createExternalTask(data: ExternalTaskData): void {
@@ -189,6 +199,7 @@ export function createExternalTask(data: ExternalTaskData): void {
       ...(data.createdAt ? { createdAt: data.createdAt } : {}),
       ...(data.logMission ? { logMission: data.logMission } : {}),
       ...(data.logDream ? { logDream: data.logDream } : {}),
+      origin: data.origin ?? 'log',
     })
 
     const idx = state.tasks.findIndex(t => t.id === task.id)

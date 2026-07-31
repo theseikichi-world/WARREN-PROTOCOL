@@ -18,6 +18,8 @@ import { getNowSnapshot, fmtClock, fmtDur } from './modules/infinity8/store'
 import { gatherSuggestions, topSuggestion, type Suggestion } from './modules/infinity8/suggestions'
 import { getHubStats, type HubStats } from './hubStats'
 import { ReleaseRadar } from './modules/pictures/ReleaseRadar'
+import Uplinks from './modules/progression/Uplinks'
+import { BandwidthStrip } from './modules/progression/BandwidthStrip'
 import { useLocale, t } from './i18n'
 import { CyberIcon } from './components/CyberIcon'
 
@@ -257,7 +259,7 @@ function TitleBar() {
 import type { ModuleId } from './guild'
 
 function SidebarBtn({ iconId, neon, active, title, dim = false, onClick }: {
-  iconId: ModuleId | 'hub' | 'set' | 'pwr'
+  iconId: ModuleId | 'hub' | 'set' | 'pwr' | 'uplink'
   neon: string; active: boolean; title: string
   dim?: boolean; onClick: () => void
 }) {
@@ -443,6 +445,9 @@ function Dashboard({ displayName }: { displayName: string }) {
       {/* Live now card — only while INFINITY-8 is in service */}
       {INF8_ENABLED && <NowCard />}
 
+      {/* Two uplinks, and what they're carrying */}
+      <BandwidthStrip />
+
       {/* What's landing soon, from the titles already tracked */}
       <ReleaseRadar />
 
@@ -570,6 +575,7 @@ export default function App() {
             <Route path="/infinity8/*" element={<Infinity8 />} />
             <Route path="/pictures/*"  element={<Pictures />} />
             <Route path="/journal/*"   element={<Journal />} />
+            <Route path="/uplinks/*"  element={<Uplinks />} />
             {/* Unbuilt modules are hidden; any stray URL falls back to the Hub */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -585,6 +591,8 @@ export default function App() {
         }}>
           {/* Hub */}
           <SidebarBtn iconId="hub" neon="var(--accent)" active={location.pathname === '/'} title="Warren Hub" onClick={() => navigate('/')} />
+          <SidebarBtn iconId="uplink" neon="#00f5ff" active={location.pathname.startsWith('/uplinks')}
+            title={t('Uplinks — goals & bandwidth', 'Каналы — цели и полоса')} onClick={() => navigate('/uplinks')} />
           <div style={{ width: 28, height: 1, background: 'var(--border)', margin: '2px 0' }} />
 
           {/* Modules — only the ones that are actually shipped */}

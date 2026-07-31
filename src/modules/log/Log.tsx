@@ -17,6 +17,12 @@ import {
 import { aiJson, loadSettings, modelForTask, type AiMessage } from '../../settings'
 import { t as tr } from '../../i18n'
 
+// L.O.G is read-only while the progression system lands: its dreams are being
+// replaced by goal chains (PROTOCOLS), so new ones would only be written into a
+// structure that is about to change. Everything already here stays visible and
+// editable — only creation is closed.
+const LOG_FROZEN = true
+
 const LOG_NEON  = '#c084fc'
 const LOG_DIM   = 'rgba(192,132,252,0.1)'
 const S7_NEON   = '#00b4ff'  // SCRAP-7 blue for sync badges
@@ -1338,7 +1344,7 @@ export default function Log() {
             {synthesizing ? tr('SYNTHESIZING','СИНТЕЗ...') : tr('SYNTHESIZE','СИНТЕЗ')}
           </button>
         )}
-        <button onClick={() => setDreamModal('new')} style={{
+        {!LOG_FROZEN && <button onClick={() => setDreamModal('new')} style={{
           width: 28, height: 28, borderRadius: 7, fontSize: 16, fontWeight: 700,
           color: `${LOG_NEON}80`, border: `1px solid ${LOG_NEON}30`,
           background: LOG_DIM, cursor: 'pointer', transition: 'all 0.15s',
@@ -1346,7 +1352,7 @@ export default function Log() {
         }}
           onMouseEnter={e => { e.currentTarget.style.color = LOG_NEON; e.currentTarget.style.background = 'rgba(192,132,252,0.18)' }}
           onMouseLeave={e => { e.currentTarget.style.color = `${LOG_NEON}80`; e.currentTarget.style.background = LOG_DIM }}
-        >✧</button>
+        >✧</button>}
       </div>
 
       {/* Synthesis error (shared) */}
@@ -1389,12 +1395,20 @@ export default function Log() {
               color: `${LOG_NEON}22`, letterSpacing: '0.1em', lineHeight: 1.8 }}>
               {tr('Plant your first star —', 'Зажгите первую звезду —')}<br/>{tr('a Dream you want to make real.', 'мечту, которую хотите осуществить.')}
             </p>
+            {LOG_FROZEN ? (
+              <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', marginTop: 18,
+                color: `${LOG_NEON}55`, letterSpacing: '0.06em', lineHeight: 1.8 }}>
+                {tr('L.O.G is read-only — new goals are set up in UPLINKS.',
+                    'L.O.G только для чтения — новые цели создаются в UPLINKS.')}
+              </p>
+            ) : (
             <button onClick={() => setDreamModal('new')} style={{
               marginTop: 18, padding: '8px 22px', borderRadius: 7, cursor: 'pointer',
               fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700,
               letterSpacing: '0.12em', color: LOG_NEON,
               border: `1px solid ${LOG_NEON}40`, background: LOG_DIM, transition: 'background 0.15s',
             }}>{tr('✧ PLANT FIRST STAR', '✧ ЗАЖЕЧЬ ПЕРВУЮ ЗВЕЗДУ')}</button>
+            )}
           </div>
         )}
 

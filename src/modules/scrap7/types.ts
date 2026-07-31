@@ -1,6 +1,16 @@
 // ─── Task types ───────────────────────────────────────────────────────────────
 
 export type TaskType  = 'habit' | 'daily' | 'todo'
+
+/**
+ * Where a task came from. Decides who it answers to:
+ *   manual — you made it here. Shows in UNBOUND, no progression contribution.
+ *   log    — synced from L.O.G. Belongs to a system that still exists, so it is
+ *            NOT an orphan and never appears in UNBOUND. Earns no progression XP.
+ *   chain  — carries a PROTOCOL routine. The only origin that feeds progression.
+ * Legacy tasks have no field; `taskOrigin()` infers it.
+ */
+export type TaskOrigin = 'manual' | 'log' | 'chain'
 export type Priority  = 'trivial' | 'easy' | 'medium' | 'hard'
 export type Direction = 'positive' | 'negative'
 export type TimeOfDay = 'morning' | 'day' | 'evening' | 'daily'
@@ -17,6 +27,7 @@ export interface Task {
   taskType:   TaskType
   completed:  boolean
   createdAt:  string
+  origin?:    TaskOrigin   // absent on legacy tasks — see taskOrigin()
 
   // Habit-specific
   direction?:        Direction
@@ -40,6 +51,25 @@ export interface Task {
   // Cross-module provenance (set by createExternalTask — e.g. L.O.G sync)
   logMission?: string
   logDream?:   string
+}
+
+// ─── Task origin ──────────────────────────────────────────────────────────────
+// Legacy tasks predate the field. L.O.G stamped its provenance on every task it
+// synced, so those are recoverable exactly; everything else was made by hand.
+
+export function taskOrigin(t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): TaskOrigin {
+  if (t.origin) return t.origin
+  return (t.logMission || t.logDream) ? 'log' : 'manual'
+}
+
+/** Only PROTOCOL routines move the progression loop. */
+export function feedsProgression(t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): boolean {
+  return taskOrigin(t) === 'chain'
+}
+
+/** UNBOUND is for hand-made tasks only — L.O.G's tasks have a home already. */
+export function isUnbound(t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): boolean {
+  return taskOrigin(t) === 'manual'
 }
 
 // ─── Milestone labels (cyberpunk-flavoured) ───────────────────────────────────

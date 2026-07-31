@@ -412,10 +412,26 @@ export function IconFoxy(p: IconProps) {
   )
 }
 
+/* ── Uplink: rising signal bars into a transmit arc ── */
+function IconUplink({ size, color = 'currentColor', glow }: IconProps) {
+  const c = color
+  return (
+    <Svg size={size} color={c} glow={glow}>
+      {/* Bandwidth bars */}
+      <rect x="3"  y="14" width="3" height="7"  rx="1" fill={c} opacity="0.45"/>
+      <rect x="8"  y="10" width="3" height="11" rx="1" fill={c} opacity="0.7"/>
+      <rect x="13" y="6"  width="3" height="15" rx="1" fill={c}/>
+      {/* Transmit arc */}
+      <path d="M18 8a5 5 0 0 1 3 4" stroke={c} strokeWidth="1.6" strokeLinecap="round" opacity="0.8"/>
+      <circle cx="18" cy="4.5" r="1.6" fill={c}/>
+    </Svg>
+  )
+}
+
 /* ── Map: moduleId → icon component ── */
 import type { ModuleId } from '../guild'
 
-export function CyberIcon({ id, size, color, glow }: { id: ModuleId | 'hub' | 'set' | 'pwr' } & IconProps) {
+export function CyberIcon({ id, size, color, glow }: { id: ModuleId | 'hub' | 'set' | 'pwr' | 'uplink' } & IconProps) {
   const props = { size, color, glow }
   switch (id) {
     case 'scrap7': return <IconScrap7 {...props} />
@@ -433,6 +449,7 @@ export function CyberIcon({ id, size, color, glow }: { id: ModuleId | 'hub' | 's
     case 'hub':    return <IconHub    {...props} />
     case 'set':    return <IconSet    {...props} />
     case 'pwr':    return <IconPwr    {...props} />
+    case 'uplink': return <IconUplink {...props} />
     default:       return <IconHub    {...props} />
   }
 }
