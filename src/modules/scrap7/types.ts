@@ -28,6 +28,12 @@ export interface Task {
   completed:  boolean
   createdAt:  string
   origin?:    TaskOrigin   // absent on legacy tasks — see taskOrigin()
+  /**
+   * Set when the routine's goal loses its bandwidth slot. The habit is never
+   * deleted: it stays visible and trackable, its score decays at half rate,
+   * and it earns nothing. Owned by the progression module.
+   */
+  frozen?:    boolean
 
   // Habit-specific
   direction?:        Direction

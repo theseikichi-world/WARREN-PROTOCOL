@@ -4,9 +4,13 @@
 
 import {
   type Goal, type GoalSlot, type ProgressionState,
-  SWAP_COOLDOWN_DAYS,
+  SWAP_COOLDOWN_DAYS, SECONDARY_MAX_NODES, THRESHOLD_UNLOCK_AT,
 } from './types'
 import { SEED_GOALS } from './seed'
+import { evaluateUnlocks, isUnlocked, nodeScore, routineTaskId } from './chain'
+import {
+  loadState as loadScrap7, saveState as saveScrap7, createExternalTask,
+} from '../scrap7/store'
 
 const KEY = 'warren_progression_v1'
 
@@ -144,6 +148,104 @@ export function assignSecondary(s: ProgressionState, goalId: string, now = new D
 /** Park a goal. Progress is preserved; it simply stops earning. */
 export function archiveGoal(s: ProgressionState, goalId: string, now = new Date()): ProgressionState {
   return { ...s, goals: s.goals.map(g => g.id === goalId ? stamp(g, 'archived', now) : g) }
+}
+
+// ─── Chain ↔ SCRAP-7 sync ─────────────────────────────────────────────────────
+
+/**
+ * Which unlocked routines of a goal may carry a live habit right now.
+ *
+ * The primary uplink carries all of them. The secondary is capped at
+ * SECONDARY_MAX_NODES *active* routines — one already past the integration
+ * threshold no longer counts, since it's maintenance rather than work in
+ * progress, so mastering something frees the slot it was using.
+ */
+export function instantiableNodes(goal: Goal, tasks: ReturnType<typeof loadScrap7>['tasks']): Set<string> {
+  const unlocked = goal.nodes.filter(isUnlocked)
+  if (goal.slot === 'primary') return new Set(unlocked.map(n => n.id))
+  if (goal.slot === 'archived') {
+    // Frozen: nothing new opens, but whatever already exists stays
+    return new Set(unlocked.filter(n => n.scrapTaskId).map(n => n.id))
+  }
+
+  const byUnlockTime = [...unlocked].sort((a, b) => (a.unlockedAt ?? '').localeCompare(b.unlockedAt ?? ''))
+  const allowed = new Set<string>()
+  let active = 0
+  for (const n of byUnlockTime) {
+    if (nodeScore(n, tasks) >= THRESHOLD_UNLOCK_AT) { allowed.add(n.id); continue }  // integrated — free
+    if (active < SECONDARY_MAX_NODES) { allowed.add(n.id); active++ }
+  }
+  return allowed
+}
+
+/**
+ * Bring SCRAP-7 in line with the chains: open what qualifies, create exactly
+ * one habit per newly opened routine, and mark frozen anything belonging to a
+ * goal that lost its slot.
+ *
+ * Idempotent by construction. Habit ids are derived from the routine id, and a
+ * habit is only ever created when no task with that id exists — re-running this
+ * on an already-unlocked chain writes nothing and can never reset a score.
+ */
+export function syncChain(state: ProgressionState, now = new Date()): ProgressionState {
+  const before = loadScrap7()
+  const existing = new Set(before.tasks.map(t => t.id))
+
+  // 1. Open routines whose prerequisites are integrated (frozen goals don't advance)
+  let goals = state.goals.map(g =>
+    g.slot === 'archived' ? g : evaluateUnlocks(g, before.tasks, now).goal)
+
+  // 2. Give every eligible open routine a habit, exactly once
+  const pending: { node: Goal['nodes'][number]; goal: Goal }[] = []
+  goals = goals.map(g => {
+    const allowed = instantiableNodes(g, before.tasks)
+    const nodes = g.nodes.map(n => {
+      if (!isUnlocked(n) || !allowed.has(n.id)) return n
+      const taskId = routineTaskId(n)
+      if (!existing.has(taskId)) { pending.push({ node: n, goal: g }); existing.add(taskId) }
+      return n.scrapTaskId === taskId ? n : { ...n, scrapTaskId: taskId }
+    })
+    return { ...g, nodes }
+  })
+
+  for (const { node, goal } of pending) {
+    createExternalTask({
+      id:        routineTaskId(node),
+      text:      node.title,
+      category:  goal.title,
+      taskType:  'habit',
+      direction: 'positive',
+      origin:    'chain',
+      target:    1,
+      unit:      'times',
+    })
+  }
+
+  // 3. Freeze / thaw. A frozen habit is never deleted — it stays visible and
+  //    trackable, decays at half rate, and earns nothing.
+  const frozenIds = new Set<string>()
+  const liveIds   = new Set<string>()
+  for (const g of goals) {
+    for (const n of g.nodes) {
+      if (!n.scrapTaskId) continue
+      ;(g.slot === 'archived' ? frozenIds : liveIds).add(n.scrapTaskId)
+    }
+  }
+
+  const after = loadScrap7()
+  let touched = false
+  const tasks = after.tasks.map(t => {
+    const want = frozenIds.has(t.id) ? true : liveIds.has(t.id) ? false : undefined
+    if (want === undefined || !!t.frozen === want) return t
+    touched = true
+    return { ...t, frozen: want }
+  })
+  if (touched) {
+    saveScrap7({ ...after, tasks })
+    window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'progression' } }))
+  }
+
+  return { ...state, goals }
 }
 
 /** Add a goal, into a free slot if one exists, otherwise straight to the archive. */

@@ -37,12 +37,18 @@ function buildNodes(goalId: string, seeds: NodeSeed[]): ChainNode[] {
   }))
 }
 
+/**
+ * `boss` is null unless the chapter ends in a real, datable, external event.
+ * Only the terminal chapters have one here — the intermediate "bosses" that
+ * were drafted ("a full training week", "reading consolidated") were score
+ * states wearing an event costume, so they're gone rather than invented.
+ */
 const chapter = (index: number, title: string, goalId: string, keys: string[],
-                 bossTitle: string, nodeCount: number): Chapter => ({
+                 bossTitle: string | null): Chapter => ({
   index,
   title,
   nodeIds: keys.map(k => `${goalId}:${k}`),
-  boss: { title: bossTitle, requirement: { nodeCount, minScore: 0.70 }, completedAt: null },
+  boss: bossTitle ? { title: bossTitle, requirement: { minScore: 0.70 }, completedAt: null } : null,
 })
 
 // ─── ACTOR ────────────────────────────────────────────────────────────────────
@@ -78,12 +84,10 @@ const ACTOR: Goal = {
   slot:  'primary',
   nodes: buildNodes(ACTOR_ID, ACTOR_NODES),
   chapters: [
-    chapter(1, 'Voice & Presence', ACTOR_ID, ['reading', 'diction'],
-      'Record a monologue, start to finish', 2),
-    chapter(2, 'Material', ACTOR_ID, ['journal', 'books', 'observe'],
-      'Write a character study drawn from life', 3),
+    chapter(1, 'Voice & Presence', ACTOR_ID, ['reading', 'diction'], null),
+    chapter(2, 'Material', ACTOR_ID, ['journal', 'books', 'observe'], null),
     chapter(3, 'Craft', ACTOR_ID, ['memorize', 'selftape', 'english'],
-      'A self-tape shot and submitted', 3),
+      'A self-tape shot and submitted'),
   ],
   createdAt:        new Date(0).toISOString(),
   lastSlotChangeAt: new Date(0).toISOString(),
@@ -120,12 +124,10 @@ const CAPOEIRA: Goal = {
   slot:  'secondary',
   nodes: buildNodes(CAP_ID, CAP_NODES),
   chapters: [
-    chapter(1, 'Base', CAP_ID, ['training', 'mobility'],
-      'A full training week, nothing missed', 2),
-    chapter(2, 'Movement', CAP_ID, ['ginga', 'cardio'],
-      'Hold the ginga through a whole song', 2),
+    chapter(1, 'Base', CAP_ID, ['training', 'mobility'], null),
+    chapter(2, 'Movement', CAP_ID, ['ginga', 'cardio'], null),
     chapter(3, 'Roda', CAP_ID, ['berimbau', 'ptbr', 'roda'],
-      'Entering the roda', 3),
+      'Entering the roda'),
   ],
   createdAt:        new Date(0).toISOString(),
   lastSlotChangeAt: new Date(0).toISOString(),

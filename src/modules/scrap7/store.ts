@@ -13,6 +13,8 @@ const LEGACY_KEY = 'scrap7_v3'
 // Exponential smoothing factor — matches Loop Habit Tracker's curve:
 // ~5% after day 1, ~30% after 1 week, ~80% after 1 month, ~96% after 2 months
 const ALPHA = 0.05
+/** Frozen routines decay at half rate — see Task.frozen. */
+const FROZEN_DECAY = 0.5
 
 function makeInitialGreeting(): ChatMessage {
   return {
@@ -83,14 +85,18 @@ export function applyDailyReset(state: Scrap7State): Scrap7State {
         let newScore  = t.score ?? 0
         let streakBroken = false
 
+        // A frozen routine belongs to a goal you set aside — it bleeds at half
+        // rate and keeps its streak, because you were never asked to do it.
+        const decay = t.frozen ? ALPHA * FROZEN_DECAY : ALPHA
+
         // Apply decay for each day between last tracked and today
         for (let d = 1; d < totalDays; d++) {
           const missed = new Date(lastDate)
           missed.setDate(lastDate.getDate() + d)
           const missedKey = missed.toISOString().slice(0, 10)
           if (!skipped.has(missedKey)) {
-            newScore     = newScore * (1 - ALPHA)  // decay: outcome = 0
-            streakBroken = true
+            newScore = newScore * (1 - decay)      // decay: outcome = 0
+            if (!t.frozen) streakBroken = true
           }
         }
 

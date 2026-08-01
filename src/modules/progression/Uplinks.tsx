@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { t as tr } from '../../i18n'
 import {
-  loadProgression, saveProgression, seedIfEmpty,
+  loadProgression, saveProgression, seedIfEmpty, syncChain,
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed, bandwidthFull,
   cooldownRemaining, promoteSecondary, assignPrimary, assignSecondary, archiveGoal,
 } from './store'
+import { RoutineList } from './RoutineList'
+import { loadState as loadScrap7 } from '../scrap7/store'
+import type { Task } from '../scrap7/types'
 import {
   TIER_META, SWAP_COOLDOWN_DAYS, SECONDARY_MAX_NODES,
   type Goal, type ProgressionState,
@@ -20,16 +23,40 @@ const DIM  = 'rgba(148,163,184,0.55)'
 
 export default function Uplinks() {
   const [state, setState] = useState<ProgressionState>(() => seedIfEmpty(loadProgression()))
+  const [tasks, setTasks] = useState<Task[]>(() => loadScrap7().tasks)
   const [now, setNow]     = useState(() => new Date())
 
-  // Persist the seed on first mount so the two reference uplinks survive a reload
-  useEffect(() => { saveProgression(state); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [])
+  // Seed, then bring SCRAP-7 in line with the chains. syncChain is idempotent,
+  // so running it on every mount and every sync event is safe.
+  const reconcile = useCallback(() => {
+    setState(prev => {
+      const next = syncChain(seedIfEmpty(prev))
+      saveProgression(next)
+      return next
+    })
+    setTasks(loadScrap7().tasks)
+  }, [])
+
+  useEffect(() => {
+    reconcile()
+    window.addEventListener('warren:sync', reconcile)
+    window.addEventListener('focus', reconcile)
+    return () => {
+      window.removeEventListener('warren:sync', reconcile)
+      window.removeEventListener('focus', reconcile)
+    }
+  }, [reconcile])
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000)   // keeps the cooldown honest
     return () => clearInterval(id)
   }, [])
 
-  const persist = useCallback((next: ProgressionState) => { saveProgression(next); setState(next) }, [])
+  const persist = useCallback((next: ProgressionState) => {
+    const synced = syncChain(next)          // slot changes move routines live ⇄ frozen
+    saveProgression(synced)
+    setState(synced)
+    setTasks(loadScrap7().tasks)
+  }, [])
 
   const primary   = primaryGoal(state)
   const secondary = secondaryGoal(state)
@@ -50,11 +77,11 @@ export default function Uplinks() {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '14px' }}>
         {/* Slots */}
-        <SlotCard slot="primary" goal={primary} cooldown={cooldown}
+        <SlotCard slot="primary" goal={primary} cooldown={cooldown} tasks={tasks}
           onPromote={() => {}} onDemote={() => persist(assignSecondary(state, primary!.id, now))}
           onArchive={() => persist(archiveGoal(state, primary!.id, now))} />
 
-        <SlotCard slot="secondary" goal={secondary} cooldown={0}
+        <SlotCard slot="secondary" goal={secondary} cooldown={0} tasks={tasks}
           onPromote={() => persist(promoteSecondary(state, now))}
           onDemote={() => {}}
           onArchive={() => persist(archiveGoal(state, secondary!.id, now))} />
@@ -126,10 +153,11 @@ export default function Uplinks() {
 }
 
 // ─── One slot ─────────────────────────────────────────────────────────────────
-function SlotCard({ slot, goal, cooldown, onPromote, onDemote, onArchive }: {
+function SlotCard({ slot, goal, cooldown, tasks, onPromote, onDemote, onArchive }: {
   slot:      'primary' | 'secondary'
   goal:      Goal | null
   cooldown:  number
+  tasks:     Task[]
   onPromote: () => void
   onDemote:  () => void
   onArchive: () => void
@@ -206,6 +234,11 @@ function SlotCard({ slot, goal, cooldown, onPromote, onDemote, onArchive }: {
           {tr('Reassignment available in', 'Смена доступна через')} {cooldown} {tr('days', 'дн.')}
         </p>
       )}
+
+      {/* The chain itself */}
+      <div style={{ marginTop: 13, paddingTop: 12, borderTop: `1px solid ${accent}18` }}>
+        <RoutineList goal={goal} tasks={tasks} accent={accent} />
+      </div>
     </div>
   )
 }

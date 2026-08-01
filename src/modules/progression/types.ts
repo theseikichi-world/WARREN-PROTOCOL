@@ -39,9 +39,17 @@ export interface ChainNode {
   scrapTaskId:     string        // the SCRAP-7 habit carrying score/streak
 }
 
+/**
+ * A BREACH: one datable, external, one-off event. If it couldn't go in a
+ * calendar it isn't a breach — score states are already legible through the
+ * tier names, and dressing one up as an event is filler.
+ *
+ * The gate is EVERY routine in the chapter at `minScore`. There is no node
+ * count: a hand-written chapter is exactly as long as the goal needs.
+ */
 export interface Milestone {
-  title:       string            // a dated one-off event, not a habit
-  requirement: { nodeCount: number; minScore: number }
+  title:       string
+  requirement: { minScore: number }
   completedAt: string | null
 }
 
@@ -49,7 +57,8 @@ export interface Chapter {
   index:   number
   title:   string
   nodeIds: string[]
-  boss:    Milestone
+  /** null when no genuine external event exists — the chapter advances on gating alone. */
+  boss:    Milestone | null
 }
 
 /**
