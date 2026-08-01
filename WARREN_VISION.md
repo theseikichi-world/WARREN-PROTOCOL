@@ -54,7 +54,12 @@ used it, then hands you the next.
 **[BUILT] Main quest line** — journal → hydration → first routine → seven runs →
 seven-day log → first text → first routine to `strong`.
 
-**[NEXT] Instruments open small.** A module's first tier must solve the problem
+**[BUILT for SOLARIS]** Firmware tiers are *derived from use*, never stored and
+never bought — there is no way to grind one open. They also can't skip: 100
+meals logged with hydration untouched still reads v0, because the kitchen opens
+in the order that makes sense to learn.
+
+**[NEXT for A.R.D.O / JOURNAL] Instruments open small.** A module's first tier must solve the problem
 completely, just simply. SOLARIS starts as *hydration only* — no calories, no
 macros, no pantry — and grows as it's used. **Gate complexity, never utility:**
 if you need a feature today, it ships today; only noise is locked.
@@ -62,7 +67,7 @@ if you need a feature today, it ships today; only noise is locked.
 | Instrument | Tier 0 | Later |
 |---|---|---|
 | JOURNAL | free-form entry | prompts → tagged library → AI pattern surfacing |
-| SOLARIS | hydration only | calories → macros → pantry → analyzer |
+| SOLARIS **[BUILT]** | hydration only | v1 calories (5 hydration days) → v2 macros (15 meals) → v3 pantry/analyser/dishes (40 meals) |
 | A.R.D.O | paste + read aloud | SM-2 → cue-line mode → beat breakdown |
 
 **[FUTURE] Journal AI.** Reads what you wrote and suggests — how to make
@@ -139,6 +144,36 @@ Vocabulary: UPLINK (goal) · BANDWIDTH (slots) · PROTOCOL (chain) · ROUTINE (n
 CACHE (inventory) · CREDITS · FIRMWARE v0–v3 (tool tier).
 
 ---
+
+## 5b. One app or several? — decided: one, with a hard internal line
+
+The instinct is right about the *product* boundary and wrong about the *binary*
+boundary. Weather, news, releases and the exploration/events module genuinely do
+not build a character — but splitting them into separate applications buys a
+thematic "universe" and pays for it with multiple builds, installs, updates,
+Store submissions, and an IPC layer to share data that currently costs nothing
+because it's all one localStorage.
+
+So: **separate the concerns, not the binaries.** Two classes, enforced:
+
+- **INSTRUMENTS** — SOLARIS, A.R.D.O, JOURNAL, SCRAP-7. Granted by routines,
+  deepen by use, feed XP and stats.
+- **UTILITIES** — PICTURES, and later weather, news, exploration/events. Never
+  gated, never grant XP, never touch a stat. They serve the day, not the
+  character. PICTURES already works exactly this way and is the template.
+
+A utility may have at most **one deliberate bridge** into the character loop, and
+the bridge always credits the reflective act, never the consumption — LOG AS
+STUDY credits the journal entry about the film, never the watching.
+
+Revisit splitting only when a utility grows big enough to have its own users or
+its own release rhythm. The module boundary keeps extraction cheap, so this
+decision is reversible; building three apps now is not.
+
+**[FUTURE] Exploration / local events module.** Real-time local happenings —
+marathons, classes, meetups. Decided: **no XP at all.** It becomes a utility
+under the rule above, which also dissolves the abuse problem entirely, since
+there is nothing to farm.
 
 ## 6. Open architecture decisions
 

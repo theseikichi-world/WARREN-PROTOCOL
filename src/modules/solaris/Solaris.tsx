@@ -16,6 +16,7 @@ import {
 } from './store'
 import { loadSettings, aiJson, aiVisionJson, modelForTask, type ImageInput } from '../../settings'
 import { fileToImageInput } from './image'
+import { solarisUsage, solarisTier, solarisNext, solarisHas } from '../progression/tools'
 import { t as tr } from '../../i18n'
 
 const NEON     = '#ffb13c'   // solar gold
@@ -1613,6 +1614,12 @@ export default function Solaris() {
   const drinks  = useMemo(() => member ? getDrinks(state, member.id, today) : [], [state, member, today])
   const waterTarget = member ? recommendedWaterMl(member.profile) : 0
 
+  // FIRMWARE — the kitchen opens one surface at a time, by use. v0 hydrates,
+  // and hydrating is the whole job at v0; nothing you need today is locked.
+  const usage = useMemo(() => solarisUsage(state), [state])
+  const tier  = solarisTier(usage)
+  const next  = solarisNext(usage)
+
   // ── No members yet → onboard the first one ──
   if (!member) {
     return (
@@ -1759,14 +1766,14 @@ export default function Solaris() {
               letterSpacing: '0.1em' }}>{tr('DAY STREAK', 'ДНЕЙ ПОДРЯД')}</p>
           </div>
         )}
-        <button onClick={() => setScreen({ type: 'pantry' })} title={tr('Shared pantry', 'Общая кладовая')} style={{
+        {solarisHas(tier, 'kitchen') && <button onClick={() => setScreen({ type: 'pantry' })} title={tr('Shared pantry', 'Общая кладовая')} style={{
           width: 28, height: 28, borderRadius: 7, fontSize: 13,
           color: `${NEON}70`, border: `1px solid ${NEON}25`, background: 'transparent', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
         }}
           onMouseEnter={e => { e.currentTarget.style.color = NEON; e.currentTarget.style.background = NEON_DIM }}
           onMouseLeave={e => { e.currentTarget.style.color = `${NEON}70`; e.currentTarget.style.background = 'transparent' }}
-        >🧺</button>
+        >🧺</button>}
         <button onClick={() => setScreen({ type: 'edit', memberId: member.id })} title={`${tr('Edit', 'Изменить')} ${member.name}`} style={{
           width: 28, height: 28, borderRadius: 7, fontSize: 13,
           color: `${NEON}70`, border: `1px solid ${NEON}25`, background: 'transparent', cursor: 'pointer',
@@ -1783,16 +1790,25 @@ export default function Solaris() {
         onAdd={() => setScreen({ type: 'add' })} />
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {/* Ration overview */}
-        {targets && (
+        {/* Ration overview — calories at v1, macros at v2 */}
+        {targets && solarisHas(tier, 'calories') && (
           <div style={{ padding: '14px', display: 'flex', gap: 16, alignItems: 'center' }}>
             <OrbitRing consumed={totals.calories} target={targets.calories} />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ alignSelf: 'flex-start' }}><BmiChip profile={member.profile} /></div>
-              <MacroBar kind="protein" consumed={totals.protein} target={targets.protein} />
-              <MacroBar kind="carbs"   consumed={totals.carbs}   target={targets.carbs} />
-              <MacroBar kind="fat"     consumed={totals.fat}     target={targets.fat} />
+              {solarisHas(tier, 'macros') && (<>
+                <MacroBar kind="protein" consumed={totals.protein} target={targets.protein} />
+                <MacroBar kind="carbs"   consumed={totals.carbs}   target={targets.carbs} />
+                <MacroBar kind="fat"     consumed={totals.fat}     target={targets.fat} />
+              </>)}
             </div>
+          </div>
+        )}
+
+        {/* At v0 the crew card still shows who this is calibrated for */}
+        {targets && !solarisHas(tier, 'calories') && (
+          <div style={{ padding: '12px 14px 0' }}>
+            <BmiChip profile={member.profile} />
           </div>
         )}
 
@@ -1801,8 +1817,8 @@ export default function Solaris() {
           onAdd={(kind, ml) => persist(addDrink(state, member.id, today, kind, ml))}
           onRemove={id => persist(removeDrink(state, member.id, today, id))} />
 
-        {/* Log a meal (AI) */}
-        <button onClick={() => setScreen({ type: 'log' })} style={{
+        {/* Log a meal (AI) — v1 */}
+        {solarisHas(tier, 'calories') && <button onClick={() => setScreen({ type: 'log' })} style={{
           margin: '0 14px 8px', width: 'calc(100% - 28px)', padding: '11px 14px', borderRadius: 9, cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 10,
           background: `linear-gradient(90deg, ${NEON}12, ${SOLAR}0c)`,
@@ -1821,10 +1837,10 @@ export default function Solaris() {
             </p>
           </div>
           <span style={{ fontSize: 13 }}>📷</span>
-        </button>
+        </button>}
 
-        {/* What should I eat? (pantry-aware dishes) */}
-        <button onClick={() => setScreen({ type: 'delivery' })} style={{
+        {/* What should I eat? (pantry-aware dishes) — v3 */}
+        {solarisHas(tier, 'kitchen') && <button onClick={() => setScreen({ type: 'delivery' })} style={{
           margin: '0 14px 8px', width: 'calc(100% - 28px)', padding: '11px 14px', borderRadius: 9, cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 10,
           background: `linear-gradient(90deg, ${SOLAR}14, ${NEON}10)`,
@@ -1845,18 +1861,45 @@ export default function Solaris() {
             </p>
           </div>
           <span style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}60` }}>→</span>
-        </button>
+        </button>}
 
-        {/* Meals manifest */}
-        <div style={{ padding: '4px 0 16px' }}>
-          {SLOT_ORDER.map(slot => (
-            <SlotGroup key={slot} slot={slot}
-              entries={day.entries.filter(e => e.slot === slot)}
-              onAdd={() => setAddSlot(slot)}
-              onRemove={id => persist(removeEntry(state, member.id, today, id))}
-            />
-          ))}
-        </div>
+        {/* Meals manifest — v1 */}
+        {solarisHas(tier, 'calories') && (
+          <div style={{ padding: '4px 0 16px' }}>
+            {SLOT_ORDER.map(slot => (
+              <SlotGroup key={slot} slot={slot}
+                entries={day.entries.filter(e => e.slot === slot)}
+                onAdd={() => setAddSlot(slot)}
+                onRemove={id => persist(removeEntry(state, member.id, today, id))}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* What this instrument opens next — stated, never nagged */}
+        {next && (
+          <div style={{ margin: '4px 14px 18px', padding: '10px 12px', borderRadius: 9,
+            background: `${NEON}07`, border: `1px solid ${NEON}20` }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 800,
+                letterSpacing: '0.18em', color: `${NEON}90` }}>FIRMWARE v{tier}</span>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.5)',
+                marginLeft: 'auto' }}>{next.have}/{next.need}</span>
+            </div>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 700, marginTop: 6,
+              color: 'rgba(255,240,220,0.9)' }}>
+              v{next.tier} · {tr(next.opens, next.opensRu)}
+            </p>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(148,163,184,0.55)',
+              marginTop: 3 }}>{tr(next.needs, next.needsRu)}</p>
+            <div style={{ height: 3, borderRadius: 2, marginTop: 7, overflow: 'hidden',
+              background: 'rgba(255,255,255,0.06)' }}>
+              <div style={{ height: '100%', width: `${Math.round((next.have / next.need) * 100)}%`,
+                borderRadius: 2, background: NEON, boxShadow: `0 0 6px ${NEON}80`,
+                transition: 'width 0.5s ease' }} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
