@@ -4,6 +4,7 @@
 
 import type { Task } from '../scrap7/types'
 import type { ChainNode, Chapter, Goal } from './types'
+import { THRESHOLD_UNLOCK_AT } from './types'
 
 /** Deterministic id for the SCRAP-7 habit behind a routine — the idempotency key. */
 export const routineTaskId = (node: ChainNode): string => `chain:${node.id}`
@@ -97,4 +98,18 @@ export function chapterState(chapter: Chapter, goal: Goal, tasks: Task[]): Chapt
 /** The chapter you're actually working in — the first one not yet complete. */
 export function activeChapter(goal: Goal, tasks: Task[]): Chapter | null {
   return goal.chapters.find(c => !chapterState(c, goal, tasks).complete) ?? null
+}
+
+// ─── Node state ───────────────────────────────────────────────────────────────
+// LOCKED     prerequisites unmet — shows what it needs
+// AVAILABLE  unlocked, not installed — waiting on your decision
+// TRAINING   installed, integrating through use
+// INTEGRATED past the threshold; stops competing for a training slot
+
+export type NodeState = 'locked' | 'available' | 'training' | 'integrated'
+
+export function nodeState(node: ChainNode, tasks: Task[]): NodeState {
+  if (!isUnlocked(node)) return 'locked'
+  if (!node.scrapTaskId) return 'available'
+  return nodeScore(node, tasks) >= THRESHOLD_UNLOCK_AT ? 'integrated' : 'training'
 }

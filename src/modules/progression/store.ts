@@ -179,49 +179,21 @@ export function instantiableNodes(goal: Goal, tasks: ReturnType<typeof loadScrap
 }
 
 /**
- * Bring SCRAP-7 in line with the chains: open what qualifies, create exactly
- * one habit per newly opened routine, and mark frozen anything belonging to a
- * goal that lost its slot.
+ * Reconcile the chains with SCRAP-7. Opens routines whose prerequisites are
+ * integrated and keeps frozen flags honest — but never installs anything.
  *
- * Idempotent by construction. Habit ids are derived from the routine id, and a
- * habit is only ever created when no task with that id exists — re-running this
- * on an already-unlocked chain writes nothing and can never reset a score.
+ * Installation is a decision, like spending a perk point: an AVAILABLE routine
+ * sits there glowing until you choose it. Nothing appears in your habit list
+ * because the system decided it was your turn.
  */
 export function syncChain(state: ProgressionState, now = new Date()): ProgressionState {
   const before = loadScrap7()
-  const existing = new Set(before.tasks.map(t => t.id))
 
   // 1. Open routines whose prerequisites are integrated (frozen goals don't advance)
-  let goals = state.goals.map(g =>
+  const goals = state.goals.map(g =>
     g.slot === 'archived' ? g : evaluateUnlocks(g, before.tasks, now).goal)
 
-  // 2. Give every eligible open routine a habit, exactly once
-  const pending: { node: Goal['nodes'][number]; goal: Goal }[] = []
-  goals = goals.map(g => {
-    const allowed = instantiableNodes(g, before.tasks)
-    const nodes = g.nodes.map(n => {
-      if (!isUnlocked(n) || !allowed.has(n.id)) return n
-      const taskId = routineTaskId(n)
-      if (!existing.has(taskId)) { pending.push({ node: n, goal: g }); existing.add(taskId) }
-      return n.scrapTaskId === taskId ? n : { ...n, scrapTaskId: taskId }
-    })
-    return { ...g, nodes }
-  })
-
-  for (const { node, goal } of pending) {
-    createExternalTask({
-      id:        routineTaskId(node),
-      text:      node.title,
-      category:  goal.title,
-      taskType:  'habit',
-      direction: 'positive',
-      origin:    'chain',
-      target:    1,
-      unit:      'times',
-    })
-  }
-
-  // 3. Freeze / thaw. A frozen habit is never deleted — it stays visible and
+  // 2. Freeze / thaw. A frozen habit is never deleted — it stays visible and
   //    trackable, decays at half rate, and earns nothing.
   const frozenIds = new Set<string>()
   const liveIds   = new Set<string>()
@@ -232,20 +204,80 @@ export function syncChain(state: ProgressionState, now = new Date()): Progressio
     }
   }
 
-  const after = loadScrap7()
   let touched = false
-  const tasks = after.tasks.map(t => {
+  const tasks = before.tasks.map(t => {
     const want = frozenIds.has(t.id) ? true : liveIds.has(t.id) ? false : undefined
     if (want === undefined || !!t.frozen === want) return t
     touched = true
     return { ...t, frozen: want }
   })
   if (touched) {
-    saveScrap7({ ...after, tasks })
+    saveScrap7({ ...before, tasks })
     window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'progression' } }))
   }
 
   return { ...state, goals }
+}
+
+export type InstallResult =
+  | { ok: true;  state: ProgressionState }
+  | { ok: false; reason: 'locked' | 'installed' | 'capacity' }
+
+/**
+ * Learn a routine. The one place a chain habit is ever created.
+ *
+ * Idempotent: the habit id derives from the routine id and is only created when
+ * no task with that id exists, so a double-click or a replayed event can never
+ * duplicate it or reset an accumulated score.
+ */
+export function installNode(state: ProgressionState, nodeId: string): InstallResult {
+  const goal = state.goals.find(g => g.nodes.some(n => n.id === nodeId))
+  const node = goal?.nodes.find(n => n.id === nodeId)
+  if (!goal || !node) return { ok: false, reason: 'locked' }
+  if (!isUnlocked(node))  return { ok: false, reason: 'locked' }
+  if (node.scrapTaskId)   return { ok: false, reason: 'installed' }
+  if (!hasCapacity(goal, loadScrap7().tasks)) return { ok: false, reason: 'capacity' }
+
+  const taskId = routineTaskId(node)
+  if (!loadScrap7().tasks.some(t => t.id === taskId)) {
+    createExternalTask({
+      id:        taskId,
+      text:      node.title,
+      category:  goal.title,
+      taskType:  'habit',
+      direction: 'positive',
+      origin:    'chain',
+      target:    1,
+      unit:      'times',
+    })
+  }
+
+  return {
+    ok: true,
+    state: {
+      ...state,
+      goals: state.goals.map(g => g.id !== goal.id ? g : {
+        ...g,
+        nodes: g.nodes.map(n => n.id === nodeId ? { ...n, scrapTaskId: taskId } : n),
+      }),
+    },
+  }
+}
+
+/** Routines currently being trained — installed but not yet integrated. */
+export function trainingCount(goal: Goal, tasks: ReturnType<typeof loadScrap7>['tasks']): number {
+  return goal.nodes.filter(n => n.scrapTaskId && nodeScore(n, tasks) < THRESHOLD_UNLOCK_AT).length
+}
+
+/**
+ * Room for another routine? The secondary uplink trains at most
+ * SECONDARY_MAX_NODES at once — an integrated one no longer counts, so
+ * mastering something frees the slot it was using.
+ */
+export function hasCapacity(goal: Goal, tasks: ReturnType<typeof loadScrap7>['tasks']): boolean {
+  if (goal.slot === 'primary')  return true
+  if (goal.slot === 'archived') return false
+  return trainingCount(goal, tasks) < SECONDARY_MAX_NODES
 }
 
 /** Add a goal, into a free slot if one exists, otherwise straight to the archive. */
