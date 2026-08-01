@@ -9,13 +9,14 @@ import {
 import { SEED_GOALS } from './seed'
 import { evaluateUnlocks, isUnlocked, nodeScore, routineTaskId } from './chain'
 import { awardXp, levelFor, type XpEvent } from './xp'
+import { evaluateQuests, type Quest, type QuestContext } from './quests'
 import {
   loadState as loadScrap7, saveState as saveScrap7, createExternalTask,
 } from '../scrap7/store'
 
 const KEY = 'warren_progression_v1'
 
-const INITIAL: ProgressionState = { goals: [], seeded: false, xp: 0 }
+const INITIAL: ProgressionState = { goals: [], seeded: false, xp: 0, quests: {} }
 
 export function loadProgression(): ProgressionState {
   try {
@@ -26,6 +27,7 @@ export function loadProgression(): ProgressionState {
       goals:  Array.isArray(parsed.goals) ? parsed.goals : [],
       seeded: parsed.seeded === true,
       xp:     typeof parsed.xp === 'number' ? parsed.xp : 0,
+      quests: (parsed.quests && typeof parsed.quests === 'object') ? parsed.quests : {},
     }
   } catch {
     return structuredClone(INITIAL)
@@ -323,4 +325,19 @@ export function recordRun(
   const levelAfter = levelFor(next.xp).level
 
   return { state: next, gained, events, levelUp: levelAfter > levelBefore ? levelAfter : null }
+}
+
+/**
+ * Clear any main-quest step the record now satisfies and bank its reward.
+ * Quest XP is flat — it is a story beat, not a routine, so slot rate and fuel
+ * don't apply.
+ */
+export function syncQuests(state: ProgressionState, ctx: QuestContext, now = new Date()): {
+  state: ProgressionState
+  cleared: Quest[]
+} {
+  const { completed, cleared } = evaluateQuests(state.quests, ctx, now)
+  if (cleared.length === 0) return { state, cleared }
+  const gained = cleared.reduce((sum, q) => sum + q.xp, 0)
+  return { state: { ...state, quests: completed, xp: state.xp + gained }, cleared }
 }

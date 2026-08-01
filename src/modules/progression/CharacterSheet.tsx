@@ -5,6 +5,7 @@ import { levelFor, nextGate, GATES, isUnlockedAt } from './xp'
 import { deriveStats, overallRating, type Stat } from './stats'
 import { nodeState } from './chain'
 import type { ModuleSummaries } from '../bigscreen/moduleStats'
+import { activeQuest, questProgress, QUEST_LINE } from './quests'
 
 const CYAN = '#00f5ff'
 const GOLD = '#ffd700'
@@ -15,12 +16,13 @@ const DIM  = 'rgba(148,163,184,0.5)'
 // you actually did, which is the only version of an RPG sheet that stays true
 // when the character is a real person.
 
-export function CharacterSheet({ goals, tasks, xp, sums, name }: {
-  goals: Goal[]
-  tasks: Task[]
-  xp:    number
-  sums:  ModuleSummaries
-  name:  string
+export function CharacterSheet({ goals, tasks, xp, sums, name, quests }: {
+  goals:  Goal[]
+  tasks:  Task[]
+  xp:     number
+  sums:   ModuleSummaries
+  name:   string
+  quests: Record<string, string>
 }) {
   const lvl    = levelFor(xp)
   const stats  = deriveStats(goals, tasks, sums)
@@ -80,6 +82,9 @@ export function CharacterSheet({ goals, tasks, xp, sums, name }: {
         <Cell value={String(installed.length)} label={tr('RUNNING', 'В РАБОТЕ')} color={CYAN} />
         <Cell value={String(available.length)} label={tr('AVAILABLE', 'ДОСТУПНО')} color={available.length ? '#39ff14' : DIM} />
       </div>
+
+      {/* Main quest — the starting zone hands you one verb at a time */}
+      <MainQuest quests={quests} ctx={{ sums, goals, tasks }} />
 
       {/* Attributes */}
       <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.2em',
@@ -147,6 +152,66 @@ function StatRow({ stat }: { stat: Stat }) {
       <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${idle ? 0 : stat.value}%`, borderRadius: 2,
           background: stat.color, boxShadow: `0 0 6px ${stat.color}70`, transition: 'width 0.6s ease' }} />
+      </div>
+    </div>
+  )
+}
+
+/** The active step of the main quest, plus how far the line runs. */
+function MainQuest({ quests, ctx }: {
+  quests: Record<string, string>
+  ctx:    Parameters<typeof questProgress>[1]
+}) {
+  const active = activeQuest(quests)
+  const doneCount = QUEST_LINE.filter(q => quests[q.id]).length
+
+  if (!active) {
+    return (
+      <div style={{ marginTop: 14, padding: '12px 13px', borderRadius: 10,
+        background: `${GOLD}0c`, border: `1px solid ${GOLD}35` }}>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.2em',
+          color: `${GOLD}b0` }}>{tr('MAIN QUEST', 'ОСНОВНОЙ КВЕСТ')}</p>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 9, color: 'rgba(230,242,255,0.85)', marginTop: 6 }}>
+          {tr('The starting zone is behind you. Everything from here is your own line.',
+              'Стартовая зона позади. Дальше — только ваша линия.')}
+        </p>
+      </div>
+    )
+  }
+
+  const p = questProgress(active, ctx)
+
+  return (
+    <div style={{ marginTop: 14, padding: '12px 13px', borderRadius: 10,
+      background: `linear-gradient(140deg, ${GOLD}0e, rgba(6,14,26,0.5))`,
+      border: `1px solid ${GOLD}35` }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.2em',
+          color: `${GOLD}b0` }}>⚑ {tr('MAIN QUEST', 'ОСНОВНОЙ КВЕСТ')}</span>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, marginLeft: 'auto' }}>
+          {doneCount}/{QUEST_LINE.length}
+        </span>
+      </div>
+
+      <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900, marginTop: 7,
+        color: GOLD, letterSpacing: '0.08em', textShadow: `0 0 10px ${GOLD}45` }}>
+        {tr(active.title, active.ru)}
+      </p>
+      <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, lineHeight: 1.65, marginTop: 5,
+        color: 'rgba(215,232,248,0.8)' }}>
+        {tr(active.brief, active.briefRu)}
+      </p>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
+        <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)',
+          overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${Math.round(p.ratio * 100)}%`, borderRadius: 2,
+            background: GOLD, boxShadow: `0 0 7px ${GOLD}80`, transition: 'width 0.5s ease' }} />
+        </div>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, color: `${GOLD}c0` }}>
+          {p.have}/{p.need}
+        </span>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM }}>+{active.xp} XP</span>
       </div>
     </div>
   )

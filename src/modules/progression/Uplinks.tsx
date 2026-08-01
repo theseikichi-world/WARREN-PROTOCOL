@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { t as tr } from '../../i18n'
 import {
-  loadProgression, saveProgression, seedIfEmpty, syncChain, installNode, recordRun,
+  loadProgression, saveProgression, seedIfEmpty, syncChain, installNode, recordRun, syncQuests,
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
   cooldownRemaining, promoteSecondary, assignPrimary, assignSecondary, archiveGoal,
   trainingCount, hasCapacity,
@@ -31,13 +31,17 @@ export default function Uplinks() {
   const [toast, setToast] = useState('')
 
   const reconcile = useCallback(() => {
+    const tasksNow = loadScrap7().tasks
+    const sumsNow  = getModuleSummaries()
     setState(prev => {
-      const next = syncChain(seedIfEmpty(prev))
+      const chained = syncChain(seedIfEmpty(prev))
+      const { state: next, cleared } = syncQuests(chained, { sums: sumsNow, goals: chained.goals, tasks: tasksNow })
       saveProgression(next)
+      if (cleared.length) flash(`⚑ ${tr(cleared[0].title, cleared[0].ru)} — +${cleared[0].xp} XP`)
       return next
     })
-    setTasks(loadScrap7().tasks)
-    setSums(getModuleSummaries())
+    setTasks(tasksNow)
+    setSums(sumsNow)
   }, [])
 
   useEffect(() => {
@@ -96,7 +100,8 @@ export default function Uplinks() {
     setTasks(next.tasks)
     setSums(getModuleSummaries())
     window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'uplinks' } }))
-  }, [])
+    reconcile()
+  }, [reconcile])
 
   const primary   = primaryGoal(state)
   const secondary = secondaryGoal(state)
@@ -171,7 +176,7 @@ export default function Uplinks() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
         {view === 'character' && (
           <CharacterSheet goals={state.goals} tasks={tasks} xp={state.xp}
-            sums={sums} name={loadSettings().displayName} />
+            sums={sums} name={loadSettings().displayName} quests={state.quests} />
         )}
 
         {view !== 'character' && shown ? (

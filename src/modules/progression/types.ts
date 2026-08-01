@@ -81,6 +81,7 @@ export interface ProgressionState {
   goals:   Goal[]
   seeded:  boolean               // reference uplinks installed once
   xp:      number                // the single progression currency
+  quests:  Record<string, string>  // quest id → cleared at
 }
 
 // ─── Slot rules ───────────────────────────────────────────────────────────────
