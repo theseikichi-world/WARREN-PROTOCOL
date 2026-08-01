@@ -14,22 +14,22 @@ const goal = (id: string, slot: Goal['slot'], changed = daysAgo(30)): Goal => ({
   createdAt: daysAgo(60), lastSlotChangeAt: changed,
 })
 
-const state = (...goals: Goal[]): ProgressionState => ({ goals, seeded: true })
+const state = (...goals: Goal[]): ProgressionState => ({ goals, seeded: true, xp: 0 })
 
 describe('seeding', () => {
   it('installs the two reference uplinks exactly once', () => {
-    const first = seedIfEmpty({ goals: [], seeded: false })
+    const first = seedIfEmpty({ goals: [], seeded: false, xp: 0 })
     expect(first.goals.map(g => g.title)).toEqual(['ACTOR', 'CAPOEIRA'])
     expect(primaryGoal(first)?.title).toBe('ACTOR')
     expect(secondaryGoal(first)?.title).toBe('CAPOEIRA')
 
     // Re-running must never duplicate or resurrect deleted goals
-    const cleared = seedIfEmpty({ goals: [], seeded: true })
+    const cleared = seedIfEmpty({ goals: [], seeded: true, xp: 0 })
     expect(cleared.goals).toHaveLength(0)
   })
 
   it('seeds routines with a cue and an ordered threshold ladder', () => {
-    const s = seedIfEmpty({ goals: [], seeded: false })
+    const s = seedIfEmpty({ goals: [], seeded: false, xp: 0 })
     const nodes = s.goals.flatMap(g => g.nodes)
     expect(nodes.length).toBeGreaterThan(10)
     expect(nodes.every(n => n.cue.trim().length > 0)).toBe(true)
@@ -41,7 +41,7 @@ describe('seeding', () => {
   })
 
   it('points every prerequisite and chapter at a real node', () => {
-    const s = seedIfEmpty({ goals: [], seeded: false })
+    const s = seedIfEmpty({ goals: [], seeded: false, xp: 0 })
     for (const g of s.goals) {
       const ids = new Set(g.nodes.map(n => n.id))
       for (const n of g.nodes) for (const p of n.prerequisiteIds) expect(ids.has(p)).toBe(true)

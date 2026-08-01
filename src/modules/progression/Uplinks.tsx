@@ -1,15 +1,19 @@
 import { useState, useEffect, useCallback } from 'react'
 import { t as tr } from '../../i18n'
 import {
-  loadProgression, saveProgression, seedIfEmpty, syncChain, installNode,
+  loadProgression, saveProgression, seedIfEmpty, syncChain, installNode, recordRun,
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
   cooldownRemaining, promoteSecondary, assignPrimary, assignSecondary, archiveGoal,
   trainingCount, hasCapacity,
 } from './store'
 import { SkillTree } from './SkillTree'
+import { CharacterSheet } from './CharacterSheet'
 import { nodeState } from './chain'
+import { levelFor, isUnlockedAt } from './xp'
 import { loadState as loadScrap7, saveState as saveScrap7, trackHabit } from '../scrap7/store'
 import type { Task } from '../scrap7/types'
+import { getModuleSummaries, type ModuleSummaries } from '../bigscreen/moduleStats'
+import { loadSettings } from '../../settings'
 import { SECONDARY_MAX_NODES, type Goal, type ProgressionState } from './types'
 
 const CYAN = '#00f5ff'
@@ -22,7 +26,8 @@ export default function Uplinks() {
   const [state, setState] = useState<ProgressionState>(() => seedIfEmpty(loadProgression()))
   const [tasks, setTasks] = useState<Task[]>(() => loadScrap7().tasks)
   const [now, setNow]     = useState(() => new Date())
-  const [view, setView]   = useState<'primary' | 'secondary'>('primary')
+  const [view, setView]   = useState<'character' | 'primary' | 'secondary'>('character')
+  const [sums, setSums]   = useState<ModuleSummaries>(() => getModuleSummaries())
   const [toast, setToast] = useState('')
 
   const reconcile = useCallback(() => {
@@ -32,6 +37,7 @@ export default function Uplinks() {
       return next
     })
     setTasks(loadScrap7().tasks)
+    setSums(getModuleSummaries())
   }, [])
 
   useEffect(() => {
@@ -74,10 +80,21 @@ export default function Uplinks() {
   }, [state])
 
   const handleTrack = useCallback((taskId: string) => {
-    const s7 = loadScrap7()
+    const s7     = loadScrap7()
+    const before = s7.tasks.find(t => t.id === taskId)?.score ?? 0
     const { state: next } = trackHabit(s7, taskId, 1)
     saveScrap7(next)
+    const after = next.tasks.find(t => t.id === taskId)?.score ?? 0
+
+    setState(prev => {
+      const reward = recordRun(prev, taskId, before, after)
+      saveProgression(reward.state)
+      if (reward.levelUp) flash(tr(`LEVEL ${reward.levelUp}`, `УРОВЕНЬ ${reward.levelUp}`))
+      else if (reward.gained) flash(`+${reward.gained} XP`)
+      return reward.state
+    })
     setTasks(next.tasks)
+    setSums(getModuleSummaries())
     window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'uplinks' } }))
   }, [])
 
@@ -85,8 +102,10 @@ export default function Uplinks() {
   const secondary = secondaryGoal(state)
   const archived  = archivedGoals(state)
   const cooldown  = cooldownRemaining(state, now)
-  const shown     = view === 'primary' ? primary : secondary
+  const shown     = view === 'primary' ? primary : view === 'secondary' ? secondary : null
   const accent    = view === 'primary' ? CYAN : GOLD
+  const level     = levelFor(state.xp).level
+  const secondaryOpen = isUnlockedAt('secondary', level)
 
   return (
     <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -102,28 +121,47 @@ export default function Uplinks() {
         </div>
       </div>
 
-      {/* Goal tabs */}
+      {/* Character, then a tab per uplink */}
       <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1px solid ${CYAN}10` }}>
+        <button onClick={() => setView('character')} style={{
+          flex: 0.8, padding: '9px 6px', cursor: 'pointer',
+          background: view === 'character' ? `${CYAN}0c` : 'transparent',
+          borderBottom: `2px solid ${view === 'character' ? CYAN : 'transparent'}`,
+          fontFamily: 'var(--font)',
+        }}>
+          <p style={{ fontSize: 6.5, fontWeight: 700, letterSpacing: '0.14em',
+            color: view === 'character' ? `${CYAN}b0` : 'rgba(148,163,184,0.35)' }}>
+            {tr('LV', 'УР')} {level}
+          </p>
+          <p style={{ fontSize: 10.5, fontWeight: 900, letterSpacing: '0.08em', marginTop: 3,
+            color: view === 'character' ? CYAN : 'rgba(148,163,184,0.5)',
+            textShadow: view === 'character' ? `0 0 10px ${CYAN}50` : 'none' }}>
+            {tr('CHARACTER', 'ПЕРСОНАЖ')}
+          </p>
+        </button>
+
         {(['primary', 'secondary'] as const).map(slot => {
           const g = slot === 'primary' ? primary : secondary
           const on = view === slot
           const c  = slot === 'primary' ? CYAN : GOLD
+          const locked = slot === 'secondary' && !secondaryOpen
           return (
-            <button key={slot} onClick={() => setView(slot)} style={{
-              flex: 1, padding: '9px 6px', cursor: 'pointer', background: on ? `${c}0c` : 'transparent',
+            <button key={slot} onClick={() => !locked && setView(slot)} style={{
+              flex: 1, padding: '9px 6px', cursor: locked ? 'default' : 'pointer',
+              background: on ? `${c}0c` : 'transparent',
               borderBottom: `2px solid ${on ? c : 'transparent'}`,
-              fontFamily: 'var(--font)',
+              fontFamily: 'var(--font)', opacity: locked ? 0.45 : 1,
             }}>
               <p style={{ fontSize: 6.5, fontWeight: 700, letterSpacing: '0.14em',
                 color: on ? `${c}b0` : 'rgba(148,163,184,0.35)' }}>
                 {slot === 'primary' ? tr('PRIMARY', 'ОСНОВНОЙ') : tr('SECONDARY', 'ВТОРИЧНЫЙ')}
-                {slot === 'secondary' && g ? ` · ${trainingCount(g, tasks)}/${SECONDARY_MAX_NODES}` : ''}
+                {slot === 'secondary' && g && secondaryOpen ? ` · ${trainingCount(g, tasks)}/${SECONDARY_MAX_NODES}` : ''}
               </p>
               <p style={{ fontSize: 10.5, fontWeight: 900, letterSpacing: '0.08em', marginTop: 3,
                 color: on ? c : 'rgba(148,163,184,0.5)',
                 textShadow: on ? `0 0 10px ${c}50` : 'none',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {g ? g.title : tr('EMPTY', 'ПУСТО')}
+                {locked ? `🔒 ${tr('LV', 'УР')} 5` : g ? g.title : tr('EMPTY', 'ПУСТО')}
               </p>
             </button>
           )
@@ -131,7 +169,12 @@ export default function Uplinks() {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
-        {shown ? (
+        {view === 'character' && (
+          <CharacterSheet goals={state.goals} tasks={tasks} xp={state.xp}
+            sums={sums} name={loadSettings().displayName} />
+        )}
+
+        {view !== 'character' && shown ? (
           <>
             <SkillTree goal={shown} tasks={tasks} accent={accent}
               onInstall={handleInstall} onTrack={handleTrack} />
@@ -142,11 +185,11 @@ export default function Uplinks() {
               onDemote={() => persist(assignSecondary(state, shown.id, now))}
               onFreeze={() => persist(archiveGoal(state, shown.id, now))} />
           </>
-        ) : (
+        ) : view !== 'character' ? (
           <p style={{ fontFamily: 'var(--font)', fontSize: 9, color: DIM, textAlign: 'center', padding: '40px 12px' }}>
             {tr('This uplink is unallocated.', 'Этот канал свободен.')}
           </p>
-        )}
+        ) : null}
 
         {/* Frozen goals — recoverable, never deleted */}
         {archived.length > 0 && (

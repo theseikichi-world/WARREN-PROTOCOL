@@ -80,6 +80,7 @@ export interface Goal {
 export interface ProgressionState {
   goals:   Goal[]
   seeded:  boolean               // reference uplinks installed once
+  xp:      number                // the single progression currency
 }
 
 // ─── Slot rules ───────────────────────────────────────────────────────────────

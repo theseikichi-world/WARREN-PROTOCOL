@@ -8,13 +8,14 @@ import {
 } from './types'
 import { SEED_GOALS } from './seed'
 import { evaluateUnlocks, isUnlocked, nodeScore, routineTaskId } from './chain'
+import { awardXp, levelFor, type XpEvent } from './xp'
 import {
   loadState as loadScrap7, saveState as saveScrap7, createExternalTask,
 } from '../scrap7/store'
 
 const KEY = 'warren_progression_v1'
 
-const INITIAL: ProgressionState = { goals: [], seeded: false }
+const INITIAL: ProgressionState = { goals: [], seeded: false, xp: 0 }
 
 export function loadProgression(): ProgressionState {
   try {
@@ -24,6 +25,7 @@ export function loadProgression(): ProgressionState {
     return {
       goals:  Array.isArray(parsed.goals) ? parsed.goals : [],
       seeded: parsed.seeded === true,
+      xp:     typeof parsed.xp === 'number' ? parsed.xp : 0,
     }
   } catch {
     return structuredClone(INITIAL)
@@ -40,7 +42,7 @@ export function saveProgression(s: ProgressionState): void {
  */
 export function seedIfEmpty(state: ProgressionState): ProgressionState {
   if (state.seeded || state.goals.length > 0) return { ...state, seeded: true }
-  return { goals: structuredClone(SEED_GOALS), seeded: true }
+  return { ...state, goals: structuredClone(SEED_GOALS), seeded: true }
 }
 
 // ─── Reads ────────────────────────────────────────────────────────────────────
@@ -284,4 +286,41 @@ export function hasCapacity(goal: Goal, tasks: ReturnType<typeof loadScrap7>['ta
 export function addGoal(s: ProgressionState, goal: Goal, now = new Date()): ProgressionState {
   const slot: GoalSlot = !primaryGoal(s) ? 'primary' : !secondaryGoal(s) ? 'secondary' : 'archived'
   return { ...s, goals: [...s.goals, stamp(goal, slot, now)] }
+}
+
+// ─── Earning ──────────────────────────────────────────────────────────────────
+
+export interface RunReward {
+  state:  ProgressionState
+  gained: number
+  events: XpEvent[]
+  levelUp: number | null    // the new level, when one was crossed
+}
+
+/**
+ * Bank what a single run was worth. Crossing `strong` or the integration
+ * threshold pays once, because the crossing is detected from the score either
+ * side of the run rather than from a stored flag.
+ */
+export function recordRun(
+  state: ProgressionState,
+  taskId: string,
+  before: number,
+  after: number,
+  fuelMultiplier = 1,
+): RunReward {
+  const goal = state.goals.find(g => g.nodes.some(n => n.scrapTaskId === taskId))
+  const node = goal?.nodes.find(n => n.scrapTaskId === taskId)
+  if (!goal || !node) return { state, gained: 0, events: [], levelUp: null }
+
+  const events: XpEvent[] = [{ kind: 'routine.run', tier: node.tier }]
+  if (before < 0.65 && after >= 0.65) events.push({ kind: 'routine.strong' })
+  if (before < THRESHOLD_UNLOCK_AT && after >= THRESHOLD_UNLOCK_AT) events.push({ kind: 'routine.integrated' })
+
+  const gained = events.reduce((sum, e) => sum + awardXp(e, goal.slot, fuelMultiplier), 0)
+  const levelBefore = levelFor(state.xp).level
+  const next = { ...state, xp: state.xp + gained }
+  const levelAfter = levelFor(next.xp).level
+
+  return { state: next, gained, events, levelUp: levelAfter > levelBefore ? levelAfter : null }
 }
