@@ -8,6 +8,8 @@ import { loadSettings, saveSettings, applySettings, isTauri, type Settings } fro
 import SettingsPanel from './SettingsPanel'
 import { Onboarding } from './Onboarding'
 import { RouteTour } from './TourOverlay'
+import { Initiation } from './modules/progression/Initiation'
+import { loadProgression, saveProgression } from './modules/progression/store'
 import { QuestHintBanner } from './modules/progression/QuestHint'
 import Scrap7    from './modules/scrap7/Scrap7'
 import Log       from './modules/log/Log'
@@ -524,6 +526,7 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
   const [intro, setIntro]       = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [initiated, setInitiated] = useState(() => !!loadProgression().initiatedAt)
   const entitlements: Entitlements = {}
 
   // Apply settings on mount and whenever they change
@@ -537,12 +540,16 @@ export default function App() {
     return () => window.removeEventListener('warren:open-settings', open)
   }, [])
 
-  // Desktop: boot straight into fullscreen Warren OS (the intro plays on top)
+  // Every launch starts at the hub. HashRouter restores the last route from the
+  // URL, so without this a restart — or a reset performed inside a module —
+  // drops you back on a screen that may no longer have anything on it.
   useEffect(() => {
     if (WARREN_OS_ENABLED && isTauri() && loadSettings().bootBigScreen) {
       void getCurrentWindow().setFullscreen(true).catch(() => {})
       navigate('/bigscreen')
+      return
     }
+    navigate('/', { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -550,6 +557,17 @@ export default function App() {
 
   /** Navigate and drop the settings overlay — it covers wherever you're going. */
   const go = (path: string) => { setSettingsOpen(false); navigate(path) }
+
+  // ── What owns the screen ────────────────────────────────────────────────────
+  // Strictly one at a time, in this order. Every one of these is full-screen, so
+  // without an explicit chain they stack: the arrival used to land on top of an
+  // unfinished tour, and opening a module early started a second tour over the
+  // first. Each stage waits for the one above it.
+  const onHub          = location.pathname === '/'
+  const showIntro      = intro && settings.showIntro
+  const showOnboarding = !showIntro && !settings.onboardedAt
+  const showInitiation = !showIntro && !showOnboarding && !initiated && onHub
+  const tourEnabled    = !showIntro && !showOnboarding && !showInitiation && !settingsOpen
 
   const bgColor = `rgba(6, 11, 22, ${settings.opacity})`
 
@@ -588,13 +606,23 @@ export default function App() {
 
       {/* First run. Nothing here works properly until it knows whose day it is
           measuring, so this is a gate rather than a quest. */}
-      {!settings.onboardedAt && !(intro && settings.showIntro) && (
+      {showOnboarding && (
         <Onboarding settings={settings}
           onDone={patch => { const next = { ...settings, ...patch }; saveSettings(next); setSettings(next) }} />
       )}
 
-      {/* Step-by-step, once per surface. Waits for first contact to be over. */}
-      <RouteTour enabled={!!settings.onboardedAt && !settingsOpen && !(intro && settings.showIntro)} />
+      {/* The arrival. Lives on the hub, because that is where a new operator is
+          standing — it used to ambush you the first time you opened UPLINKS. */}
+      {showInitiation && (
+        <Initiation name={settings.displayName}
+          onDone={() => {
+            saveProgression({ ...loadProgression(), initiatedAt: new Date().toISOString() })
+            setInitiated(true)
+          }} />
+      )}
+
+      {/* Step-by-step, once per surface — and only once everything above it is done */}
+      <RouteTour enabled={tourEnabled} />
 
       {/* Title bar */}
       <TitleBar />

@@ -29,7 +29,7 @@ const LOG_NEON  = '#c084fc'
 const LOG_DIM   = 'rgba(192,132,252,0.1)'
 const S7_NEON   = '#00b4ff'  // SCRAP-7 blue for sync badges
 
-const LOG_ANALYSIS_SYSTEM = `You are L.O.G — Long-range Objective Graph, a cyberpunk beaver goal scientist.
+const LOG_ANALYSIS_SYSTEM = `You are PATHFINDER, a cyberpunk beaver who finds the route from where someone is to what they want.
 Your mission: take ONE dream and generate a precise, actionable breakdown.
 
 Respond with ONLY a valid JSON object — no markdown, no explanation, no code fences.
@@ -61,7 +61,7 @@ Rules:
 - todo = finite one-time action; daily = repeat every day; habit = behavior built over time (streak)`
 
 // ─── Constellation (cross-dream synthesis) ────────────────────────────────────
-const CONSTELLATION_SYSTEM = `You are L.O.G, a goal scientist analysing a whole CONSTELLATION of dreams together.
+const CONSTELLATION_SYSTEM = `You are PATHFINDER, analysing a whole CONSTELLATION of dreams together.
 The dreams are given in PRIORITY ORDER (dream #1 is the user's highest priority).
 
 Find how the dreams interconnect — shared skills, habits or resources that advance several at once — then design ONE unified action set that moves the most important dreams forward with the least effort.
@@ -268,7 +268,7 @@ function AnalysisPanel({ result, dream, state, onChange, onClose }: {
           <span style={{ fontSize: 12, filter: `drop-shadow(0 0 5px ${LOG_NEON})` }}>🦫</span>
           <div>
             <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
-              color: LOG_NEON, letterSpacing: '0.2em' }}>L.O.G ANALYSIS</p>
+              color: LOG_NEON, letterSpacing: '0.2em' }}>PATHFINDER ANALYSIS</p>
             <p style={{ fontFamily: 'var(--font)', fontSize: 7,
               color: `${LOG_NEON}50`, letterSpacing: '0.1em' }}>{tr('TRAJECTORY COMPUTED', 'ТРАЕКТОРИЯ ГОТОВА')}</p>
           </div>
@@ -868,7 +868,7 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
               <span style={{ fontSize: 14, filter: `drop-shadow(0 0 4px ${LOG_NEON})` }}>🦫</span>
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
-                  color: LOG_NEON, letterSpacing: '0.15em' }}>{tr('ANALYZE WITH L.O.G', 'АНАЛИЗ С L.O.G')}</p>
+                  color: LOG_NEON, letterSpacing: '0.15em' }}>{tr('ANALYZE WITH PATHFINDER', 'АНАЛИЗ С PATHFINDER')}</p>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 7,
                   color: `${LOG_NEON}50`, letterSpacing: '0.08em', marginTop: 1 }}>
                   AI will plot missions, tasks, dailies & habits
@@ -1352,9 +1352,9 @@ export default function Log() {
       }}>
         <div>
           <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900,
-            color: LOG_NEON, letterSpacing: '0.2em', textShadow: `0 0 10px ${LOG_NEON}` }}>L.O.G</p>
+            color: LOG_NEON, letterSpacing: '0.2em', textShadow: `0 0 10px ${LOG_NEON}` }}>PATHFINDER</p>
           <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${LOG_NEON}40`, letterSpacing: '0.12em' }}>
-            LONG-RANGE OBJECTIVE GRAPH
+            {tr('ROUTE TO WHAT YOU WANT', 'МАРШРУТ К ТОМУ, ЧТО ВЫ ХОТИТЕ')}
           </p>
         </div>
         <div style={{ flex: 1 }} />
@@ -1438,8 +1438,8 @@ export default function Log() {
             {LOG_FROZEN ? (
               <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', marginTop: 18,
                 color: `${LOG_NEON}55`, letterSpacing: '0.06em', lineHeight: 1.8 }}>
-                {tr('L.O.G is read-only — new goals are set up in UPLINKS.',
-                    'L.O.G только для чтения — новые цели создаются в UPLINKS.')}
+                {tr('Write one and PATHFINDER will help you find the route.',
+                    'Запишите одну — PATHFINDER поможет найти маршрут.')}
               </p>
             ) : (
             <button onClick={() => setDreamModal('new')} style={{

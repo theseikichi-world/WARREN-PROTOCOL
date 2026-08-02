@@ -55,16 +55,16 @@ export const TOURS: Record<string, Tour> = {
       { anchor: 'uplink-tabs', title: 'PRIMARY & SECONDARY', titleRu: 'ОСНОВНОЙ И ВТОРИЧНЫЙ',
         body: 'Each uplink holds a protocol — a tree of routines. The second slot opens at level 5, and the secondary earns at 0.6×.',
         bodyRu: 'В каждом канале — протокол, дерево рутин. Второй слот открывается на 5 уровне и приносит 0.6× опыта.' },
-      { anchor: 'new-uplink', title: 'A GOAL COMES FROM A DREAM', titleRu: 'ЦЕЛЬ РОЖДАЕТСЯ ИЗ МЕЧТЫ',
-        body: 'Write a dream in L.O.G, then promote it. The guide proposes a chain of routines and you edit every node before a single habit exists.',
-        bodyRu: 'Запишите мечту в L.O.G и продвиньте её. Гид предложит цепь рутин, а вы правите каждый узел до того, как появится хоть одна привычка.' },
+      { title: 'A GOAL COMES FROM A DREAM', titleRu: 'ЦЕЛЬ РОЖДАЕТСЯ ИЗ МЕЧТЫ',
+        body: 'You do not create one here. Write a dream in PATHFINDER and promote it — the guide proposes a chain of routines and you edit every node before a single habit exists.',
+        bodyRu: 'Здесь его не создают. Запишите мечту в PATHFINDER и продвиньте её — гид предложит цепь рутин, а вы правите каждый узел до появления первой привычки.' },
     ],
   },
 
   log: {
     id: 'log',
     steps: [
-      { title: 'L.O.G — THE DREAM INBOX', titleRu: 'L.O.G — ВХОДЯЩИЕ МЕЧТЫ',
+      { title: 'PATHFINDER — THE DREAM INBOX', titleRu: 'PATHFINDER — ВХОДЯЩИЕ МЕЧТЫ',
         body: 'Write down everything you want, without filtering. This is the one place in Warren with no limit — the narrowing happens later.',
         bodyRu: 'Записывайте всё, чего хотите, без фильтра. Единственное место в Warren без ограничений — сужение произойдёт позже.' },
       { title: 'THEN PROMOTE ONE', titleRu: 'ЗАТЕМ ПРОДВИНЬТЕ ОДНУ',

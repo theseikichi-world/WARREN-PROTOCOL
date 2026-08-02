@@ -14,19 +14,35 @@ const PAD  = 6
 
 interface Box { top: number; left: number; width: number; height: number }
 
+/**
+ * Where a step is pointing, or null if it isn't pointing anywhere real.
+ *
+ * A collapsed element counts as absent: BANDWIDTH renders nothing while both
+ * slots are empty, leaving a full-width strip of zero height, and the overlay
+ * cheerfully outlined it. A highlight around nothing is worse than no highlight.
+ */
+const MIN_ANCHOR = 8
+
 function boxFor(anchor?: string): Box | null {
   if (!anchor) return null
   const el = document.querySelector(`[data-tour="${anchor}"]`)
   if (!el) return null
   const r = el.getBoundingClientRect()
-  if (r.width === 0 && r.height === 0) return null
+  if (r.width < MIN_ANCHOR || r.height < MIN_ANCHOR) return null
   return { top: r.top - PAD, left: r.left - PAD, width: r.width + PAD * 2, height: r.height + PAD * 2 }
+}
+
+/** Steps worth showing here and now: an anchored step whose anchor is missing is dropped. */
+function liveSteps(steps: TourStep[]): TourStep[] {
+  return steps.filter(s => !s.anchor || boxFor(s.anchor) !== null)
 }
 
 export function TourOverlay({ tour, onDone }: { tour: Tour; onDone: () => void }) {
   const [i, setI] = useState(0)
   const [box, setBox] = useState<Box | null>(null)
-  const step: TourStep | undefined = tour.steps[i]
+  // Fixed at mount: the steps that can actually point at something right now
+  const [steps] = useState<TourStep[]>(() => liveSteps(tour.steps))
+  const step: TourStep | undefined = steps[i]
 
   // Re-measure on every step, and again after a scroll settles
   useLayoutEffect(() => {
@@ -49,10 +65,10 @@ export function TourOverlay({ tour, onDone }: { tour: Tour; onDone: () => void }
     return () => window.removeEventListener('keydown', onKey)
   }, [onDone])
 
-  useEffect(() => { if (i >= tour.steps.length) onDone() }, [i, tour.steps.length, onDone])
+  useEffect(() => { if (i >= steps.length) onDone() }, [i, steps.length, onDone])
   if (!step) return null
 
-  const last = i === tour.steps.length - 1
+  const last = i === steps.length - 1
   const dim  = 'rgba(2,6,12,0.82)'
 
   // Card goes below the hole when there's room, otherwise above it
@@ -89,10 +105,10 @@ export function TourOverlay({ tour, onDone }: { tour: Tour; onDone: () => void }
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
           <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 800,
             letterSpacing: '0.22em', color: `${CYAN}70` }}>
-            {i + 1} / {tour.steps.length}
+            {i + 1} / {steps.length}
           </span>
           <div style={{ display: 'flex', gap: 3, marginLeft: 'auto' }}>
-            {tour.steps.map((_, n) => (
+            {steps.map((_, n) => (
               <div key={n} style={{ width: n === i ? 12 : 5, height: 3, borderRadius: 2,
                 background: n <= i ? CYAN : 'rgba(255,255,255,0.14)', transition: 'all 0.2s' }} />
             ))}
@@ -148,6 +164,9 @@ export function RouteTour({ enabled }: { enabled: boolean }) {
     if (!enabled) { setActive(null); return }
     const tour = tourForPath(location.pathname)
     if (!tour || hasSeenTour(tour.id)) { setActive(null); return }
+    // The hub tour is the first welcome, and nothing else runs before it. Opening
+    // a module early used to stack a second tour on top of an unfinished one.
+    if (tour.id !== 'hub' && !hasSeenTour('hub')) { setActive(null); return }
     // Let the screen paint before measuring anything on it
     const id = setTimeout(() => setActive(tour), 420)
     return () => clearTimeout(id)

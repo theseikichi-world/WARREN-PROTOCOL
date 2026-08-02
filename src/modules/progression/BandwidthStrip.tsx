@@ -30,7 +30,38 @@ export function BandwidthStrip() {
 
   const primary   = primaryGoal(state)
   const secondary = secondaryGoal(state)
-  if (!primary && !secondary) return null
+
+  // Nothing allocated yet. This used to render null, which left a labelled hole
+  // in the hub — and the guided tour dutifully pointed at it. An empty slot is
+  // worth saying out loud, as long as it also says what to do about it.
+  if (!primary && !secondary) {
+    return (
+      <button onClick={() => navigate('/log')} style={{
+        width: '100%', textAlign: 'left', cursor: 'pointer', marginBottom: 16,
+        padding: '11px 13px', borderRadius: 10,
+        background: `linear-gradient(135deg, ${CYAN}0a, rgba(13,24,48,0.3))`,
+        border: `1px dashed ${CYAN}35`, transition: 'border-color 0.15s',
+      }}
+        onMouseEnter={e => e.currentTarget.style.borderColor = `${CYAN}70`}
+        onMouseLeave={e => e.currentTarget.style.borderColor = `${CYAN}35`}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: '0.18em', color: `${CYAN}b0` }}>
+            {t('BANDWIDTH', 'ПРОПУСКНАЯ СПОСОБНОСТЬ')}
+          </span>
+          <span style={{ fontSize: 7.5, fontWeight: 800, color: `${CYAN}70`, marginLeft: 'auto' }}>
+            0/2 {t('ALLOCATED', 'ЗАНЯТО')}
+          </span>
+        </div>
+        <p style={{ fontSize: 9, color: 'rgba(215,232,248,0.72)', lineHeight: 1.6, marginTop: 7 }}>
+          {t('Both slots are open. A goal starts as a dream — write one in PATHFINDER and promote it.',
+             'Оба слота свободны. Цель начинается с мечты — запишите её в PATHFINDER и продвиньте.')}
+        </p>
+        <p style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.14em', color: CYAN, marginTop: 8 }}>
+          {t('OPEN PATHFINDER', 'ОТКРЫТЬ PATHFINDER')} →
+        </p>
+      </button>
+    )
+  }
 
   return (
     <button onClick={() => navigate('/uplinks')} style={{

@@ -12,7 +12,7 @@ import { ChainForge } from './ChainForge'
 // Dreams are unlimited; bandwidth is two. This is the narrowing, and it is a
 // decision the user makes three ways:
 //
-//   FROM A DREAM   the guide reads a dream from L.O.G and proposes a chain
+//   FROM A DREAM   the guide reads a dream from PATHFINDER and proposes a chain
 //   FROM A TEMPLATE  the two reference chains, now a starting point you edit
 //   BLANK          nothing proposed, nothing assumed
 //
@@ -121,8 +121,8 @@ function Picker({ accent, error, onClose, onDream, onDraft }: {
         <p style={section}>{tr('FROM A DREAM', 'ИЗ МЕЧТЫ')}</p>
         {dreams.length === 0 && (
           <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: DIM, lineHeight: 1.6 }}>
-            {tr('No dreams in L.O.G yet. Write one there first — the guide reads it to propose a chain.',
-                'В L.O.G пока нет мечт. Запишите одну там — гид прочтёт её и предложит цепь.')}
+            {tr('No dreams in PATHFINDER yet. Write one there first — the guide reads it to propose a chain.',
+                'В PATHFINDER пока нет мечт. Запишите одну там — гид прочтёт её и предложит цепь.')}
           </p>
         )}
         {dreams.map(d => {

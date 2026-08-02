@@ -74,7 +74,7 @@ export const QUEST_DESTINATIONS: Record<QuestTarget, QuestDestination> = {
   journal:  { path: '/journal', label: 'OPEN THE JOURNAL',   ru: 'ОТКРЫТЬ ЖУРНАЛ' },
   solaris:  { path: '/solaris', label: 'OPEN THE KITCHEN',   ru: 'ОТКРЫТЬ КУХНЮ' },
   ardo:     { path: '/ardo',    label: 'OPEN A.R.D.O',       ru: 'ОТКРЫТЬ A.R.D.O' },
-  log:      { path: '/log',     label: 'OPEN L.O.G',         ru: 'ОТКРЫТЬ L.O.G' },
+  log:      { path: '/log',     label: 'OPEN PATHFINDER',    ru: 'ОТКРЫТЬ PATHFINDER' },
   // Both land on UPLINKS, but they want different tabs and different advice
   character:{ path: '/uplinks', label: 'OPEN YOUR CHARACTER',ru: 'ОТКРЫТЬ ПЕРСОНАЖА' },
   uplink:   { path: '/uplinks', label: 'OPEN YOUR PROTOCOL', ru: 'ОТКРЫТЬ ПРОТОКОЛ' },
@@ -115,8 +115,8 @@ export const QUEST_LINE: Quest[] = [
   },
   {
     id: 's1-first-uplink', stage: 1, title: 'CHOOSE ONE DREAM', ru: 'ВЫБЕРИТЕ ОДНУ МЕЧТУ',
-    brief:   'Write a dream in L.O.G, then promote it to an uplink. Dreams are unlimited; bandwidth is two. That choice is the whole game.',
-    briefRu: 'Запишите мечту в L.O.G и продвиньте её в канал. Мечты бесконечны, каналов — два. Этот выбор и есть вся игра.',
+    brief:   'Write a dream in PATHFINDER, then promote it to an uplink. Dreams are unlimited; bandwidth is two. That choice is the whole game.',
+    briefRu: 'Запишите мечту в PATHFINDER и продвиньте её в канал. Мечты бесконечны, каналов — два. Этот выбор и есть вся игра.',
     objective: { kind: 'uplink.created', need: 1 }, target: 'log', xp: 60,
   },
 

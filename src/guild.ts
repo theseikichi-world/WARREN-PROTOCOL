@@ -37,10 +37,10 @@ export const GUILD: GuildMember[] = [
     desc: 'Cyber-raccoon engineer. Iron heart. Cyber eye. Task completion at any cost.',
   },
   {
-    id: 'log', group: 'instrument' as GuildGroup,   name: 'L.O.G',         unit: 'LOG', animal: 'Beaver',
-    role: 'Goal Scientist',
+    id: 'log', group: 'instrument' as GuildGroup,   name: 'PATHFINDER',    unit: 'PTH', animal: 'Beaver',
+    role: 'Dreams & Routes',
     neon: '#c084fc', path: '/log', free: false, built: true,
-    desc: 'Long-range Objective Graph. Every mission mapped. Every dot connected.',
+    desc: 'Finds the route from where you are to what you want. Every dream mapped, every dot connected.',
   },
   {
     id: 'ardo', group: 'utility' as GuildGroup,  name: 'A.R.D.O',       unit: 'ARD', animal: 'Turtle',

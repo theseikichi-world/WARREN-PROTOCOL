@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { t as tr } from '../../i18n'
 import {
   loadProgression, saveProgression, seedIfEmpty, syncChain, installNode, recordRun, syncQuests,
@@ -8,12 +8,10 @@ import {
   trainingCount, hasCapacity, commitDraft,
   installLifeSupport, installCustomLifeSupport, deleteLifeSupport, recordBaselineRun,
 } from './store'
-import { Initiation } from './Initiation'
 import type { LifeSupportTemplate } from './lifeSupport'
 import { SkillTree } from './SkillTree'
 import { CharacterSheet } from './CharacterSheet'
 import { ChainForge } from './ChainForge'
-import { NewUplink } from './NewUplink'
 import { goalToDraft, type ChainDraft } from './draft'
 import { nodeState } from './chain'
 import { gatedLevel, isUnlockedAt } from './xp'
@@ -31,13 +29,13 @@ const DIM  = 'rgba(148,163,184,0.55)'
 
 export default function Uplinks() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [state, setState] = useState<ProgressionState>(() => seedIfEmpty(loadProgression()))
   const [tasks, setTasks] = useState<Task[]>(() => loadScrap7().tasks)
   const [now, setNow]     = useState(() => new Date())
   const [view, setView]   = useState<'character' | 'primary' | 'secondary'>('character')
   const [sums, setSums]   = useState<ModuleSummaries>(() => getModuleSummaries())
   const [toast, setToast] = useState('')
-  const [creating, setCreating] = useState(false)
   const [forging, setForging]   = useState<ChainDraft | null>(null)
 
   // Re-read from storage rather than from React state: the forge and the
@@ -70,11 +68,9 @@ export default function Uplinks() {
     return () => clearInterval(id)
   }, [])
 
-  // The hub's CREATE YOUR FIRST UPLINK quest asks for the picker, not just the
-  // screen — arriving with nowhere to go would be the same dead end one level down.
+  // A quest that points here also says which tab it meant
   useEffect(() => {
     const nav = location.state as { spotlight?: string } | null
-    if (nav?.spotlight === 'new-uplink') setCreating(true)
     if (nav?.spotlight === 'life-support') setView('character')
     if (nav?.spotlight === 'install-routine') setView(v => v === 'character' ? 'primary' : v)
   }, [location.state])
@@ -193,11 +189,9 @@ export default function Uplinks() {
             {tr('BANDWIDTH', 'ПОЛОСА')} {bandwidthUsed(state)}/2
           </p>
         </div>
-        <button data-tour="new-uplink" onClick={() => setCreating(true)} style={{
-          padding: '5px 10px', borderRadius: 6, cursor: 'pointer', background: 'transparent',
-          border: `1px solid ${CYAN}35`, fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700,
-          letterSpacing: '0.1em', color: CYAN, flexShrink: 0,
-        }}>+ {tr('UPLINK', 'КАНАЛ')}</button>
+        {/* No "+ UPLINK" here. A goal comes from a dream and PATHFINDER is the
+            only door (rule 17) — a second entrance here was the app quietly
+            disagreeing with itself. */}
       </div>
 
       {/* Character, then a tab per uplink */}
@@ -279,15 +273,15 @@ export default function Uplinks() {
             </p>
             <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(148,163,184,0.35)',
               marginTop: 7, lineHeight: 1.7, maxWidth: 300, marginLeft: 'auto', marginRight: 'auto' }}>
-              {tr('Promote a dream from L.O.G, start from a template, or write the chain yourself.',
-                  'Продвиньте мечту из L.O.G, начните с шаблона или напишите цепь сами.')}
+              {tr('A goal starts as a dream. Write one in PATHFINDER and promote it — the guide proposes the chain, you edit every node.',
+                  'Цель начинается с мечты. Запишите её в PATHFINDER и продвиньте — гид предложит цепь, вы правите каждый узел.')}
             </p>
-            <button onClick={() => setCreating(true)} style={{
+            <button onClick={() => navigate('/log')} style={{
               marginTop: 12, padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
               fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
               color: '#02121a', background: `linear-gradient(135deg, ${accent}, ${accent}b0)`,
               border: 'none', boxShadow: `0 0 16px ${accent}45`,
-            }}>◈ {tr('NEW UPLINK', 'НОВЫЙ КАНАЛ')}</button>
+            }}>◈ {tr('OPEN PATHFINDER', 'ОТКРЫТЬ PATHFINDER')}</button>
           </div>
         ) : null}
 
@@ -320,26 +314,6 @@ export default function Uplinks() {
           </>
         )}
       </div>
-
-      {/* The arrival. Plays once, before there is anything to congratulate. */}
-      {state.initiatedAt == null && (
-        <Initiation name={loadSettings().displayName}
-          onDone={() => {
-            const next = { ...loadProgression(), initiatedAt: new Date().toISOString() }
-            saveProgression(next)
-            setState(next)
-          }} />
-      )}
-
-      {creating && (
-        <NewUplink accent={CYAN}
-          onClose={() => setCreating(false)}
-          onCommitted={(_, title) => {
-            setCreating(false)
-            reconcile()
-            flash(`◆ ${title || tr('UPLINK', 'КАНАЛ')} ${tr('ONLINE', 'В СЕТИ')}`)
-          }} />
-      )}
 
       {forging && (
         <ChainForge draft={forging} accent={accent === GOLD ? GOLD : CYAN}

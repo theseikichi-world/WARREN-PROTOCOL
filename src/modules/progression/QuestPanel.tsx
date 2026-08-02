@@ -61,12 +61,16 @@ export function QuestPanel() {
    * whole module and being left to hunt is the failure this replaces.
    */
   const go = (quest: Quest) => {
+    // The uplink steps resolve against what exists: with no goal at all,
+    // "install a routine" belongs at the door a goal comes through, not on an
+    // empty tree.
+    if (quest.target === 'uplink' && !hasUplink) {
+      navigate('/log', { state: questNav(quest) })
+      return
+    }
     const path = QUEST_DESTINATIONS[quest.target].path
     if (!path) return
-    // The uplink steps resolve against what exists: with no goal, "install a
-    // routine" should land on the place you create one.
-    const spotlight = quest.target === 'uplink' && !hasUplink ? 'new-uplink' : quest.spotlight
-    navigate(path, { state: questNav(quest, spotlight) })
+    navigate(path, { state: questNav(quest, quest.spotlight) })
   }
 
   // The starting zone is finite by design
