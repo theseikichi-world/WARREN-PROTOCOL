@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `732cc4f` · 267 tests · tsc/build/lint clean.
+**State as of the last commit:** `7e551d9` · 273 tests · tsc/build/lint clean.
 
 ---
 
@@ -78,7 +78,7 @@ Flavour belongs on what you read once. (Internal identifiers still say
 | `Initiation.tsx` | the arrival. Plays once, flagged by `initiatedAt` |
 | `xp.ts` | XP events, level curve (`level² × 40`), level gates |
 | `stats.ts` | six character attributes derived from real module data |
-| `quests.ts` | main quest line + objective measurement |
+| `quests.ts` | main quest line, objective measurement, and where each step happens |
 | `tools.ts` | FIRMWARE tiers (SOLARIS implemented) |
 | `SkillTree.tsx` | the tree diagram + node detail panel |
 | `CharacterSheet.tsx` | level, XP, standing, main quest, attributes, milestones |
@@ -117,7 +117,9 @@ These were each decided deliberately; breaking one silently breaks the product.
    — currently 0.41`, never an empty progress bar.
 6. **A quest cannot be completed by pressing a button.** Objectives are measured
    from data; quests clear because the record says so. Order holds — a later
-   objective met early never skips the line.
+   objective met early never skips the line. But it must always be **one tap
+   from the doing**: every quest carries a `target`, the card is the button, and
+   it names its destination before you press it.
 7. **Firmware is derived from use**, never stored or bought, and cannot skip a
    tier.
 8. **Gate complexity, never utility.** Tier 0 of any instrument fully solves the
