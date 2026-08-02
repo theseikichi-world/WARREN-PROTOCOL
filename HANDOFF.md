@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `4dd8ec3` · 316 tests · tsc/build/lint clean.
+**State as of the last commit:** `20e5b90` · 321 tests · tsc/build/lint clean.
 
 ---
 
@@ -77,6 +77,7 @@ Flavour belongs on what you read once. (Internal identifiers still say
 | `lifeSupport.ts` | LIFE SUPPORT templates — the basics, no tree, no gating |
 | `LifeSupportPanel.tsx` | that section of the character sheet; slots, picker, custom |
 | `Initiation.tsx` | the arrival. Plays once, flagged by `initiatedAt` |
+| `LevelUp.tsx` | threshold crossed — says what opened; once per `celebratedLevel` |
 | `questNav.ts` | quest→destination state: the brief and the spotlight travel with you |
 | `QuestHint.tsx` | the banner restating why you're on this screen |
 | `xp.ts` | XP events, level curve (derived from `stageXp`), **the quest gate**, level gates |
@@ -183,6 +184,18 @@ These were each decided deliberately; breaking one silently breaks the product.
 25. **Never point at nothing.** A tour step whose anchor is missing or collapsed
     is dropped from the run. Better still, don't have empty anchors: a surface
     with nothing in it should say so and offer the way out.
+26. **A tour is marked seen when it STARTS.** Marking on completion meant an
+    abandoned tour re-ambushed you next visit, which reads as a bug. There is a
+    session guard behind the flag; Settings → REPLAY clears both (it reloads).
+27. **Real work gets a visible beat.** A quest clearing flares over the panel
+    with its XP; crossing a level is a full screen naming what opened. Both are
+    still informational — they report what changed, they don't congratulate.
+    `levelReward()` derives that list from the gates, slots and stages, so it
+    cannot drift, and it says so plainly when a level opened nothing.
+28. **Never animate the position of something that occupies layout.** A
+    transform-based entrance can leave a residual translate and paint the
+    element over its neighbour — exactly how the quest banner ended up on the
+    module's header. Use `fadeInPlace` for anything in the flow.
 
 ---
 
