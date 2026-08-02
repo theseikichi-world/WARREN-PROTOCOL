@@ -1,12 +1,10 @@
-import { useState } from 'react'
 import { t as tr } from '../../i18n'
 import type { Task } from '../scrap7/types'
 import type { Goal } from './types'
-import { levelFor, nextGate, GATES, isUnlockedAt } from './xp'
+import { gatedLevel, nextGate, GATES, isUnlockedAt } from './xp'
 import { deriveStats, overallRating, type Stat } from './stats'
 import { nodeState } from './chain'
 import type { ModuleSummaries } from '../bigscreen/moduleStats'
-import { activeQuest, questProgress, questCta, QUEST_LINE, type Quest } from './quests'
 import { LifeSupportPanel } from './LifeSupportPanel'
 
 const CYAN = '#00f5ff'
@@ -18,7 +16,7 @@ const DIM  = 'rgba(148,163,184,0.5)'
 // you actually did, which is the only version of an RPG sheet that stays true
 // when the character is a real person.
 
-export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life, onQuestGo }: {
+export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life }: {
   goals:  Goal[]
   tasks:  Task[]
   xp:     number
@@ -27,10 +25,8 @@ export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life, onQ
   quests: Record<string, string>
   /** Life-support handlers — the character sheet owns the habits with no tree. */
   life:   Omit<Parameters<typeof LifeSupportPanel>[0], 'tasks'>
-  /** Take the operator to wherever the active quest actually happens. */
-  onQuestGo: (quest: Quest) => void
 }) {
-  const lvl    = levelFor(xp)
+  const lvl    = gatedLevel(xp, quests)
   const stats  = deriveStats(goals, tasks, sums)
   const rating = overallRating(stats)
   const gate   = nextGate(lvl.level)
@@ -72,7 +68,7 @@ export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life, onQ
         </div>
         <div style={{ display: 'flex', marginTop: 5 }}>
           <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM }}>
-            {lvl.intoNext} / {lvl.needed} XP
+            {lvl.capped ? tr('XP BANKED', 'ОПЫТ НАКОПЛЕН') : `${lvl.intoNext} / ${lvl.needed} XP`}
           </span>
           {gate && (
             <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${GOLD}90`, marginLeft: 'auto' }}>
@@ -80,6 +76,16 @@ export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life, onQ
             </span>
           )}
         </div>
+
+        {/* A full bar that does nothing needs to say why. The quest gate is the
+            one thing XP cannot buy past, so it is named here rather than implied. */}
+        {lvl.capped && (
+          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, lineHeight: 1.6, marginTop: 7,
+            color: `${GOLD}c0` }}>
+            ⊘ {tr(`LEVEL ${lvl.level + 1} HELD — ${lvl.blocking.length} objective${lvl.blocking.length === 1 ? '' : 's'} left on the hub`,
+                  `УРОВЕНЬ ${lvl.level + 1} ЗАКРЫТ — осталось задач: ${lvl.blocking.length}, они на хабе`)}
+          </p>
+        )}
       </div>
 
       {/* Standing — one honest headline */}
@@ -88,10 +94,6 @@ export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life, onQ
         <Cell value={String(installed.length)} label={tr('RUNNING', 'В РАБОТЕ')} color={CYAN} />
         <Cell value={String(available.length)} label={tr('AVAILABLE', 'ДОСТУПНО')} color={available.length ? '#39ff14' : DIM} />
       </div>
-
-      {/* Main quest — the starting zone hands you one verb at a time */}
-      <MainQuest quests={quests} ctx={{ sums, goals, tasks }}
-        hasUplink={live.length > 0} onGo={onQuestGo} />
 
       {/* Life support — the habits that answer to no goal */}
       <LifeSupportPanel tasks={tasks} {...life} />
@@ -164,92 +166,5 @@ function StatRow({ stat }: { stat: Stat }) {
           background: stat.color, boxShadow: `0 0 6px ${stat.color}70`, transition: 'width 0.6s ease' }} />
       </div>
     </div>
-  )
-}
-
-/**
- * The active step of the main quest, plus how far the line runs.
- *
- * The whole card is the button. A brief that names a thing to do and then
- * leaves you hunting the sidebar for the module is a puzzle, not a starting
- * zone — so it states where it goes and takes you there.
- */
-function MainQuest({ quests, ctx, hasUplink, onGo }: {
-  quests:    Record<string, string>
-  ctx:       Parameters<typeof questProgress>[1]
-  hasUplink: boolean
-  onGo:      (quest: Quest) => void
-}) {
-  const [hover, setHover] = useState(false)
-  const active = activeQuest(quests)
-  const doneCount = QUEST_LINE.filter(q => quests[q.id]).length
-
-  if (!active) {
-    return (
-      <div style={{ marginTop: 14, padding: '12px 13px', borderRadius: 10,
-        background: `${GOLD}0c`, border: `1px solid ${GOLD}35` }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.2em',
-          color: `${GOLD}b0` }}>{tr('MAIN QUEST', 'ОСНОВНОЙ КВЕСТ')}</p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 9, color: 'rgba(230,242,255,0.85)', marginTop: 6 }}>
-          {tr('The starting zone is behind you. Everything from here is your own line.',
-              'Стартовая зона позади. Дальше — только ваша линия.')}
-        </p>
-      </div>
-    )
-  }
-
-  const p   = questProgress(active, ctx)
-  const cta = questCta(active, hasUplink)
-
-  return (
-    <button onClick={() => onGo(active)}
-      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
-      style={{ display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
-        marginTop: 14, padding: '12px 13px', borderRadius: 10,
-        background: `linear-gradient(140deg, ${GOLD}${hover ? '18' : '0e'}, rgba(6,14,26,0.5))`,
-        border: `1px solid ${GOLD}${hover ? '60' : '35'}`,
-        boxShadow: hover ? `0 0 18px ${GOLD}25` : 'none',
-        transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.2em',
-          color: `${GOLD}b0` }}>⚑ {tr('MAIN QUEST', 'ОСНОВНОЙ КВЕСТ')}</span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, marginLeft: 'auto' }}>
-          {doneCount}/{QUEST_LINE.length}
-        </span>
-      </div>
-
-      <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900, marginTop: 7,
-        color: GOLD, letterSpacing: '0.08em', textShadow: `0 0 10px ${GOLD}45` }}>
-        {tr(active.title, active.ru)}
-      </p>
-      <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, lineHeight: 1.65, marginTop: 5,
-        color: 'rgba(215,232,248,0.8)' }}>
-        {tr(active.brief, active.briefRu)}
-      </p>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9 }}>
-        <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)',
-          overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${Math.round(p.ratio * 100)}%`, borderRadius: 2,
-            background: GOLD, boxShadow: `0 0 7px ${GOLD}80`, transition: 'width 0.5s ease' }} />
-        </div>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, color: `${GOLD}c0` }}>
-          {p.have}/{p.need}
-        </span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM }}>+{active.xp} XP</span>
-      </div>
-
-      {/* Where it happens — the whole point of the card being a button */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10,
-        paddingTop: 9, borderTop: `1px solid ${GOLD}20` }}>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 8.5, fontWeight: 800,
-          letterSpacing: '0.14em', color: GOLD,
-          textShadow: hover ? `0 0 10px ${GOLD}70` : 'none' }}>
-          {tr(cta.en, cta.ru)}
-        </span>
-        <span style={{ fontSize: 10, color: GOLD, marginLeft: 'auto',
-          transform: hover ? 'translateX(3px)' : 'none', transition: 'transform 0.15s' }}>→</span>
-      </div>
-    </button>
   )
 }

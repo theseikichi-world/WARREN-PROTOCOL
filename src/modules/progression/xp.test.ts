@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { baseXp, awardXp, levelCost, levelFor, isUnlockedAt, nextGate, GATES } from './xp'
+import { baseXp, awardXp, levelCost, levelFor, gatedLevel, levelCap, isUnlockedAt, nextGate, GATES } from './xp'
+import { stageQuests, LAST_GATED_STAGE } from './quests'
 import { deriveStats, overallRating } from './stats'
 import type { Task } from '../scrap7/types'
 import type { ChainNode, Goal } from './types'
@@ -127,5 +128,59 @@ describe('character stats', () => {
   it('averages only the stats that have something to say', () => {
     const sums: ModuleSummaries = { ...EMPTY, ardo: { due: 0, texts: 1, mastery: 60, next: null } }
     expect(overallRating(deriveStats([], [], sums))).toBe(60)
+  })
+})
+
+describe('the quest gate', () => {
+  const NOW = '2026-08-02T10:00:00.000Z'
+  const clear = (...ids: string[]) => Object.fromEntries(ids.map(id => [id, NOW]))
+  const stage = (n: number) => clear(...stageQuests(n).map(q => q.id))
+  const all   = (upTo: number) => Object.assign({}, ...Array.from({ length: upTo }, (_, i) => stage(i + 1)))
+
+  it('holds you at level 1 with nothing cleared, however much XP is banked', () => {
+    const g = gatedLevel(1_000_000, {})
+    expect(g.level).toBe(1)
+    expect(g.capped).toBe(true)
+    expect(g.xpLevel).toBeGreaterThan(1)
+  })
+
+  it('names what is holding it rather than showing a stuck bar', () => {
+    const g = gatedLevel(1_000_000, {})
+    expect(g.blocking).toHaveLength(stageQuests(1).length)
+    expect(g.progress).toBe(1)          // the bar reads full, and the copy says why
+  })
+
+  it('opens level 2 only once every stage-1 quest is done', () => {
+    const partial = clear(stageQuests(1)[0].id)
+    expect(gatedLevel(1_000_000, partial).level).toBe(1)
+    expect(gatedLevel(1_000_000, stage(1)).level).toBe(2)
+  })
+
+  it('still requires the XP — clearing a stage is not a free level', () => {
+    const g = gatedLevel(0, all(4))
+    expect(g.level).toBe(1)
+    expect(g.capped).toBe(false)
+    expect(g.blocking).toEqual([])
+  })
+
+  it('lets XP alone carry you once the starting zone is finished', () => {
+    expect(levelCap(all(LAST_GATED_STAGE))).toBe(Number.POSITIVE_INFINITY)
+    const g = gatedLevel(1_000_000, all(LAST_GATED_STAGE))
+    expect(g.capped).toBe(false)
+    expect(g.level).toBe(g.xpLevel)
+  })
+
+  it('raises the cap one stage at a time', () => {
+    expect(levelCap({})).toBe(1)
+    expect(levelCap(stage(1))).toBe(2)
+    expect(levelCap(all(2))).toBe(3)
+    // Clearing stage 2 without stage 1 buys nothing — order holds
+    expect(levelCap(stage(2))).toBe(1)
+  })
+
+  it('reports the ungated level so the gap is visible', () => {
+    const g = gatedLevel(levelCost(1) + levelCost(2), {})
+    expect(g.level).toBe(1)
+    expect(g.xpLevel).toBe(3)
   })
 })

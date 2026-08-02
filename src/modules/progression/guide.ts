@@ -11,7 +11,7 @@
 import { aiJson, loadSettings, modelForTask, type AiMessage } from '../../settings'
 import type { Dream } from '../log/types'
 import type { NodeTier } from './types'
-import { TIER_META } from './types'
+import { TIER_META, PRIMARY_MAX_NODES } from './types'
 import { blankDraft, uniqueKey, type ChainDraft, type DraftNode } from './draft'
 
 export const GUIDE_TASK_ID = 'uplink.protocol'
@@ -43,12 +43,17 @@ Respond with ONLY a valid JSON object — no markdown, no code fences, no explan
 }
 
 Rules:
-- 5-9 nodes total, in 2-4 chapters. Every node appears in exactly ONE chapter.
+- 12-18 nodes total, in 3-5 chapters. Every node appears in exactly ONE chapter.
+- SHAPE THE TREE. It is a skill tree, not a to-do list, and the user can only train ${PRIMARY_MAX_NODES} routines at a time — so the graph must force choices:
+  · 2-3 entry nodes with "after": [], then 2-3 PARALLEL BRANCHES running down the tree. Never one long chain.
+  · Each chapter ends in a CAPSTONE: one node whose "after" lists 2-3 nodes from different branches. It is the visible payoff — usually tier 3-4, and the hardest thing in that chapter.
+  · Later chapters build on earlier ones: at least one node per chapter should require a node from the chapter before.
+  · Vary the tiers. Early branches are tier 1-2; depth earns tier 3-4.
 - "key": short lowercase ascii slug, unique, stable. Referenced by "after" and by chapter "keys".
 - "cue" is REQUIRED and must be a concrete anchor — an existing habit ("straight after reading"), a place, or a pinned weekday and time ("Mon/Wed/Fri 19:00"). Never "daily" or "3x a week": floating frequency measurably slows automatism.
 - "tier": 1 = ${TIER_META[1].profile}. 2 = ${TIER_META[2].profile}. 3 = ${TIER_META[3].profile}. 4 = ${TIER_META[4].profile}.
 - "ladder": 3 ascending thresholds for the SAME behaviour, smallest first. The first rung must be genuinely easy — it is what gets done on the worst day of the month.
-- "after": keys of routines that must be integrated first. 1-3 entry nodes with "after": [] ; the rest form a shallow tree, not one long line. Never reference a key that doesn't exist and never form a loop.
+- "after": keys of routines that must be automatic first. Never reference a key that doesn't exist, and never form a loop.
 - "tool": one of journal, ardo, solaris, pictures — only when the routine genuinely needs that instrument. Otherwise null.
 - "boss": a real, datable, EXTERNAL event that ends the chapter ("A self-tape shot and submitted") — or null. A score state dressed as an event is not a boss. Most chapters have none; the last one usually does.
 - Every "key" stays lowercase ascii even when the titles are not English.`
@@ -97,7 +102,7 @@ export function normalizeProposal(raw: RawProposal, dream: { id?: string; title:
 
   // 1. Nodes, with unique keys. A key collision would silently merge routines.
   const keys: string[] = []
-  const nodes: DraftNode[] = arr(raw.nodes).slice(0, 16).map(r => {
+  const nodes: DraftNode[] = arr(raw.nodes).slice(0, 24).map(r => {
     const n = (r ?? {}) as RawNode
     const title = str(n.title)
     const key   = uniqueKey(str(n.key) || title, keys)
@@ -169,7 +174,7 @@ export async function proposeChain(dream: Dream): Promise<ChainDraft> {
   ]
   const raw = await aiJson<RawProposal>(messages, settings, {
     model: modelForTask(settings, GUIDE_TASK_ID),
-    maxTokens: 2400,
+    maxTokens: 4000,
   })
   return normalizeProposal(raw, dream)
 }

@@ -8,6 +8,7 @@
 
 import type { GoalSlot, NodeTier } from './types'
 import { xpRateForSlot } from './types'
+import { LAST_GATED_STAGE, stageComplete, stageQuests, type Quest } from './quests'
 
 export type XpEvent =
   | { kind: 'routine.run';       tier: NodeTier }   // a routine performed today
@@ -68,6 +69,56 @@ export function levelFor(totalXp: number): LevelState {
   while (rest >= levelCost(level)) { rest -= levelCost(level); level++ }
   const needed = levelCost(level)
   return { level, intoNext: rest, needed, progress: needed > 0 ? rest / needed : 0 }
+}
+
+// ─── The quest gate ───────────────────────────────────────────────────────────
+// XP alone does not advance you. Each early level has a stage of quests behind
+// it, and the curve stops at the last stage you actually finished — bank a
+// hundred thousand points without naming your character and you are still
+// level 1. Grinding is not a substitute for setting the thing up.
+//
+// Levels past LAST_GATED_STAGE are XP alone: the starting zone is finite.
+
+/** The highest level the quest line currently permits. */
+export function levelCap(completed: Record<string, string> | undefined): number {
+  let cap = 1
+  for (let stage = 1; stage <= LAST_GATED_STAGE; stage++) {
+    if (!stageComplete(stage, completed)) return cap
+    cap = stage + 1
+  }
+  return Number.POSITIVE_INFINITY
+}
+
+export interface GatedLevel extends LevelState {
+  /** What XP alone would have bought — above `level` whenever the gate is holding. */
+  xpLevel:  number
+  capped:   boolean
+  /** The quests standing between you and the next level. Empty unless capped. */
+  blocking: Quest[]
+}
+
+/**
+ * The level you're actually at. When the gate is holding, the bar reads full and
+ * `blocking` says why — a full bar that does nothing, with no explanation, is
+ * exactly the empty-progress-bar failure this app refuses everywhere else.
+ */
+export function gatedLevel(totalXp: number, completed: Record<string, string> | undefined): GatedLevel {
+  const raw = levelFor(totalXp)
+  const cap = levelCap(completed)
+  if (raw.level <= cap) return { ...raw, xpLevel: raw.level, capped: false, blocking: [] }
+
+  const done   = completed ?? {}
+  const needed = levelCost(cap)
+  return {
+    level:    cap,
+    intoNext: needed,
+    needed,
+    progress: 1,
+    xpLevel:  raw.level,
+    capped:   true,
+    // Leaving level L means clearing stage L
+    blocking: stageQuests(cap).filter(q => !done[q.id]),
+  }
 }
 
 // ─── Level gates ──────────────────────────────────────────────────────────────

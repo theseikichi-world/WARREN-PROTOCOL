@@ -4,12 +4,12 @@
 
 import {
   type Goal, type GoalSlot, type ProgressionState,
-  SWAP_COOLDOWN_DAYS, SECONDARY_MAX_NODES, THRESHOLD_UNLOCK_AT,
+  SWAP_COOLDOWN_DAYS, THRESHOLD_UNLOCK_AT, maxNodesFor,
 } from './types'
 import { applyDraft, draftToGoal, type ChainDraft } from './draft'
 import { baselineTaskId, type LifeSupportTemplate } from './lifeSupport'
 import { evaluateUnlocks, isUnlocked, nodeScore, routineTaskId } from './chain'
-import { awardXp, awardBaselineXp, levelFor, type XpEvent } from './xp'
+import { awardXp, awardBaselineXp, gatedLevel, type XpEvent } from './xp'
 import { evaluateQuests, type Quest, type QuestContext } from './quests'
 import {
   loadState as loadScrap7, saveState as saveScrap7, createExternalTask,
@@ -167,25 +167,24 @@ export function archiveGoal(s: ProgressionState, goalId: string, now = new Date(
 /**
  * Which unlocked routines of a goal may carry a live habit right now.
  *
- * The primary uplink carries all of them. The secondary is capped at
- * SECONDARY_MAX_NODES *active* routines — one already past the integration
- * threshold no longer counts, since it's maintenance rather than work in
- * progress, so mastering something frees the slot it was using.
+ * Both live slots are capped, at a different width: an automatic routine no
+ * longer counts, since it's maintenance rather than work in progress, so
+ * mastering something frees the slot it was using.
  */
 export function instantiableNodes(goal: Goal, tasks: ReturnType<typeof loadScrap7>['tasks']): Set<string> {
   const unlocked = goal.nodes.filter(isUnlocked)
-  if (goal.slot === 'primary') return new Set(unlocked.map(n => n.id))
   if (goal.slot === 'archived') {
     // Frozen: nothing new opens, but whatever already exists stays
     return new Set(unlocked.filter(n => n.scrapTaskId).map(n => n.id))
   }
 
+  const cap = maxNodesFor(goal.slot)
   const byUnlockTime = [...unlocked].sort((a, b) => (a.unlockedAt ?? '').localeCompare(b.unlockedAt ?? ''))
   const allowed = new Set<string>()
   let active = 0
   for (const n of byUnlockTime) {
-    if (nodeScore(n, tasks) >= THRESHOLD_UNLOCK_AT) { allowed.add(n.id); continue }  // integrated — free
-    if (active < SECONDARY_MAX_NODES) { allowed.add(n.id); active++ }
+    if (nodeScore(n, tasks) >= THRESHOLD_UNLOCK_AT) { allowed.add(n.id); continue }  // automatic — free
+    if (active < cap) { allowed.add(n.id); active++ }
   }
   return allowed
 }
@@ -282,14 +281,13 @@ export function trainingCount(goal: Goal, tasks: ReturnType<typeof loadScrap7>['
 }
 
 /**
- * Room for another routine? The secondary uplink trains at most
- * SECONDARY_MAX_NODES at once — an integrated one no longer counts, so
+ * Room for another routine? Both live slots are capped, so installing is a
+ * decision rather than a formality — an automatic routine no longer counts, so
  * mastering something frees the slot it was using.
  */
 export function hasCapacity(goal: Goal, tasks: ReturnType<typeof loadScrap7>['tasks']): boolean {
-  if (goal.slot === 'primary')  return true
   if (goal.slot === 'archived') return false
-  return trainingCount(goal, tasks) < SECONDARY_MAX_NODES
+  return trainingCount(goal, tasks) < maxNodesFor(goal.slot)
 }
 
 /** Add a goal, into a free slot if one exists, otherwise straight to the archive. */
@@ -413,9 +411,9 @@ export function recordBaselineRun(state: ProgressionState, before: number, after
   if (before < THRESHOLD_UNLOCK_AT && after >= THRESHOLD_UNLOCK_AT) events.push({ kind: 'baseline.automatic' })
 
   const gained = events.reduce((sum, e) => sum + awardBaselineXp(e), 0)
-  const levelBefore = levelFor(state.xp).level
+  const levelBefore = gatedLevel(state.xp, state.quests).level
   const next = { ...state, xp: state.xp + gained }
-  const levelAfter = levelFor(next.xp).level
+  const levelAfter = gatedLevel(next.xp, next.quests).level
 
   return { state: next, gained, events, levelUp: levelAfter > levelBefore ? levelAfter : null }
 }
@@ -450,9 +448,9 @@ export function recordRun(
   if (before < THRESHOLD_UNLOCK_AT && after >= THRESHOLD_UNLOCK_AT) events.push({ kind: 'routine.integrated' })
 
   const gained = events.reduce((sum, e) => sum + awardXp(e, goal.slot, fuelMultiplier), 0)
-  const levelBefore = levelFor(state.xp).level
+  const levelBefore = gatedLevel(state.xp, state.quests).level
   const next = { ...state, xp: state.xp + gained }
-  const levelAfter = levelFor(next.xp).level
+  const levelAfter = gatedLevel(next.xp, next.quests).level
 
   return { state: next, gained, events, levelUp: levelAfter > levelBefore ? levelAfter : null }
 }

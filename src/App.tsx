@@ -20,6 +20,7 @@ import { getHubStats, type HubStats } from './hubStats'
 import { ReleaseRadar } from './modules/pictures/ReleaseRadar'
 import Uplinks from './modules/progression/Uplinks'
 import { BandwidthStrip } from './modules/progression/BandwidthStrip'
+import { QuestPanel } from './modules/progression/QuestPanel'
 import { useLocale, t } from './i18n'
 import { CyberIcon } from './components/CyberIcon'
 
@@ -445,6 +446,9 @@ function Dashboard({ displayName }: { displayName: string }) {
       {/* Live now card — only while INFINITY-8 is in service */}
       {INF8_ENABLED && <NowCard />}
 
+      {/* The quest log lives where navigation lives */}
+      <QuestPanel />
+
       {/* Two uplinks, and what they're carrying */}
       <BandwidthStrip />
 
@@ -502,6 +506,14 @@ export default function App() {
 
   // Apply settings on mount and whenever they change
   useEffect(() => { applySettings(settings) }, [settings])
+
+  // The IDENTIFY YOURSELF quest points at Settings, which is an overlay owned
+  // here rather than a route — so it asks for it by event.
+  useEffect(() => {
+    const open = () => setSettingsOpen(true)
+    window.addEventListener('warren:open-settings', open)
+    return () => window.removeEventListener('warren:open-settings', open)
+  }, [])
 
   // Desktop: boot straight into fullscreen Warren OS (the intro plays on top)
   useEffect(() => {

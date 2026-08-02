@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { t as tr } from '../../i18n'
-import { QUEST_DESTINATIONS, type Quest } from './quests'
 import {
   loadProgression, saveProgression, seedIfEmpty, syncChain, installNode, recordRun, syncQuests,
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
@@ -17,12 +16,12 @@ import { ChainForge } from './ChainForge'
 import { NewUplink } from './NewUplink'
 import { goalToDraft, type ChainDraft } from './draft'
 import { nodeState } from './chain'
-import { levelFor, isUnlockedAt } from './xp'
+import { gatedLevel, isUnlockedAt } from './xp'
 import { loadState as loadScrap7, saveState as saveScrap7, trackHabit } from '../scrap7/store'
 import type { Task } from '../scrap7/types'
 import { getModuleSummaries, type ModuleSummaries } from '../bigscreen/moduleStats'
 import { loadSettings } from '../../settings'
-import { SECONDARY_MAX_NODES, type Goal, type ProgressionState } from './types'
+import { maxNodesFor, type Goal, type ProgressionState } from './types'
 
 const CYAN = '#00f5ff'
 const GOLD = '#ffd700'
@@ -31,7 +30,7 @@ const DIM  = 'rgba(148,163,184,0.55)'
 // ─── UPLINKS — two goals, two trees ───────────────────────────────────────────
 
 export default function Uplinks() {
-  const navigate = useNavigate()
+  const location = useLocation()
   const [state, setState] = useState<ProgressionState>(() => seedIfEmpty(loadProgression()))
   const [tasks, setTasks] = useState<Task[]>(() => loadScrap7().tasks)
   const [now, setNow]     = useState(() => new Date())
@@ -47,7 +46,8 @@ export default function Uplinks() {
     const tasksNow = loadScrap7().tasks
     const sumsNow  = getModuleSummaries()
     const chained  = syncChain(seedIfEmpty(loadProgression()))
-    const { state: next, cleared } = syncQuests(chained, { sums: sumsNow, goals: chained.goals, tasks: tasksNow })
+    const { state: next, cleared } = syncQuests(chained, {
+      sums: sumsNow, goals: chained.goals, tasks: tasksNow, name: loadSettings().displayName })
     saveProgression(next)
     if (cleared.length) flash(`⚑ ${tr(cleared[0].title, cleared[0].ru)} — +${cleared[0].xp} XP`)
     setState(next)
@@ -70,6 +70,12 @@ export default function Uplinks() {
     return () => clearInterval(id)
   }, [])
 
+  // The hub's CREATE YOUR FIRST UPLINK quest asks for the picker, not just the
+  // screen — arriving with nowhere to go would be the same dead end one level down.
+  useEffect(() => {
+    if ((location.state as { openNewUplink?: boolean } | null)?.openNewUplink) setCreating(true)
+  }, [location.state])
+
   const persist = useCallback((next: ProgressionState) => {
     const synced = syncChain(next)
     saveProgression(synced)
@@ -83,8 +89,8 @@ export default function Uplinks() {
     const res = installNode(state, nodeId)
     if (!res.ok) {
       flash(res.reason === 'capacity'
-        ? tr(`Secondary uplink is training ${SECONDARY_MAX_NODES} routines already`,
-             `Вторичный канал уже тренирует ${SECONDARY_MAX_NODES} рутины`)
+        ? tr('Training slots are full — take one to automatic to free a slot',
+             'Слоты тренировки заняты — доведите одну до автоматизма, чтобы освободить')
         : tr('Not available yet', 'Пока недоступно'))
       return
     }
@@ -151,18 +157,6 @@ export default function Uplinks() {
     flash(tr('◆ ADOPTED — it counts now', '◆ ПРИНЯТО — теперь считается'))
   }, [])
 
-  /**
-   * Take the quest where it points. The uplink steps resolve against what
-   * actually exists: with no goal yet, "install a routine" opens the place you
-   * create one rather than a tab with nothing on it.
-   */
-  const handleQuestGo = useCallback((quest: Quest) => {
-    const path = QUEST_DESTINATIONS[quest.target].path
-    if (path) { navigate(path); return }
-    if (!primaryGoal(state) && !secondaryGoal(state)) { setCreating(true); return }
-    setView(primaryGoal(state) ? 'primary' : 'secondary')
-  }, [navigate, state])
-
   /** Save an edited protocol. Nothing earned is lost — see applyDraft. */
   const handleForgeCommit = useCallback((draft: ChainDraft) => {
     const res = commitDraft(loadProgression(), draft)
@@ -181,7 +175,7 @@ export default function Uplinks() {
   const cooldown  = cooldownRemaining(state, now)
   const shown     = view === 'primary' ? primary : view === 'secondary' ? secondary : null
   const accent    = view === 'primary' ? CYAN : GOLD
-  const level     = levelFor(state.xp).level
+  const level     = gatedLevel(state.xp, state.quests).level
   const secondaryOpen = isUnlockedAt('secondary', level)
 
   return (
@@ -237,7 +231,7 @@ export default function Uplinks() {
               <p style={{ fontSize: 6.5, fontWeight: 700, letterSpacing: '0.14em',
                 color: on ? `${c}b0` : 'rgba(148,163,184,0.35)' }}>
                 {slot === 'primary' ? tr('PRIMARY', 'ОСНОВНОЙ') : tr('SECONDARY', 'ВТОРИЧНЫЙ')}
-                {slot === 'secondary' && g && secondaryOpen ? ` · ${trainingCount(g, tasks)}/${SECONDARY_MAX_NODES}` : ''}
+                {g && (slot === 'primary' || secondaryOpen) ? ` · ${trainingCount(g, tasks)}/${maxNodesFor(g.slot)}` : ''}
               </p>
               <p style={{ fontSize: 10.5, fontWeight: 900, letterSpacing: '0.08em', marginTop: 3,
                 color: on ? c : 'rgba(148,163,184,0.5)',
@@ -259,8 +253,7 @@ export default function Uplinks() {
               onInstall: handleLifeInstall,
               onAdopt:   handleAdopt,
               onRelease: handleLifeRelease,
-            }}
-            onQuestGo={handleQuestGo} />
+            }} />
         )}
 
         {view !== 'character' && shown ? (
@@ -391,7 +384,7 @@ function GoalActions({ goal, view, cooldown, canInstallMore, onEdit, onPromote, 
         </button>
       )}
       <button onClick={onFreeze} style={btn(false)}>❄ {tr('FREEZE', 'ЗАМОРОЗИТЬ')}</button>
-      {view === 'secondary' && !canInstallMore && (
+      {!canInstallMore && (
         <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${GOLD}90`, marginLeft: 'auto' }}>
           {tr('training slots full', 'слоты тренировки заняты')}
         </span>

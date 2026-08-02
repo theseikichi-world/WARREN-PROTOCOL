@@ -91,7 +91,18 @@ export interface ProgressionState {
 // ─── Slot rules ───────────────────────────────────────────────────────────────
 
 export const SWAP_COOLDOWN_DAYS   = 7
+/**
+ * Concurrent routines in training, per slot. This is the scarcity the whole
+ * tree hangs on: with unlimited installs a tech tree is a checklist you tick
+ * top to bottom, and picking a branch means nothing. A routine past
+ * THRESHOLD_UNLOCK_AT stops counting — it's maintenance, not work in progress —
+ * so mastering something is what frees the slot it was using.
+ */
+export const PRIMARY_MAX_NODES    = 5
 export const SECONDARY_MAX_NODES  = 3     // active routines allowed in the second slot
+
+export const maxNodesFor = (slot: GoalSlot): number =>
+  slot === 'primary' ? PRIMARY_MAX_NODES : slot === 'secondary' ? SECONDARY_MAX_NODES : 0
 export const SECONDARY_XP_RATE    = 0.6
 export const PRIMARY_XP_RATE      = 1.0
 export const DEFAULT_UNLOCKS_AT   = 0.60

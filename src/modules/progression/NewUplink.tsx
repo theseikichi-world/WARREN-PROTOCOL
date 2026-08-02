@@ -4,7 +4,7 @@ import { loadSettings } from '../../settings'
 import { loadLogState } from '../log/store'
 import type { Dream } from '../log/types'
 import { loadProgression, saveProgression, syncChain, commitDraft } from './store'
-import { blankDraft, TEMPLATES, type ChainDraft } from './draft'
+import { blankDraft, type ChainDraft } from './draft'
 import { proposeChain } from './guide'
 import { ChainForge } from './ChainForge'
 
@@ -171,27 +171,10 @@ function Picker({ accent, error, onClose, onDream, onDraft }: {
           </p>
         )}
 
-        <p style={section}>{tr('FROM A TEMPLATE', 'ИЗ ШАБЛОНА')}</p>
-        {TEMPLATES.map(t => (
-          <button key={t.title} onClick={() => onDraft(structuredClone(t))} style={card}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 800, color: 'rgba(230,242,255,0.9)' }}>
-              {t.title}
-            </p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, marginTop: 3 }}>
-              {t.nodes.length} {tr('routines', 'рутин')} · {t.chapters.length} {tr('chapters', 'глав')} · {tr('fully editable', 'полностью правится')}
-            </p>
-          </button>
-        ))}
-
-        <p style={section}>{tr('FROM NOTHING', 'С НУЛЯ')}</p>
-        <button onClick={() => onDraft(blankDraft(''))} style={card}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 800, color: 'rgba(230,242,255,0.9)' }}>
-            {tr('BLANK PROTOCOL', 'ПУСТОЙ ПРОТОКОЛ')}
-          </p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, marginTop: 3 }}>
-            {tr('One chapter, no routines. You write every node.', 'Одна глава, ни одной рутины. Все узлы — ваши.')}
-          </p>
-        </button>
+        {/* A template path used to sit here, offering two hand-written chains.
+            An uplink comes from a dream now: someone else's goals were never
+            going to be yours, and a blank protocol with no dream behind it is
+            a goal you never actually chose. Both paths are gone on purpose. */}
       </div>
     </div>
   )
