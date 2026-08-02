@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `8111a43` · 316 tests · tsc/build/lint clean.
+**State as of the last commit:** `4dd8ec3` · 316 tests · tsc/build/lint clean.
 
 ---
 
@@ -33,7 +33,7 @@ modules to avoid clashing with local `t` loop variables.
 ## 2. The system, in one diagram
 
 ```
-DREAMS (unlimited, in L.O.G — the inbox)
+DREAMS (unlimited, in PATHFINDER — the inbox)
    └─ PROMOTE TO UPLINK → the guide proposes → you edit every node
        └─ UPLINK  (2 slots: primary 1.0× / secondary 0.6×, 2nd at level 5)
            └─ PROTOCOL — a tech tree of ROUTINES
@@ -93,7 +93,7 @@ Flavour belongs on what you read once. (Internal identifiers still say
 - `scrap7/types.ts` — `TaskOrigin`, `Task.origin`, `Task.frozen`, `taskOrigin()`,
   `feedsProgression()`, `isUnbound()`
 - `scrap7/store.ts` — v4 key + origin migration, half-rate decay for frozen
-- `log/Log.tsx` — `LOG_FROZEN = false`; PROMOTE TO UPLINK on each dream card
+- `log/Log.tsx` — **PATHFINDER** (module id + route stay `log`); PROMOTE TO UPLINK
 - `solaris/Solaris.tsx` — UI gated by firmware tier
 - `pictures/radar.ts` + `ReleaseRadar.tsx` — hub release radar
 - `App.tsx` — `WARREN_OS_ENABLED`/`INF8_ENABLED` dormancy flags, `/uplinks` route
@@ -135,7 +135,8 @@ These were each decided deliberately; breaking one silently breaks the product.
     checklist and picking a branch means nothing. An automatic routine stops
     counting, so mastering something is what frees a slot.
 17. **An uplink comes from a dream.** No templates, no blank protocol — those
-    are goals you never chose. L.O.G is the only door.
+    are goals you never chose. PATHFINDER is the only door, and there is no
+    second entrance in UPLINKS: an empty slot points back at PATHFINDER.
 18. **The operator's hours are a hard constraint.** Collected at first run and
     fed to the guide. A cue outside waking hours, or an early-morning chain for
     an owl, fails for reasons unrelated to willpower. Chronotype comes from
@@ -155,6 +156,17 @@ These were each decided deliberately; breaking one silently breaks the product.
 22. **Starting over is total.** Reset wipes the profile and the tour flags too,
     so FIRST CONTACT and every walkthrough replay. Only the API key and
     appearance survive — a credential says nothing about being new.
+23. **One overlay at a time.** Intro → FIRST CONTACT → the arrival → tours, in
+    that order, decided in one place in `App.tsx`. They are all full-screen, so
+    independent booleans stack. Module tours additionally wait for the *hub*
+    tour: the first welcome comes first, and an abandoned tour stays unseen so
+    it resumes rather than being lost.
+24. **Every launch lands on the hub.** HashRouter restores the last route from
+    the URL, so a restart — or a reset done inside a module — used to reopen a
+    screen with nothing left on it.
+25. **Never point at nothing.** A tour step whose anchor is missing or collapsed
+    is dropped from the run. Better still, don't have empty anchors: a surface
+    with nothing in it should say so and offer the way out.
 7. **Firmware is derived from use**, never stored or bought, and cannot skip a
    tier.
 8. **Gate complexity, never utility.** Tier 0 of any instrument fully solves the
@@ -197,6 +209,10 @@ From the original spec (`§10`):
 ### Requested but not yet built (from rounds of use, 2026-08-02)
 Decided with the user; do these in roughly this order.
 
+0. **PATHFINDER rename is user-facing only.** `ModuleId` is still `'log'`, the
+   route is still `/log`, and `log_v1` is still the storage key. Renaming those
+   buys nothing and would break saved data — but a grep for "L.O.G" now only
+   hits comments and internal names, which is the intended end state.
 1. **Retire SCRAP-7's Habits tab.** Half-done: the Character tab is now the
    home for LIFE SUPPORT + YOUR OWN HABITS, so habits *have* somewhere to live.
    What remains is removing the Habits tab from SCRAP-7 (leaving todos +
