@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `80b59e7` · 309 tests · tsc/build/lint clean.
+**State as of the last commit:** `8111a43` · 316 tests · tsc/build/lint clean.
 
 ---
 
@@ -21,7 +21,8 @@ every number is read off real behaviour.
 | `scrap7_v4` | tasks/habits (**v3 kept untouched as a rollback point**) |
 | `warren_progression_v1` | goals, chains, XP, quest ledger |
 | `log_v1` `ardo_v1` `solaris_v1` `journal_v1` `pictures_v1` `infinity8_v1` | modules |
-| `warren_settings` `warren_locale` | app |
+| `warren_settings` `warren_locale` | app + operator profile |
+| `warren_tours_v1` | which guided tours have played |
 | `bigscreen_favs_v1` `bigscreen_launches_v1` | Warren OS (dormant) |
 
 Everything is EN/RU via inline pairs: `t(en, ru)`, imported as `tr` inside
@@ -98,6 +99,7 @@ Flavour belongs on what you read once. (Internal identifiers still say
 - `App.tsx` — `WARREN_OS_ENABLED`/`INF8_ENABLED` dormancy flags, `/uplinks` route
 - `guild.ts` — `built` flag, `group: instrument | utility`; INFINITY-8 `false`
 - `profile.ts` + `Onboarding.tsx` — first-run gate; chronotype from mid-sleep
+- `tour.ts` + `TourOverlay.tsx` — per-surface walkthroughs, anchored by `data-tour`
 - `settings.ts` — profile fields (`gender`, `wakeTime`, `sleepTime`, `onboardedAt`)
 
 ---
@@ -141,9 +143,18 @@ These were each decided deliberately; breaking one silently breaks the product.
 19. **Life support is slotted** (1 at LV1, then 2·4·6·8·12). The template shelf
     is deliberately larger than anyone can run; the SLOT CAP is what bounds the
     baseline economy, and there's a test pinning that rather than the shelf size.
+    **Deleting a basic really deletes it** — no adopt-back list. This is the one
+    place that differs from rules 3/14, and deliberately: an abandoned basic is
+    abandoned, whereas a routine dropped from a chain still has a goal behind it.
 20. **A quest points at the control, not just the screen.** The brief travels
     with the navigation and the destination highlights what to press. Landing on
     a module and being left to hunt is the failure this replaces.
+21. **A gated level costs exactly what its stage pays** (`levelCost` derives from
+    `stageXp`). Finish the stage, fill the bar, level up — one motion. Add a
+    quest to a stage and its level expands to match, automatically.
+22. **Starting over is total.** Reset wipes the profile and the tour flags too,
+    so FIRST CONTACT and every walkthrough replay. Only the API key and
+    appearance survive — a credential says nothing about being new.
 7. **Firmware is derived from use**, never stored or bought, and cannot skip a
    tier.
 8. **Gate complexity, never utility.** Tier 0 of any instrument fully solves the
@@ -203,6 +214,10 @@ Decided with the user; do these in roughly this order.
    and sent to the guide, but nothing else reads them yet — life-support cues
    are still fixed strings, and an owl gets "with breakfast" the same as a lark.
    `dayShape()` is there when a module wants it.
+6. **Anchor the remaining tours.** Hub and UPLINKS have `data-tour` anchors on
+   real controls; L.O.G, SCRAP-7, SOLARIS, JOURNAL, A.R.D.O and PICTURES have
+   written copy but no anchors, so their steps just centre. Adding an anchor is
+   one attribute — the tour needs no code of its own.
 
 ---
 
