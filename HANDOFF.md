@@ -43,8 +43,8 @@ DREAMS (unlimited, in PATHFINDER — the inbox)
                            └─ instruments deepen by use (FIRMWARE v0–v3)
 
 CHARACTER tab (no tree, no gating, answers to no goal)
-   └─ LIFE SUPPORT — the basics, from templates, 3 XP a run
-       └─ YOUR OWN HABITS — hand-made, earn nothing, one press to adopt
+   └─ LIFE SUPPORT — the basics, from templates or your own, 3 XP a run
+       └─ slots open with levels (1 · 2 · 4 · 6 · 8 · 12); deleting one deletes it
 ```
 
 ### Vocabulary (keep it consistent)
@@ -73,13 +73,13 @@ Flavour belongs on what you read once. (Internal identifiers still say
 | `draft.ts` | `ChainDraft`, validation, `applyDraft`/`draftToGoal`, `TEMPLATES` |
 | `guide.ts` | dream → proposed chain: prompt + `normalizeProposal` (paranoid, pure) |
 | `ChainForge.tsx` | the editor + live layout preview; nothing commits from anywhere else |
-| `NewUplink.tsx` | the picker (dream / template / blank) and the guide call |
+| `NewUplink.tsx` | dream → guide call → forge. Reached from PATHFINDER only |
 | `lifeSupport.ts` | LIFE SUPPORT templates — the basics, no tree, no gating |
-| `LifeSupportPanel.tsx` | that section of the character sheet + YOUR OWN HABITS |
+| `LifeSupportPanel.tsx` | that section of the character sheet; slots, picker, custom |
 | `Initiation.tsx` | the arrival. Plays once, flagged by `initiatedAt` |
 | `questNav.ts` | quest→destination state: the brief and the spotlight travel with you |
 | `QuestHint.tsx` | the banner restating why you're on this screen |
-| `xp.ts` | XP events, level curve (`level² × 40`), **the quest gate**, level gates |
+| `xp.ts` | XP events, level curve (derived from `stageXp`), **the quest gate**, level gates |
 | `stats.ts` | six character attributes derived from real module data |
 | `quests.ts` | quest STAGES, objective measurement, and where each step happens |
 | `QuestPanel.tsx` | the quest log — lives on the **hub**, not the character sheet |
@@ -87,7 +87,7 @@ Flavour belongs on what you read once. (Internal identifiers still say
 | `SkillTree.tsx` | the tree diagram + node detail panel |
 | `CharacterSheet.tsx` | level, XP, standing, main quest, attributes, milestones |
 | `Uplinks.tsx` | the screen — tabs CHARACTER \| PRIMARY \| SECONDARY |
-| `BandwidthStrip.tsx` | hub widget |
+| `BandwidthStrip.tsx` | hub widget; when empty it is the door to PATHFINDER |
 
 ### Touched elsewhere
 - `scrap7/types.ts` — `TaskOrigin`, `Task.origin`, `Task.frozen`, `taskOrigin()`,
@@ -119,7 +119,7 @@ These were each decided deliberately; breaking one silently breaks the product.
 4. **Two origins earn, and by very different amounts.** `'chain'` is goal work
    at full rate; `'baseline'` is LIFE SUPPORT at 3 XP a run — every basic done
    in a day must stay under one tier-4 routine run, and there's a test pinning
-   that. `'log'` and `'manual'` earn nothing; YOUR OWN HABITS is `'manual'`.
+   that. `'log'` and `'manual'` earn nothing.
 5. **Locked things state their condition** — `⊘ REQUIRES: Reading aloud @ 0.60
    — currently 0.41`, never an empty progress bar.
 6. **A quest cannot be completed by pressing a button.** Objectives are measured
@@ -127,6 +127,22 @@ These were each decided deliberately; breaking one silently breaks the product.
    checklist in any order; between stages the order is strict, so a later
    objective met early never skips the story. It must always be **one tap from
    the doing**: every quest carries a `target` and names its destination.
+7. **Firmware is derived from use**, never stored or bought, and cannot skip a
+   tier.
+8. **Gate complexity, never utility.** Tier 0 of any instrument fully solves the
+   problem it exists for.
+9. **An inventory item may protect a streak but never advance integration.**
+10. **Rewards inform, never congratulate.** Show the curve, the delta, the
+    estimate. One user, and he knows when he's being flattered.
+11. **`ALPHA = 0.05` is not to be changed.** The score curve is Loop Habit
+    Tracker's and it's correct.
+12. **Don't delete features.** Anything cut goes behind the `built` flag.
+13. **A routine's KEY is permanent.** Node ids derive from it and habit ids
+    derive from those, so the integration score hangs off the key. Titles are
+    free to change; keys are never re-derived. This is what makes editing a
+    live protocol safe.
+14. **Editing never deletes a habit either.** A routine dropped from a chain is
+    released to SCRAP-7 (`origin: 'manual'`), score and streak intact.
 15. **XP alone never levels you up.** Each early level has a stage of quests
     behind it (`gatedLevel` in `xp.ts`). A held level states what is holding it
     — "⊘ LEVEL 2 HELD — 4 objectives left" — never a full bar that does nothing.
@@ -167,22 +183,6 @@ These were each decided deliberately; breaking one silently breaks the product.
 25. **Never point at nothing.** A tour step whose anchor is missing or collapsed
     is dropped from the run. Better still, don't have empty anchors: a surface
     with nothing in it should say so and offer the way out.
-7. **Firmware is derived from use**, never stored or bought, and cannot skip a
-   tier.
-8. **Gate complexity, never utility.** Tier 0 of any instrument fully solves the
-   problem it exists for.
-9. **An inventory item may protect a streak but never advance integration.**
-10. **Rewards inform, never congratulate.** Show the curve, the delta, the
-    estimate. One user, and he knows when he's being flattered.
-11. **`ALPHA = 0.05` is not to be changed.** The score curve is Loop Habit
-    Tracker's and it's correct.
-12. **Don't delete features.** Anything cut goes behind the `built` flag.
-13. **A routine's KEY is permanent.** Node ids derive from it and habit ids
-    derive from those, so the integration score hangs off the key. Titles are
-    free to change; keys are never re-derived. This is what makes editing a
-    live protocol safe.
-14. **Editing never deletes a habit either.** A routine dropped from a chain is
-    released to SCRAP-7 (`origin: 'manual'`), score and streak intact.
 
 ---
 
