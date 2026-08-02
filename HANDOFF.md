@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `240792d` · 284 tests · tsc/build/lint clean.
+**State as of the last commit:** `80b59e7` · 309 tests · tsc/build/lint clean.
 
 ---
 
@@ -76,6 +76,8 @@ Flavour belongs on what you read once. (Internal identifiers still say
 | `lifeSupport.ts` | LIFE SUPPORT templates — the basics, no tree, no gating |
 | `LifeSupportPanel.tsx` | that section of the character sheet + YOUR OWN HABITS |
 | `Initiation.tsx` | the arrival. Plays once, flagged by `initiatedAt` |
+| `questNav.ts` | quest→destination state: the brief and the spotlight travel with you |
+| `QuestHint.tsx` | the banner restating why you're on this screen |
 | `xp.ts` | XP events, level curve (`level² × 40`), **the quest gate**, level gates |
 | `stats.ts` | six character attributes derived from real module data |
 | `quests.ts` | quest STAGES, objective measurement, and where each step happens |
@@ -94,7 +96,9 @@ Flavour belongs on what you read once. (Internal identifiers still say
 - `solaris/Solaris.tsx` — UI gated by firmware tier
 - `pictures/radar.ts` + `ReleaseRadar.tsx` — hub release radar
 - `App.tsx` — `WARREN_OS_ENABLED`/`INF8_ENABLED` dormancy flags, `/uplinks` route
-- `guild.ts` — `built` flag; INFINITY-8 set to `false`
+- `guild.ts` — `built` flag, `group: instrument | utility`; INFINITY-8 `false`
+- `profile.ts` + `Onboarding.tsx` — first-run gate; chronotype from mid-sleep
+- `settings.ts` — profile fields (`gender`, `wakeTime`, `sleepTime`, `onboardedAt`)
 
 ---
 
@@ -130,6 +134,16 @@ These were each decided deliberately; breaking one silently breaks the product.
     counting, so mastering something is what frees a slot.
 17. **An uplink comes from a dream.** No templates, no blank protocol — those
     are goals you never chose. L.O.G is the only door.
+18. **The operator's hours are a hard constraint.** Collected at first run and
+    fed to the guide. A cue outside waking hours, or an early-morning chain for
+    an owl, fails for reasons unrelated to willpower. Chronotype comes from
+    mid-sleep, never from asking "are you a morning person?".
+19. **Life support is slotted** (1 at LV1, then 2·4·6·8·12). The template shelf
+    is deliberately larger than anyone can run; the SLOT CAP is what bounds the
+    baseline economy, and there's a test pinning that rather than the shelf size.
+20. **A quest points at the control, not just the screen.** The brief travels
+    with the navigation and the destination highlights what to press. Landing on
+    a module and being left to hunt is the failure this replaces.
 7. **Firmware is derived from use**, never stored or bought, and cannot skip a
    tier.
 8. **Gate complexity, never utility.** Tier 0 of any instrument fully solves the
@@ -181,14 +195,14 @@ Decided with the user; do these in roughly this order.
 3. **SOLARIS levels.** Surface the firmware tier as a visible level with the
    next unlock and its condition stated ("v1 Calories — 5 hydration days, you
    have 2"). The tier logic in `tools.ts` already exists; this is legibility.
-4. **Sidebar split INSTRUMENTS / UTILITIES.** A divider, with PICTURES and
-   A.R.D.O grouped under UTILITIES. **Grouping only** — A.R.D.O keeps earning
-   RECALL and its planned firmware tiers. The user chose the visual split
-   explicitly over a real demotion.
-5. **The rest of the tree work.** Scarcity landed (rule 16) and the guide is
+4. **The rest of the tree work.** Scarcity landed (rule 16) and the guide is
    asked for 12-18 branching nodes with capstones, but **no real proposal has
    been read back** — see the caveat below. Optional/side nodes and a visual
    treatment for capstones are still open.
+5. **Use the profile beyond the guide prompt.** Wake/sleep hours are collected
+   and sent to the guide, but nothing else reads them yet — life-support cues
+   are still fixed strings, and an owl gets "with breakfast" the same as a lark.
+   `dayShape()` is there when a module wants it.
 
 ---
 
