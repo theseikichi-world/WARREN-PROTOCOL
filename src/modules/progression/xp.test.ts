@@ -90,10 +90,10 @@ describe('character stats', () => {
     expect(overallRating(stats)).toBeNull()
   })
 
-  it('averages integration across installed routines only', () => {
+  it('averages automatism across installed routines only', () => {
     const g = goal([node('a', 't1'), node('b', 't2'), node('c')])   // c not installed
     const stats = deriveStats([g], [habit('t1', 0.8), habit('t2', 0.4)], EMPTY)
-    expect(stats.find(s => s.key === 'integration')?.value).toBe(60)
+    expect(stats.find(s => s.key === 'automatism')?.value).toBe(60)
   })
 
   it('measures resolve as integrated over installed', () => {
@@ -104,13 +104,13 @@ describe('character stats', () => {
 
   it('ignores routines belonging to a frozen goal', () => {
     const g = goal([node('a', 't1')], 'archived')
-    expect(deriveStats([g], [habit('t1', 0.9)], EMPTY).find(s => s.key === 'integration')?.value).toBeNull()
+    expect(deriveStats([g], [habit('t1', 0.9)], EMPTY).find(s => s.key === 'automatism')?.value).toBeNull()
   })
 
-  it('scales uptime against the 66-day formation median and caps at 100', () => {
+  it('scales streak against the 66-day formation median and caps at 100', () => {
     const g = goal([node('a', 't1')])
-    expect(deriveStats([g], [habit('t1', 0.5, 33)], EMPTY).find(s => s.key === 'uptime')?.value).toBe(50)
-    expect(deriveStats([g], [habit('t1', 0.5, 200)], EMPTY).find(s => s.key === 'uptime')?.value).toBe(100)
+    expect(deriveStats([g], [habit('t1', 0.5, 33)], EMPTY).find(s => s.key === 'streak')?.value).toBe(50)
+    expect(deriveStats([g], [habit('t1', 0.5, 200)], EMPTY).find(s => s.key === 'streak')?.value).toBe(100)
   })
 
   it('picks vitality and recall up from the other modules', () => {

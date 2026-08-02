@@ -416,7 +416,7 @@ function NodeEditor({
           </div>
 
           <div>
-            <p style={label}>{tr('REQUIRES — integrated first', 'ТРЕБУЕТ — сначала интегрировать')}</p>
+            <p style={label}>{tr('REQUIRES — automatic first', 'ТРЕБУЕТ — сначала на автомат')}</p>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               {draft.nodes.filter(n => n.key !== node.key).map(n => (
                 <button key={n.key} onClick={() => onTogglePrereq(n.key)} style={chip(node.after.includes(n.key))}>

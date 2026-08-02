@@ -205,12 +205,12 @@ function NodeDetail({ node, goal, tasks, accent, state, frozen, onInstall, onTra
               color: hTier.color, textTransform: 'uppercase' }}>{hTier.label}</span>
             {(task.streak ?? 0) > 0 && (
               <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(255,107,0,0.85)' }}>
-                {task.streak} {tr('UPTIME', 'АПТАЙМ')}
+                {task.streak} {tr('STREAK', 'СЕРИЯ')}
               </span>
             )}
             <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, marginLeft: 'auto' }}>
               {frozen ? tr('frozen · half decay', 'заморожено · полураспад')
-                : score >= THRESHOLD_UNLOCK_AT ? tr('integrated', 'интегрировано')
+                : score >= THRESHOLD_UNLOCK_AT ? tr('automatic', 'на автомате')
                 : `≈${estimateDays(score, node.tier)}${tr('d left', 'д осталось')}`}
             </span>
           </div>

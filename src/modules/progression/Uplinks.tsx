@@ -5,7 +5,10 @@ import {
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
   cooldownRemaining, promoteSecondary, assignPrimary, assignSecondary, archiveGoal,
   trainingCount, hasCapacity, commitDraft,
+  installLifeSupport, releaseLifeSupport, adoptAsLifeSupport, recordBaselineRun,
 } from './store'
+import { Initiation } from './Initiation'
+import type { LifeSupportTemplate } from './lifeSupport'
 import { SkillTree } from './SkillTree'
 import { CharacterSheet } from './CharacterSheet'
 import { ChainForge } from './ChainForge'
@@ -108,6 +111,43 @@ export default function Uplinks() {
     reconcile()
   }, [reconcile])
 
+  // ── Life support: the habits with no tree, owned by the character sheet ──
+
+  /** Same +1 path as a routine, but banked flat and small — see recordBaselineRun. */
+  const handleBaselineTrack = useCallback((taskId: string) => {
+    const s7     = loadScrap7()
+    const before = s7.tasks.find(t => t.id === taskId)?.score ?? 0
+    const { state: next } = trackHabit(s7, taskId, 1)
+    saveScrap7(next)
+    const after = next.tasks.find(t => t.id === taskId)?.score ?? 0
+
+    const reward = recordBaselineRun(loadProgression(), before, after)
+    saveProgression(reward.state)
+    setState(reward.state)
+    setTasks(next.tasks)
+    if (reward.levelUp) flash(tr(`LEVEL ${reward.levelUp}`, `УРОВЕНЬ ${reward.levelUp}`))
+    else if (reward.gained) flash(`+${reward.gained} XP`)
+    window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'uplinks' } }))
+  }, [])
+
+  const handleLifeInstall = useCallback((template: LifeSupportTemplate) => {
+    const added = installLifeSupport(template, tr(template.title, template.ru), tr(template.unit, template.unitRu))
+    setTasks(loadScrap7().tasks)
+    if (added) flash(tr('◆ LIFE SUPPORT ONLINE', '◆ ЖИЗНЕОБЕСПЕЧЕНИЕ АКТИВНО'))
+  }, [])
+
+  const handleLifeRelease = useCallback((taskId: string) => {
+    releaseLifeSupport(taskId)
+    setTasks(loadScrap7().tasks)
+    flash(tr('Kept as your own habit', 'Оставлено как ваша привычка'))
+  }, [])
+
+  const handleAdopt = useCallback((taskId: string) => {
+    adoptAsLifeSupport(taskId)
+    setTasks(loadScrap7().tasks)
+    flash(tr('◆ ADOPTED — it counts now', '◆ ПРИНЯТО — теперь считается'))
+  }, [])
+
   /** Save an edited protocol. Nothing earned is lost — see applyDraft. */
   const handleForgeCommit = useCallback((draft: ChainDraft) => {
     const res = commitDraft(loadProgression(), draft)
@@ -198,7 +238,13 @@ export default function Uplinks() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
         {view === 'character' && (
           <CharacterSheet goals={state.goals} tasks={tasks} xp={state.xp}
-            sums={sums} name={loadSettings().displayName} quests={state.quests} />
+            sums={sums} name={loadSettings().displayName} quests={state.quests}
+            life={{
+              onTrack:   handleBaselineTrack,
+              onInstall: handleLifeInstall,
+              onAdopt:   handleAdopt,
+              onRelease: handleLifeRelease,
+            }} />
         )}
 
         {view !== 'character' && shown ? (
@@ -261,6 +307,16 @@ export default function Uplinks() {
           </>
         )}
       </div>
+
+      {/* The arrival. Plays once, before there is anything to congratulate. */}
+      {state.initiatedAt == null && (
+        <Initiation name={loadSettings().displayName}
+          onDone={() => {
+            const next = { ...loadProgression(), initiatedAt: new Date().toISOString() }
+            saveProgression(next)
+            setState(next)
+          }} />
+      )}
 
       {creating && (
         <NewUplink accent={CYAN}

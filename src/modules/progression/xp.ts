@@ -16,6 +16,8 @@ export type XpEvent =
   | { kind: 'routine.integrated' }                  // crossed 0.70
   | { kind: 'breach.cleared' }                      // a chapter's real-world event
   | { kind: 'tool.tier' }                           // an instrument deepened
+  | { kind: 'baseline.run' }                        // a LIFE SUPPORT habit, once a day
+  | { kind: 'baseline.automatic' }                  // a LIFE SUPPORT habit crossed 0.70
 
 /** Base award before slot rate and fuel. Tier weights the effort a run costs. */
 export function baseXp(e: XpEvent): number {
@@ -26,8 +28,18 @@ export function baseXp(e: XpEvent): number {
     case 'routine.integrated': return 90
     case 'breach.cleared':     return 200
     case 'tool.tier':          return 50
+    // Life support pays a fraction of the cheapest routine (8) on purpose. It
+    // should register, and it must never become the efficient way to level.
+    case 'baseline.run':       return 3
+    case 'baseline.automatic': return 25
   }
 }
+
+/**
+ * Life support isn't goal work, so no slot rate applies — it belongs to no
+ * uplink and is worth the same whichever goal happens to be loaded.
+ */
+export const awardBaselineXp = (e: XpEvent): number => baseXp(e)
 
 /**
  * Final award. Slot rate keeps the secondary uplink honest at 0.6×; fuel is

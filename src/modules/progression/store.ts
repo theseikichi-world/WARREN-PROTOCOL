@@ -7,8 +7,9 @@ import {
   SWAP_COOLDOWN_DAYS, SECONDARY_MAX_NODES, THRESHOLD_UNLOCK_AT,
 } from './types'
 import { applyDraft, draftToGoal, type ChainDraft } from './draft'
+import { baselineTaskId, type LifeSupportTemplate } from './lifeSupport'
 import { evaluateUnlocks, isUnlocked, nodeScore, routineTaskId } from './chain'
-import { awardXp, levelFor, type XpEvent } from './xp'
+import { awardXp, awardBaselineXp, levelFor, type XpEvent } from './xp'
 import { evaluateQuests, type Quest, type QuestContext } from './quests'
 import {
   loadState as loadScrap7, saveState as saveScrap7, createExternalTask,
@@ -16,7 +17,7 @@ import {
 
 const KEY = 'warren_progression_v1'
 
-const INITIAL: ProgressionState = { goals: [], seeded: false, xp: 0, quests: {} }
+const INITIAL: ProgressionState = { goals: [], seeded: false, xp: 0, quests: {}, initiatedAt: null }
 
 export function loadProgression(): ProgressionState {
   try {
@@ -28,6 +29,7 @@ export function loadProgression(): ProgressionState {
       seeded: parsed.seeded === true,
       xp:     typeof parsed.xp === 'number' ? parsed.xp : 0,
       quests: (parsed.quests && typeof parsed.quests === 'object') ? parsed.quests : {},
+      initiatedAt: typeof parsed.initiatedAt === 'string' ? parsed.initiatedAt : null,
     }
   } catch {
     return structuredClone(INITIAL)
@@ -357,6 +359,65 @@ export function commitDraft(s: ProgressionState, draft: ChainDraft, now = new Da
     goalId: goal.id,
     detached,
   }
+}
+
+// ─── Life support ─────────────────────────────────────────────────────────────
+// The basics, chosen from a template. Same idempotency rule as a routine: the
+// id derives from the template, and an existing habit is never rebuilt.
+
+/**
+ * Install a baseline habit. Returns false when it already exists.
+ * The cue stays on the template rather than the task — SCRAP-7 has no field
+ * for it, and life support anchors are fixed rather than authored.
+ */
+export function installLifeSupport(template: LifeSupportTemplate, title: string, unit: string): boolean {
+  const id = baselineTaskId(template.id)
+  if (loadScrap7().tasks.some(t => t.id === id)) return false
+
+  createExternalTask({
+    id,
+    text:      title,
+    category:  'Life support',
+    taskType:  'habit',
+    direction: 'positive',
+    origin:    'baseline',
+    target:    template.target,
+    unit,
+  })
+  return true
+}
+
+/** Drop a baseline habit from life support. Kept, not deleted — it becomes yours. */
+export function releaseLifeSupport(taskId: string): void {
+  const s7 = loadScrap7()
+  if (!s7.tasks.some(t => t.id === taskId)) return
+  saveScrap7({ ...s7, tasks: s7.tasks.map(t => t.id === taskId ? { ...t, origin: 'manual' as const } : t) })
+  window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'progression' } }))
+}
+
+/** Adopt a hand-made habit into life support, so it starts earning. */
+export function adoptAsLifeSupport(taskId: string): void {
+  const s7 = loadScrap7()
+  if (!s7.tasks.some(t => t.id === taskId)) return
+  saveScrap7({ ...s7, tasks: s7.tasks.map(t => t.id === taskId ? { ...t, origin: 'baseline' as const } : t) })
+  window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'progression' } }))
+}
+
+/**
+ * Bank a life-support run. Flat and small: no slot rate, no tier weighting, no
+ * fuel. Crossing into automatic pays once, detected from the score either side
+ * of the run exactly as a routine's crossing is.
+ */
+export function recordBaselineRun(state: ProgressionState, before: number, after: number): RunReward {
+  const events: XpEvent[] = [{ kind: 'baseline.run' }]
+  if (before < THRESHOLD_UNLOCK_AT && after >= THRESHOLD_UNLOCK_AT) events.push({ kind: 'baseline.automatic' })
+
+  const gained = events.reduce((sum, e) => sum + awardBaselineXp(e), 0)
+  const levelBefore = levelFor(state.xp).level
+  const next = { ...state, xp: state.xp + gained }
+  const levelAfter = levelFor(next.xp).level
+
+  return { state: next, gained, events, levelUp: levelAfter > levelBefore ? levelAfter : null }
 }
 
 // ─── Earning ──────────────────────────────────────────────────────────────────

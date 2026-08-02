@@ -34,27 +34,29 @@ function installedRoutines(goals: Goal[], tasks: Task[]): { score: number; strea
 export function deriveStats(goals: Goal[], tasks: Task[], sums: ModuleSummaries): Stat[] {
   const routines = installedRoutines(goals, tasks)
 
-  // INTEGRATION — how deep the installed routines actually run
-  const integration: Stat = {
-    key: 'integration', label: 'INTEGRATION', ru: 'ИНТЕГРАЦИЯ', color: '#00f5ff',
+  // AUTOMATISM — how automatic the installed routines have actually become.
+  // Named for what it measures: this is the number you read every day, so it
+  // says the plain thing rather than the in-world thing.
+  const automatism: Stat = {
+    key: 'automatism', label: 'AUTOMATISM', ru: 'АВТОМАТИЗМ', color: '#00f5ff',
     value: routines.length ? pct((routines.reduce((s, r) => s + r.score, 0) / routines.length) * 100) : null,
     detail: routines.length ? `${routines.length} routines running` : 'no routines installed',
   }
 
-  // UPTIME — the longest unbroken run you're currently holding
+  // STREAK — the longest unbroken run you're currently holding
   const bestStreak = routines.reduce((m, r) => Math.max(m, r.streak), 0)
-  const uptime: Stat = {
-    key: 'uptime', label: 'UPTIME', ru: 'АПТАЙМ', color: '#ff6b00',
+  const streak: Stat = {
+    key: 'streak', label: 'STREAK', ru: 'СЕРИЯ', color: '#ff6b00',
     value: routines.length ? pct((bestStreak / 66) * 100) : null,   // 66 days ≈ the median formation point
     detail: routines.length ? `${bestStreak} day best run` : 'nothing running yet',
   }
 
   // RESOLVE — how much of what you started you actually finished
-  const integrated = routines.filter(r => r.score >= THRESHOLD_UNLOCK_AT).length
+  const automatic = routines.filter(r => r.score >= THRESHOLD_UNLOCK_AT).length
   const resolve: Stat = {
     key: 'resolve', label: 'RESOLVE', ru: 'ВОЛЯ', color: '#ffd700',
-    value: routines.length ? pct((integrated / routines.length) * 100) : null,
-    detail: routines.length ? `${integrated}/${routines.length} integrated` : 'nothing to hold yet',
+    value: routines.length ? pct((automatic / routines.length) * 100) : null,
+    detail: routines.length ? `${automatic}/${routines.length} automatic` : 'nothing to hold yet',
   }
 
   // VITALITY — SOLARIS, the body the rest of it runs on
@@ -81,7 +83,7 @@ export function deriveStats(goals: Goal[], tasks: Task[], sums: ModuleSummaries)
     detail: jr && jr.entries > 0 ? `${jr.entries} entries · ${jr.streak} day streak` : 'journal untouched',
   }
 
-  return [integration, uptime, resolve, vitality, recall, insight]
+  return [automatism, streak, resolve, vitality, recall, insight]
 }
 
 /** One headline number: the average of whatever is actually measurable. */

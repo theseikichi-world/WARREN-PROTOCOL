@@ -6,6 +6,7 @@ import { deriveStats, overallRating, type Stat } from './stats'
 import { nodeState } from './chain'
 import type { ModuleSummaries } from '../bigscreen/moduleStats'
 import { activeQuest, questProgress, QUEST_LINE } from './quests'
+import { LifeSupportPanel } from './LifeSupportPanel'
 
 const CYAN = '#00f5ff'
 const GOLD = '#ffd700'
@@ -16,13 +17,15 @@ const DIM  = 'rgba(148,163,184,0.5)'
 // you actually did, which is the only version of an RPG sheet that stays true
 // when the character is a real person.
 
-export function CharacterSheet({ goals, tasks, xp, sums, name, quests }: {
+export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life }: {
   goals:  Goal[]
   tasks:  Task[]
   xp:     number
   sums:   ModuleSummaries
   name:   string
   quests: Record<string, string>
+  /** Life-support handlers — the character sheet owns the habits with no tree. */
+  life:   Omit<Parameters<typeof LifeSupportPanel>[0], 'tasks'>
 }) {
   const lvl    = levelFor(xp)
   const stats  = deriveStats(goals, tasks, sums)
@@ -85,6 +88,9 @@ export function CharacterSheet({ goals, tasks, xp, sums, name, quests }: {
 
       {/* Main quest — the starting zone hands you one verb at a time */}
       <MainQuest quests={quests} ctx={{ sums, goals, tasks }} />
+
+      {/* Life support — the habits that answer to no goal */}
+      <LifeSupportPanel tasks={tasks} {...life} />
 
       {/* Attributes */}
       <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.2em',

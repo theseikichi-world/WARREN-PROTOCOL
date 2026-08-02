@@ -84,6 +84,8 @@ export interface ProgressionState {
   seeded:  boolean               // reference uplinks installed once
   xp:      number                // the single progression currency
   quests:  Record<string, string>  // quest id → cleared at
+  /** When the operator was first briefed. The arrival plays exactly once. */
+  initiatedAt?: string | null
 }
 
 // ─── Slot rules ───────────────────────────────────────────────────────────────

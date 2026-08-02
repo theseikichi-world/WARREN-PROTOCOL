@@ -4,13 +4,19 @@ export type TaskType  = 'habit' | 'daily' | 'todo'
 
 /**
  * Where a task came from. Decides who it answers to:
- *   manual — you made it here. Shows in UNBOUND, no progression contribution.
- *   log    — synced from L.O.G. Belongs to a system that still exists, so it is
- *            NOT an orphan and never appears in UNBOUND. Earns no progression XP.
- *   chain  — carries a PROTOCOL routine. The only origin that feeds progression.
+ *   manual   — you made it here. Yours, earns nothing, listed under YOUR OWN
+ *              HABITS on the character sheet where it can be adopted.
+ *   log      — synced from L.O.G. Belongs to a system that still exists, so it
+ *              is not an orphan. Earns no progression XP.
+ *   chain    — carries a PROTOCOL routine. Goal work, full XP.
+ *   baseline — LIFE SUPPORT: the basics of being a person, chosen from a
+ *              template on the character sheet. No tree, no gating, no
+ *              prerequisites, and deliberately a fraction of the XP — showing
+ *              up for your own life should count for something, but it must
+ *              never out-earn the work you picked a goal to do.
  * Legacy tasks have no field; `taskOrigin()` infers it.
  */
-export type TaskOrigin = 'manual' | 'log' | 'chain'
+export type TaskOrigin = 'manual' | 'log' | 'chain' | 'baseline'
 export type Priority  = 'trivial' | 'easy' | 'medium' | 'hard'
 export type Direction = 'positive' | 'negative'
 export type TimeOfDay = 'morning' | 'day' | 'evening' | 'daily'
@@ -68,12 +74,21 @@ export function taskOrigin(t: Pick<Task, 'origin' | 'logMission' | 'logDream'>):
   return (t.logMission || t.logDream) ? 'log' : 'manual'
 }
 
-/** Only PROTOCOL routines move the progression loop. */
+/** Routines and life support earn; a hand-made task or a L.O.G sync does not. */
 export function feedsProgression(t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): boolean {
-  return taskOrigin(t) === 'chain'
+  const o = taskOrigin(t)
+  return o === 'chain' || o === 'baseline'
 }
 
-/** UNBOUND is for hand-made tasks only — L.O.G's tasks have a home already. */
+/** A PROTOCOL routine — the only origin with a tree, gating and full XP. */
+export const isRoutine = (t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): boolean =>
+  taskOrigin(t) === 'chain'
+
+/** LIFE SUPPORT — chosen from a template, no tree, a fraction of the XP. */
+export const isBaseline = (t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): boolean =>
+  taskOrigin(t) === 'baseline'
+
+/** Yours: made by hand, belongs to no system. Listed so it can be adopted. */
 export function isUnbound(t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): boolean {
   return taskOrigin(t) === 'manual'
 }
