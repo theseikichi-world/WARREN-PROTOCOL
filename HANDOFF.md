@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `7e551d9` · 273 tests · tsc/build/lint clean.
+**State as of the last commit:** `240792d` · 284 tests · tsc/build/lint clean.
 
 ---
 
@@ -76,9 +76,10 @@ Flavour belongs on what you read once. (Internal identifiers still say
 | `lifeSupport.ts` | LIFE SUPPORT templates — the basics, no tree, no gating |
 | `LifeSupportPanel.tsx` | that section of the character sheet + YOUR OWN HABITS |
 | `Initiation.tsx` | the arrival. Plays once, flagged by `initiatedAt` |
-| `xp.ts` | XP events, level curve (`level² × 40`), level gates |
+| `xp.ts` | XP events, level curve (`level² × 40`), **the quest gate**, level gates |
 | `stats.ts` | six character attributes derived from real module data |
-| `quests.ts` | main quest line, objective measurement, and where each step happens |
+| `quests.ts` | quest STAGES, objective measurement, and where each step happens |
+| `QuestPanel.tsx` | the quest log — lives on the **hub**, not the character sheet |
 | `tools.ts` | FIRMWARE tiers (SOLARIS implemented) |
 | `SkillTree.tsx` | the tree diagram + node detail panel |
 | `CharacterSheet.tsx` | level, XP, standing, main quest, attributes, milestones |
@@ -116,10 +117,19 @@ These were each decided deliberately; breaking one silently breaks the product.
 5. **Locked things state their condition** — `⊘ REQUIRES: Reading aloud @ 0.60
    — currently 0.41`, never an empty progress bar.
 6. **A quest cannot be completed by pressing a button.** Objectives are measured
-   from data; quests clear because the record says so. Order holds — a later
-   objective met early never skips the line. But it must always be **one tap
-   from the doing**: every quest carries a `target`, the card is the button, and
-   it names its destination before you press it.
+   from data; quests clear because the record says so. Within a STAGE they're a
+   checklist in any order; between stages the order is strict, so a later
+   objective met early never skips the story. It must always be **one tap from
+   the doing**: every quest carries a `target` and names its destination.
+15. **XP alone never levels you up.** Each early level has a stage of quests
+    behind it (`gatedLevel` in `xp.ts`). A held level states what is holding it
+    — "⊘ LEVEL 2 HELD — 4 objectives left" — never a full bar that does nothing.
+16. **Scarcity is what makes the tree a tree.** Both live slots cap concurrent
+    training (primary 5, secondary 3). With unlimited installs a tech tree is a
+    checklist and picking a branch means nothing. An automatic routine stops
+    counting, so mastering something is what frees a slot.
+17. **An uplink comes from a dream.** No templates, no blank protocol — those
+    are goals you never chose. L.O.G is the only door.
 7. **Firmware is derived from use**, never stored or bought, and cannot skip a
    tier.
 8. **Gate complexity, never utility.** Tier 0 of any instrument fully solves the
@@ -159,7 +169,7 @@ From the original spec (`§10`):
 | 7 | Level gates — *partly done in `xp.ts`* | 🟡 |
 | 8 | Tool tiers for A.R.D.O + JOURNAL | ⬜ |
 
-### Requested but not yet built (from a round of use, 2026-08-02)
+### Requested but not yet built (from rounds of use, 2026-08-02)
 Decided with the user; do these in roughly this order.
 
 1. **Retire SCRAP-7's Habits tab.** Half-done: the Character tab is now the
@@ -175,15 +185,24 @@ Decided with the user; do these in roughly this order.
    A.R.D.O grouped under UTILITIES. **Grouping only** — A.R.D.O keeps earning
    RECALL and its planned firmware tiers. The user chose the visual split
    explicitly over a real demotion.
+5. **The rest of the tree work.** Scarcity landed (rule 16) and the guide is
+   asked for 12-18 branching nodes with capstones, but **no real proposal has
+   been read back** — see the caveat below. Optional/side nodes and a visual
+   treatment for capstones are still open.
 
 ---
 
 ## 6. Known gaps and honest caveats
 
-- **The guide's proposal quality is untested against a real key.** The prompt,
-  the normaliser and every failure mode are covered by tests and were driven
-  live, but the browser profile has no API key, so no real proposal has been
-  read end to end. Worth doing once on the desktop app before trusting it.
+- **The guide's proposal quality is still untested against a real key**, and it
+  now matters more: the prompt asks for 12-18 nodes with parallel branches and
+  a capstone per chapter, and nothing has verified the model actually produces
+  that shape. The normaliser guarantees it *opens*, not that it's a good tree.
+  Worth one real run on the desktop app.
+- **Stage 1 assumes the dream pipeline works.** CHOOSE ONE DREAM cannot be
+  cleared without promoting a dream, which needs either an API key or the BY
+  HAND path. With neither a key nor a dream written, a new user is stuck at
+  level 1 — by design, but it makes L.O.G load-bearing on first run.
 - **A blank routine's key is `routine`/`routine-2`** — keys are permanent and
   derived at creation, so one added before it's named keeps the placeholder.
   Internal only; ids are never shown. Deliberate: re-deriving keys would break
