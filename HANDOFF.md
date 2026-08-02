@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `7024ab2` · 249 tests · tsc/build/lint clean.
+**State as of the last commit:** `732cc4f` · 267 tests · tsc/build/lint clean.
 
 ---
 
@@ -36,16 +36,26 @@ DREAMS (unlimited, in L.O.G — the inbox)
    └─ PROMOTE TO UPLINK → the guide proposes → you edit every node
        └─ UPLINK  (2 slots: primary 1.0× / secondary 0.6×, 2nd at level 5)
            └─ PROTOCOL — a tech tree of ROUTINES
-               └─ ROUTINE = a SCRAP-7 habit carrying INTEGRATION (score 0–1)
-                   └─ integration ≥ 0.60 unlocks the next routine
+               └─ ROUTINE = a SCRAP-7 habit carrying AUTOMATISM (score 0–1)
+                   └─ automatism ≥ 0.60 unlocks the next routine
                        └─ routines grant INSTRUMENTS (modules)
                            └─ instruments deepen by use (FIRMWARE v0–v3)
+
+CHARACTER tab (no tree, no gating, answers to no goal)
+   └─ LIFE SUPPORT — the basics, from templates, 3 XP a run
+       └─ YOUR OWN HABITS — hand-made, earn nothing, one press to adopt
 ```
 
 ### Vocabulary (keep it consistent)
 UPLINK = goal · BANDWIDTH = slots · PROTOCOL = chain · ROUTINE = node ·
-INTEGRATION = automatism score · UPTIME = streak · BREACH = chapter event ·
-CACHE = inventory · CREDITS · FIRMWARE v0–v3 = tool tier.
+AUTOMATISM = the 0–1 score · STREAK = days unbroken · BREACH = chapter event ·
+LIFE SUPPORT = baseline habits · CACHE = inventory · CREDITS ·
+FIRMWARE v0–v3 = tool tier.
+
+**The gauges say the plain thing.** AUTOMATISM and STREAK replaced INTEGRATION
+and UPTIME because they're read every day and the in-world names taught nothing.
+Flavour belongs on what you read once. (Internal identifiers still say
+`integration`/`integrated` — renaming those is churn with no user benefit.)
 
 ---
 
@@ -63,6 +73,9 @@ CACHE = inventory · CREDITS · FIRMWARE v0–v3 = tool tier.
 | `guide.ts` | dream → proposed chain: prompt + `normalizeProposal` (paranoid, pure) |
 | `ChainForge.tsx` | the editor + live layout preview; nothing commits from anywhere else |
 | `NewUplink.tsx` | the picker (dream / template / blank) and the guide call |
+| `lifeSupport.ts` | LIFE SUPPORT templates — the basics, no tree, no gating |
+| `LifeSupportPanel.tsx` | that section of the character sheet + YOUR OWN HABITS |
+| `Initiation.tsx` | the arrival. Plays once, flagged by `initiatedAt` |
 | `xp.ts` | XP events, level curve (`level² × 40`), level gates |
 | `stats.ts` | six character attributes derived from real module data |
 | `quests.ts` | main quest line + objective measurement |
@@ -96,8 +109,10 @@ These were each decided deliberately; breaking one silently breaks the product.
    an accumulated score.
 3. **Freeze never deletes.** Archiving a goal sets `Task.frozen`; the habit stays
    visible and trackable, decays at half ALPHA, and keeps its streak.
-4. **Only `origin: 'chain'` feeds progression.** L.O.G-synced tasks (`'log'`)
-   earn nothing and never appear in UNBOUND; UNBOUND is `'manual'` only.
+4. **Two origins earn, and by very different amounts.** `'chain'` is goal work
+   at full rate; `'baseline'` is LIFE SUPPORT at 3 XP a run — every basic done
+   in a day must stay under one tier-4 routine run, and there's a test pinning
+   that. `'log'` and `'manual'` earn nothing; YOUR OWN HABITS is `'manual'`.
 5. **Locked things state their condition** — `⊘ REQUIRES: Reading aloud @ 0.60
    — currently 0.41`, never an empty progress bar.
 6. **A quest cannot be completed by pressing a button.** Objectives are measured
@@ -142,14 +157,22 @@ From the original spec (`§10`):
 | 7 | Level gates — *partly done in `xp.ts`* | 🟡 |
 | 8 | Tool tiers for A.R.D.O + JOURNAL | ⬜ |
 
-### The obvious next one
-**Move habits out of SCRAP-7.** Habits show in both the tree and SCRAP-7's
-Habits tab. UPLINK should be the only habit surface; SCRAP-7 keeps todos +
-dailies; hand-made habits land in an UNBOUND section to attach or archive.
-`isUnbound()` in `scrap7/types.ts` already exists and **has no UI consuming it**
-— that section is the missing half. The forge's release path (rule 14) writes
-exactly the state that section is designed to show, so this is now the natural
-follow-on rather than a parallel candidate.
+### Requested but not yet built (from a round of use, 2026-08-02)
+Decided with the user; do these in roughly this order.
+
+1. **Retire SCRAP-7's Habits tab.** Half-done: the Character tab is now the
+   home for LIFE SUPPORT + YOUR OWN HABITS, so habits *have* somewhere to live.
+   What remains is removing the Habits tab from SCRAP-7 (leaving todos +
+   dailies) so habits stop appearing in two places.
+2. **Gamified L.O.G.** The user finds it messy — dream cards, star-map framing
+   and the mission/task hierarchy need a readable, game-like pass.
+3. **SOLARIS levels.** Surface the firmware tier as a visible level with the
+   next unlock and its condition stated ("v1 Calories — 5 hydration days, you
+   have 2"). The tier logic in `tools.ts` already exists; this is legibility.
+4. **Sidebar split INSTRUMENTS / UTILITIES.** A divider, with PICTURES and
+   A.R.D.O grouped under UTILITIES. **Grouping only** — A.R.D.O keeps earning
+   RECALL and its planned firmware tiers. The user chose the visual split
+   explicitly over a real demotion.
 
 ---
 
@@ -163,10 +186,12 @@ follow-on rather than a parallel candidate.
   derived at creation, so one added before it's named keeps the placeholder.
   Internal only; ids are never shown. Deliberate: re-deriving keys would break
   rule 13.
-- **UNBOUND has no UI.** The forge's release path sets `origin: 'manual'`
-  correctly, so a released habit is an ordinary SCRAP-7 habit today. The copy
-  says exactly that and does not promise a section that doesn't exist.
-- **Habits appear twice** — in the tree and in SCRAP-7's Habits tab.
+- **Habits still appear twice** — in the tree / character sheet and in SCRAP-7's
+  Habits tab. Next step 1 above closes this.
+- **A released life-support template can't be re-added from the picker.**
+  `availableTemplates` filters on habit id, and releasing keeps the `life:` id.
+  It shows under YOUR OWN HABITS with ADOPT instead, which is arguably the
+  better route — but the picker count reads 2/8 while only 7 are offered.
 - **Miss penalties and threshold upgrades are specced but not built** — spec
   step 4. `THRESHOLD_UNLOCK_AT` / `THRESHOLD_COST` constants exist unused.
 - **FUEL multiplier** — `awardXp` takes a `fuelMultiplier` argument that is
@@ -216,5 +241,5 @@ npm test                                    # 210 green
 - `v0.1.0-dashboard` tag — the full dashboard era, restorable with
   `git checkout v0.1.0-dashboard`.
 
-**Ask before assuming** on: whether the next step is spec step 4 (miss
-penalties + threshold upgrades) or moving habits out of SCRAP-7 (§5).
+**Ask before assuming** on: whether spec step 4 (miss penalties + threshold
+upgrades) should jump the queue ahead of the four requested items in §5.
