@@ -514,6 +514,9 @@ export default function App() {
 
   const activeModule = GUILD.find(m => location.pathname.startsWith(m.path)) ?? null
 
+  /** Navigate and drop the settings overlay — it covers wherever you're going. */
+  const go = (path: string) => { setSettingsOpen(false); navigate(path) }
+
   const bgColor = `rgba(6, 11, 22, ${settings.opacity})`
 
   // Big Screen (Warren OS mode) is immersive — no title bar, no sidebar.
@@ -589,10 +592,12 @@ export default function App() {
           background: 'rgba(6,11,22,0.4)',
           gap: 2,
         }}>
+          {/* Settings is an overlay on top of the module, so going anywhere
+              dismisses it — otherwise it hides the screen you just asked for. */}
           {/* Hub */}
-          <SidebarBtn iconId="hub" neon="var(--accent)" active={location.pathname === '/'} title="Warren Hub" onClick={() => navigate('/')} />
+          <SidebarBtn iconId="hub" neon="var(--accent)" active={location.pathname === '/'} title="Warren Hub" onClick={() => go('/')} />
           <SidebarBtn iconId="uplink" neon="#00f5ff" active={location.pathname.startsWith('/uplinks')}
-            title={t('Uplinks — goals & bandwidth', 'Каналы — цели и полоса')} onClick={() => navigate('/uplinks')} />
+            title={t('Uplinks — goals & bandwidth', 'Каналы — цели и полоса')} onClick={() => go('/uplinks')} />
           <div style={{ width: 28, height: 1, background: 'var(--border)', margin: '2px 0' }} />
 
           {/* Modules — only the ones that are actually shipped */}
@@ -604,7 +609,7 @@ export default function App() {
               active={location.pathname.startsWith(member.path)}
               title={`${member.name} · ${member.role}`}
               dim={!hasAccess(entitlements, member.id, member.free)}
-              onClick={() => navigate(member.path)}
+              onClick={() => go(member.path)}
             />
           ))}
 

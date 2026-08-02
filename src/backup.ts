@@ -59,6 +59,39 @@ export function downloadBackup(): void {
   setTimeout(() => URL.revokeObjectURL(url), 5000)
 }
 
+// ─── Start over ───────────────────────────────────────────────────────────────
+
+/**
+ * What survives a reset: the app, never the record. Settings carry the API key,
+ * the accent and the display name — re-entering those is friction, not a fresh
+ * start — and the locale is a preference, not progress.
+ */
+export const RESET_KEEP = [SETTINGS_KEY, 'warren_locale'] as const
+
+/**
+ * Everything a reset removes.
+ *
+ * Deliberately a denylist of survivors rather than a list of known module keys:
+ * a module added later would otherwise quietly survive the reset. `scrap7_v3`
+ * matters most here — it is the pre-v4 rollback copy, and leaving it behind
+ * would let the v3→v4 migration resurrect every old task on the next load.
+ */
+export function resetKeys(allKeys: string[]): string[] {
+  return allKeys.filter(k => !(RESET_KEEP as readonly string[]).includes(k))
+}
+
+/** Wipe the record. Returns how many keys went. There is no undo — export first. */
+export function resetProgress(): number {
+  const all: string[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key) all.push(key)
+  }
+  const doomed = resetKeys(all)
+  for (const key of doomed) localStorage.removeItem(key)
+  return doomed.length
+}
+
 /** Validate + restore a backup. Returns the number of keys restored. Throws on bad input. */
 export function importBackup(json: string): number {
   let parsed: unknown

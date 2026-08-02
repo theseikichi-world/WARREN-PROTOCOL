@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart'
 import { type Settings, ACCENT_PRESETS, CLAUDE_MODELS, DEFAULT_MODEL, AI_TASKS, modelForTask, saveSettings, applySettings, isTauri } from './settings'
-import { downloadBackup, exportAllJson, importBackup } from './backup'
+import { downloadBackup, exportAllJson, importBackup, resetProgress, resetKeys } from './backup'
 import { useLocale, setLocale, t } from './i18n'
 
 // ─── Toggle switch ────────────────────────────────────────────────────────────
@@ -69,6 +69,11 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
   const [backupMsg, setBackupMsg] = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState('')
+  const [resetArmed, setResetArmed] = useState(false)
+
+  /** How many stored records the reset is about to take, counted at arm time. */
+  const resetCount = () =>
+    resetKeys(Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i) ?? '')).length
 
   // Slide-in animation
   useEffect(() => {
@@ -276,12 +281,10 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
             <Toggle on={settings.showIntro} onChange={v => update({ showIntro: v })} accent={acc} />
           </Row>
 
-          {isTauri() && (
-            <Row label={t('Boot into Big Screen', 'Запуск в Большой экран')}
-              sub={t('Open fullscreen Warren OS on launch', 'Открывать полноэкранный Warren OS при запуске')}>
-              <Toggle on={settings.bootBigScreen} onChange={v => update({ bootBigScreen: v })} accent={acc} />
-            </Row>
-          )}
+          {/* "Boot into Big Screen" lived here. Warren OS is dormant
+              (WARREN_OS_ENABLED in App.tsx), so the toggle controlled nothing a
+              user could reach. The setting itself is kept, not deleted — it
+              comes back with the surface it belongs to. */}
 
           {/* ── Profile ── */}
           <Section label={t('Profile', 'Профиль')} />
@@ -526,6 +529,49 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
                   border: `1px solid ${importText.trim() ? 'rgba(255,107,0,0.45)' : 'rgba(255,255,255,0.06)'}`,
                   background: importText.trim() ? 'rgba(255,107,0,0.1)' : 'transparent' }}>
                 RESTORE & RELOAD</button>
+            </div>
+          )}
+
+          {/* ── Start over ── */}
+          {/* The one irreversible control in the app, so it is armed in two
+              steps and states the count it is about to delete. */}
+          <Section label={t('Start over', 'Начать заново')} />
+          <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
+            lineHeight: 1.6, marginBottom: 10 }}>
+            {t('Wipes the whole record — uplinks, routines and their integration, XP, quests, dreams, journal, kitchen, texts, library. Settings and your API key stay. Export a backup first; there is no undo.',
+               'Стирает всю запись — каналы, рутины и их интеграцию, опыт, задания, мечты, журнал, кухню, тексты, библиотеку. Настройки и API-ключ остаются. Сначала выгрузите копию — отменить нельзя.')}
+          </p>
+
+          {!resetArmed ? (
+            <button onClick={() => setResetArmed(true)}
+              style={{ width: '100%', padding: '8px', borderRadius: 6, cursor: 'pointer',
+                fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.1em',
+                color: 'rgba(255,0,51,0.75)', border: '1px solid rgba(255,0,51,0.3)', background: 'transparent' }}>
+              ⚠ {t('RESET EVERYTHING', 'СБРОСИТЬ ВСЁ')}</button>
+          ) : (
+            <div style={{ padding: '10px 12px', borderRadius: 8,
+              background: 'rgba(255,0,51,0.06)', border: '1px solid rgba(255,0,51,0.3)' }}>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: '#ff4444',
+                lineHeight: 1.6, marginBottom: 8 }}>
+                {t(`This deletes ${resetCount()} stored records and reloads Warren empty. It cannot be undone.`,
+                   `Будет удалено записей: ${resetCount()}. Warren перезапустится пустым. Отменить нельзя.`)}
+              </p>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={() => {
+                  const n = resetProgress()
+                  setBackupMsg(`✓ ${n} keys cleared — reloading…`)
+                  setTimeout(() => window.location.reload(), 700)
+                }}
+                  style={{ flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
+                    fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800, letterSpacing: '0.1em',
+                    color: '#ff0033', border: '1px solid rgba(255,0,51,0.5)', background: 'rgba(255,0,51,0.12)' }}>
+                  {t('YES, ERASE IT ALL', 'ДА, СТЕРЕТЬ ВСЁ')}</button>
+                <button onClick={() => setResetArmed(false)}
+                  style={{ flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
+                    fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.1em',
+                    color: 'rgba(220,240,255,0.6)', border: '1px solid rgba(255,255,255,0.12)', background: 'transparent' }}>
+                  {t('KEEP MY DATA', 'ОСТАВИТЬ')}</button>
+              </div>
             </div>
           )}
 
