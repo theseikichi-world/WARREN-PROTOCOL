@@ -409,19 +409,23 @@ export function installCustomLifeSupport(title: string, target: number, unit: st
   return id
 }
 
-/** Drop a baseline habit from life support. Kept, not deleted — it becomes yours. */
-export function releaseLifeSupport(taskId: string): void {
+/**
+ * Drop a basic. This one really deletes — score, streak and all.
+ *
+ * The earlier version handed the habit back as "yours", which sounded kind and
+ * wasn't: it left a graveyard of things you had already decided to stop doing,
+ * sitting on the character sheet asking to be re-adopted. Life support is small
+ * and chosen; abandoning one should mean abandoning it. The confirm step says so
+ * before it happens.
+ *
+ * Note this is NOT the rule for chain routines — dropping a node from a protocol
+ * still releases its habit rather than deleting it, because that history was
+ * earned against a goal you may still be pursuing.
+ */
+export function deleteLifeSupport(taskId: string): void {
   const s7 = loadScrap7()
   if (!s7.tasks.some(t => t.id === taskId)) return
-  saveScrap7({ ...s7, tasks: s7.tasks.map(t => t.id === taskId ? { ...t, origin: 'manual' as const } : t) })
-  window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'progression' } }))
-}
-
-/** Adopt a hand-made habit into life support, so it starts earning. */
-export function adoptAsLifeSupport(taskId: string): void {
-  const s7 = loadScrap7()
-  if (!s7.tasks.some(t => t.id === taskId)) return
-  saveScrap7({ ...s7, tasks: s7.tasks.map(t => t.id === taskId ? { ...t, origin: 'baseline' as const } : t) })
+  saveScrap7({ ...s7, tasks: s7.tasks.filter(t => t.id !== taskId) })
   window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'progression' } }))
 }
 

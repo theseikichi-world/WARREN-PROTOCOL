@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resetKeys, RESET_KEEP } from './backup'
+import { resetKeys, RESET_KEEP, RESET_PROFILE_FIELDS, stripProfile } from './backup'
 
 const ALL = [
   'warren_settings', 'warren_locale',
@@ -33,5 +33,40 @@ describe('start over', () => {
 
   it('is a no-op on a machine that only has settings', () => {
     expect(resetKeys([...RESET_KEEP])).toEqual([])
+  })
+})
+
+describe('starting over means starting over', () => {
+  it('strips every trace of the person from settings', () => {
+    const before = JSON.stringify({
+      displayName: 'SEIKICHI', gender: 'other', wakeTime: '10:00', sleepTime: '02:00',
+      onboardedAt: '2026-08-02T00:00:00.000Z',
+      aiApiKey: 'sk-ant-keep-me', accentColor: '#00f5ff',
+    })
+    const after = JSON.parse(stripProfile(before))
+    for (const field of RESET_PROFILE_FIELDS) expect(after[field]).toBeUndefined()
+  })
+
+  it('keeps machine setup — a reset should not cost you your API key', () => {
+    const after = JSON.parse(stripProfile(JSON.stringify({
+      displayName: 'SEIKICHI', aiApiKey: 'sk-ant-keep-me', accentColor: '#ff6b00',
+    })))
+    expect(after.aiApiKey).toBe('sk-ant-keep-me')
+    expect(after.accentColor).toBe('#ff6b00')
+  })
+
+  it('drops onboardedAt, so FIRST CONTACT asks again', () => {
+    expect(RESET_PROFILE_FIELDS).toContain('onboardedAt')
+  })
+
+  it('leaves unparsable settings alone rather than destroying them', () => {
+    expect(stripProfile('not json')).toBe('not json')
+  })
+})
+
+describe('tours', () => {
+  it('are wiped by a reset, so a fresh start is a fresh start', () => {
+    // The seen-flags live in their own key, and reset keeps only settings+locale
+    expect(resetKeys(['warren_tours_v1', ...RESET_KEEP])).toEqual(['warren_tours_v1'])
   })
 })

@@ -6,7 +6,7 @@ import {
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
   cooldownRemaining, promoteSecondary, assignPrimary, assignSecondary, archiveGoal,
   trainingCount, hasCapacity, commitDraft,
-  installLifeSupport, installCustomLifeSupport, releaseLifeSupport, adoptAsLifeSupport, recordBaselineRun,
+  installLifeSupport, installCustomLifeSupport, deleteLifeSupport, recordBaselineRun,
 } from './store'
 import { Initiation } from './Initiation'
 import type { LifeSupportTemplate } from './lifeSupport'
@@ -154,16 +154,10 @@ export default function Uplinks() {
     if (added) flash(tr('◆ LIFE SUPPORT ONLINE', '◆ ЖИЗНЕОБЕСПЕЧЕНИЕ АКТИВНО'))
   }, [])
 
-  const handleLifeRelease = useCallback((taskId: string) => {
-    releaseLifeSupport(taskId)
+  const handleLifeDelete = useCallback((taskId: string) => {
+    deleteLifeSupport(taskId)
     setTasks(loadScrap7().tasks)
-    flash(tr('Kept as your own habit', 'Оставлено как ваша привычка'))
-  }, [])
-
-  const handleAdopt = useCallback((taskId: string) => {
-    adoptAsLifeSupport(taskId)
-    setTasks(loadScrap7().tasks)
-    flash(tr('◆ ADOPTED — it counts now', '◆ ПРИНЯТО — теперь считается'))
+    flash(tr('Deleted. The slot is free.', 'Удалено. Слот свободен.'))
   }, [])
 
   /** Save an edited protocol. Nothing earned is lost — see applyDraft. */
@@ -199,7 +193,7 @@ export default function Uplinks() {
             {tr('BANDWIDTH', 'ПОЛОСА')} {bandwidthUsed(state)}/2
           </p>
         </div>
-        <button onClick={() => setCreating(true)} style={{
+        <button data-tour="new-uplink" onClick={() => setCreating(true)} style={{
           padding: '5px 10px', borderRadius: 6, cursor: 'pointer', background: 'transparent',
           border: `1px solid ${CYAN}35`, fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700,
           letterSpacing: '0.1em', color: CYAN, flexShrink: 0,
@@ -207,7 +201,7 @@ export default function Uplinks() {
       </div>
 
       {/* Character, then a tab per uplink */}
-      <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1px solid ${CYAN}10` }}>
+      <div data-tour="uplink-tabs" style={{ display: 'flex', flexShrink: 0, borderBottom: `1px solid ${CYAN}10` }}>
         <button onClick={() => setView('character')} style={{
           flex: 0.8, padding: '9px 6px', cursor: 'pointer',
           background: view === 'character' ? `${CYAN}0c` : 'transparent',
@@ -262,8 +256,7 @@ export default function Uplinks() {
               onTrack:         handleBaselineTrack,
               onInstall:       handleLifeInstall,
               onInstallCustom: handleCustomLifeInstall,
-              onAdopt:         handleAdopt,
-              onRelease:       handleLifeRelease,
+              onDelete:        handleLifeDelete,
             }} />
         )}
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { t as tr } from '../../i18n'
-import { getHabitTier, isBaseline, isUnbound, type Task } from '../scrap7/types'
+import { getHabitTier, isBaseline, type Task } from '../scrap7/types'
 import { THRESHOLD_UNLOCK_AT } from './types'
 import { useSpotlight } from './questNav'
 import {
@@ -21,14 +21,13 @@ const GREEN = '#4ade80'
 const GOLD  = '#ffd700'
 const DIM   = 'rgba(148,163,184,0.5)'
 
-export function LifeSupportPanel({ tasks, level, onTrack, onInstall, onInstallCustom, onAdopt, onRelease }: {
+export function LifeSupportPanel({ tasks, level, onTrack, onInstall, onInstallCustom, onDelete }: {
   tasks:           Task[]
   level:           number
   onTrack:         (taskId: string) => void
   onInstall:       (template: LifeSupportTemplate) => void
   onInstallCustom: (title: string, target: number, unit: string) => void
-  onAdopt:         (taskId: string) => void
-  onRelease:       (taskId: string) => void
+  onDelete:        (taskId: string) => void
 }) {
   const [picking, setPicking] = useState(false)
   const [offset, setOffset]   = useState(0)
@@ -42,9 +41,7 @@ export function LifeSupportPanel({ tasks, level, onTrack, onInstall, onInstallCu
     addRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [spotlit])
 
-  const habits    = tasks.filter(t => t.taskType === 'habit')
-  const installed = habits.filter(isBaseline)
-  const yours     = habits.filter(isUnbound)
+  const installed = tasks.filter(t => t.taskType === 'habit' && isBaseline(t))
 
   const slots    = lifeSupportSlots(level)
   const free     = Math.max(0, slots - installed.length)
@@ -61,7 +58,7 @@ export function LifeSupportPanel({ tasks, level, onTrack, onInstall, onInstallCu
   return (
     <>
       {/* Header — this is a section of the sheet, not a footnote */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '22px 0 8px' }}>
+      <div data-tour="life-support" style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '22px 0 8px' }}>
         <span style={{ fontSize: 13 }}>🫀</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900, letterSpacing: '0.16em',
@@ -182,49 +179,10 @@ export function LifeSupportPanel({ tasks, level, onTrack, onInstall, onInstallCu
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         {installed.map(task => (
           <BaselineRow key={task.id} task={task}
-            onTrack={() => onTrack(task.id)} onRelease={() => onRelease(task.id)} />
+            onTrack={() => onTrack(task.id)} onDelete={() => onDelete(task.id)} />
         ))}
       </div>
 
-      {/* Habits you made yourself — no system owns them, so they earn nothing */}
-      {yours.length > 0 && (
-        <>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '18px 0 4px' }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.2em',
-              color: DIM }}>{tr('YOUR OWN HABITS', 'ВАШИ СОБСТВЕННЫЕ')}</p>
-            <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM }}>{yours.length}</span>
-          </div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.38)',
-            lineHeight: 1.6, marginBottom: 8 }}>
-            {free > 0
-              ? tr('Made by hand, so they belong to no protocol and earn nothing. Adopt one into life support and it starts counting.',
-                   'Сделаны вручную, не принадлежат протоколу и ничего не приносят. Примите в жизнеобеспечение — и начнёт считаться.')
-              : tr('Made by hand, so they earn nothing. No free slot to adopt one into right now.',
-                   'Сделаны вручную и ничего не приносят. Свободного слота сейчас нет.')}
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {yours.map(task => (
-              <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: 8,
-                padding: '7px 10px', borderRadius: 7,
-                background: 'rgba(13,24,48,0.35)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 8.5,
-                  color: 'rgba(200,220,240,0.75)', overflow: 'hidden', textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap' }}>{task.text}</span>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, flexShrink: 0 }}>
-                  {(task.score ?? 0).toFixed(2)}
-                </span>
-                <button onClick={() => free > 0 && onAdopt(task.id)} disabled={free <= 0} style={{
-                  padding: '3px 8px', borderRadius: 5, flexShrink: 0,
-                  cursor: free > 0 ? 'pointer' : 'default',
-                  fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 700, letterSpacing: '0.1em',
-                  color: free > 0 ? GREEN : 'rgba(148,163,184,0.3)', background: 'transparent',
-                  border: `1px solid ${free > 0 ? `${GREEN}35` : 'rgba(255,255,255,0.07)'}`,
-                }}>{tr('ADOPT', 'ПРИНЯТЬ')}</button>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
     </>
   )
 }
@@ -268,10 +226,10 @@ function CustomBasic({ onAdd }: { onAdd: (title: string, target: number, unit: s
 
 // ─── One basic ────────────────────────────────────────────────────────────────
 
-function BaselineRow({ task, onTrack, onRelease }: {
-  task: Task; onTrack: () => void; onRelease: () => void
+function BaselineRow({ task, onTrack, onDelete }: {
+  task: Task; onTrack: () => void; onDelete: () => void
 }) {
-  const [confirmRelease, setConfirmRelease] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const template = templateForTask(task.id)
   const score = task.score ?? 0
   const tier  = getHabitTier(score)
@@ -315,7 +273,7 @@ function BaselineRow({ task, onTrack, onRelease }: {
           border: `1px solid ${doneToday ? `${GREEN}45` : 'transparent'}`,
         }}>{doneToday ? '✓' : '+1'}</button>
 
-        <button onClick={() => setConfirmRelease(v => !v)} title={tr('remove from life support', 'убрать из жизнеобеспечения')}
+        <button onClick={() => setConfirmDelete(v => !v)} title={tr('delete this basic', 'удалить эту основу')}
           style={{ background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0,
             color: 'rgba(148,163,184,0.35)', fontSize: 10, padding: '0 2px' }}>✕</button>
       </div>
@@ -325,18 +283,28 @@ function BaselineRow({ task, onTrack, onRelease }: {
           background: automatic ? GOLD : tier.color, transition: 'width 0.5s' }} />
       </div>
 
-      {confirmRelease && (
-        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(200,220,240,0.6)',
-            lineHeight: 1.5 }}>
-            {tr('Keeps the habit and its history, frees the slot — it just stops earning.',
-                'Привычка и история останутся, слот освободится — просто перестанет приносить опыт.')}
-          </span>
-          <button onClick={onRelease} style={{
-            padding: '3px 8px', borderRadius: 5, cursor: 'pointer', flexShrink: 0,
-            fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 700, letterSpacing: '0.1em',
-            color: '#ff6b00', background: 'transparent', border: '1px solid rgba(255,107,0,0.4)',
-          }}>{tr('REMOVE', 'УБРАТЬ')}</button>
+      {confirmDelete && (
+        <div style={{ marginTop: 8, padding: '7px 9px', borderRadius: 6,
+          background: 'rgba(255,0,51,0.07)', border: '1px solid rgba(255,0,51,0.3)' }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: '#ff6b6b', lineHeight: 1.55 }}>
+            {(task.streak ?? 0) > 0 || (task.score ?? 0) > 0
+              ? tr(`Deletes it for good — ${(task.score ?? 0).toFixed(2)} and ${task.streak ?? 0} days of streak go with it. The slot frees up.`,
+                   `Удалит навсегда — ${(task.score ?? 0).toFixed(2)} и серия ${task.streak ?? 0} дн. исчезнут вместе с ней. Слот освободится.`)
+              : tr('Deletes it for good. The slot frees up.', 'Удалит навсегда. Слот освободится.')}
+          </p>
+          <div style={{ display: 'flex', gap: 6, marginTop: 7 }}>
+            <button onClick={onDelete} style={{
+              padding: '4px 10px', borderRadius: 5, cursor: 'pointer',
+              fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.1em',
+              color: '#ff0033', background: 'rgba(255,0,51,0.12)', border: '1px solid rgba(255,0,51,0.45)',
+            }}>{tr('DELETE', 'УДАЛИТЬ')}</button>
+            <button onClick={() => setConfirmDelete(false)} style={{
+              padding: '4px 10px', borderRadius: 5, cursor: 'pointer',
+              fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, letterSpacing: '0.1em',
+              color: 'rgba(220,240,255,0.6)', background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.12)',
+            }}>{tr('KEEP', 'ОСТАВИТЬ')}</button>
+          </div>
         </div>
       )}
     </div>

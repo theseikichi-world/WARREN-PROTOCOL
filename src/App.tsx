@@ -7,6 +7,7 @@ import { hasAccess, type Entitlements } from './entitlements'
 import { loadSettings, saveSettings, applySettings, isTauri, type Settings } from './settings'
 import SettingsPanel from './SettingsPanel'
 import { Onboarding } from './Onboarding'
+import { RouteTour } from './TourOverlay'
 import { QuestHintBanner } from './modules/progression/QuestHint'
 import Scrap7    from './modules/scrap7/Scrap7'
 import Log       from './modules/log/Log'
@@ -437,11 +438,18 @@ function Dashboard({ displayName }: { displayName: string }) {
     return () => { window.removeEventListener('warren:sync', refresh); window.removeEventListener('focus', refresh) }
   }, [])
 
+  // Icons come from the app's own set, keyed by module, so a tile and its
+  // sidebar button are visibly the same thing. The animal emoji these replaced
+  // were left over from the guild-of-mascots era and no longer matched anything.
   const tiles = [
-    { label: t('Tasks due', 'Задачи на сегодня'),    value: String(stats.tasksDue),    neon: '#00b4ff', emoji: '🦝', path: '/scrap7' },
-    { label: t('Active goals', 'Активные цели'), value: String(stats.activeGoals), neon: '#c084fc', emoji: '🦫', path: '/log' },
-    { label: t('Kcal left', 'Ккал осталось'),    value: stats.caloriesLeft === null ? '—' : String(stats.caloriesLeft), neon: '#ff006e', emoji: '🐼', path: '/solaris' },
-    { label: t('Best streak', 'Лучшая серия'),  value: stats.streak > 0 ? `${stats.streak}🔥` : '0', neon: '#39ff14', emoji: '🔥', path: '/scrap7' },
+    { label: t('Tasks due', 'Задачи на сегодня'),   value: String(stats.tasksDue),
+      neon: '#00b4ff', icon: 'scrap7' as const, path: '/scrap7' },
+    { label: t('Dreams', 'Мечты'),                  value: String(stats.activeGoals),
+      neon: '#c084fc', icon: 'log' as const,    path: '/log' },
+    { label: t('Kcal left', 'Ккал осталось'),       value: stats.caloriesLeft === null ? '—' : String(stats.caloriesLeft),
+      neon: '#ffb13c', icon: 'pomu' as const,   path: '/solaris' },
+    { label: t('Best streak', 'Лучшая серия'),      value: String(stats.streak),
+      neon: '#ff6b00', icon: 'uplink' as const, path: '/uplinks' },
   ]
 
   return (
@@ -461,17 +469,17 @@ function Dashboard({ displayName }: { displayName: string }) {
       {INF8_ENABLED && <NowCard />}
 
       {/* The quest log lives where navigation lives */}
-      <QuestPanel />
+      <div data-tour="quest-panel"><QuestPanel /></div>
 
       {/* Two uplinks, and what they're carrying */}
-      <BandwidthStrip />
+      <div data-tour="bandwidth"><BandwidthStrip /></div>
 
       {/* What's landing soon, from the titles already tracked */}
       <ReleaseRadar />
 
       {/* Quick stats row — live, tap to open the module */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
-        {tiles.map(({ label, value, neon, emoji, path }) => (
+        {tiles.map(({ label, value, neon, icon, path }) => (
           <button key={label} onClick={() => navigate(path)} style={{
             padding: '10px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
             background: 'rgba(13,24,48,0.5)',
@@ -481,7 +489,7 @@ function Dashboard({ displayName }: { displayName: string }) {
             onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 13 }}>{emoji}</span>
+              <CyberIcon id={icon} size={14} color={neon} glow />
               <span style={{ fontSize: 15, fontWeight: 800, color: neon, textShadow: `0 0 8px ${neon}50` }}>
                 {value}
               </span>
@@ -585,6 +593,9 @@ export default function App() {
           onDone={patch => { const next = { ...settings, ...patch }; saveSettings(next); setSettings(next) }} />
       )}
 
+      {/* Step-by-step, once per surface. Waits for first contact to be over. */}
+      <RouteTour enabled={!!settings.onboardedAt && !settingsOpen && !(intro && settings.showIntro)} />
+
       {/* Title bar */}
       <TitleBar />
 
@@ -620,7 +631,7 @@ export default function App() {
         </main>
 
         {/* Sidebar — RIGHT side */}
-        <aside style={{
+        <aside data-tour="sidebar" style={{
           width: 48, flexShrink: 0, display: 'flex', flexDirection: 'column',
           alignItems: 'center', padding: '8px 0',
           borderLeft: '1px solid var(--border)',

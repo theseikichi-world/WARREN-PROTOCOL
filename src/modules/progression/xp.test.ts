@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { baseXp, awardXp, levelCost, levelFor, gatedLevel, levelCap, isUnlockedAt, nextGate, GATES } from './xp'
-import { stageQuests, LAST_GATED_STAGE } from './quests'
+import { stageQuests, stageXp, LAST_GATED_STAGE } from './quests'
 import { deriveStats, overallRating } from './stats'
 import type { Task } from '../scrap7/types'
 import type { ChainNode, Goal } from './types'
@@ -26,7 +26,7 @@ describe('xp awards', () => {
 
 describe('level curve', () => {
   it('starts at level 1 with nothing banked', () => {
-    expect(levelFor(0)).toEqual({ level: 1, intoNext: 0, needed: 40, progress: 0 })
+    expect(levelFor(0)).toEqual({ level: 1, intoNext: 0, needed: levelCost(1), progress: 0 })
   })
 
   it('levels exactly at the cost boundary', () => {
@@ -34,9 +34,21 @@ describe('level curve', () => {
     expect(levelFor(levelCost(1)).level).toBe(2)
   })
 
-  it('gets steeper each level', () => {
-    expect(levelCost(2)).toBeGreaterThan(levelCost(1))
-    expect(levelCost(5)).toBe(1000)
+  it('makes a gated level cost exactly what its stage pays', () => {
+    // Finish the stage, fill the bar, level up — one motion. A level that cost
+    // less would slam the bar to full partway through the work it represents.
+    for (let stage = 1; stage <= LAST_GATED_STAGE; stage++) {
+      expect(levelCost(stage)).toBeGreaterThanOrEqual(stageXp(stage))
+    }
+    expect(levelCost(1)).toBe(stageXp(1))
+  })
+
+  it('never gets cheaper as it goes up', () => {
+    for (let l = 2; l <= 20; l++) expect(levelCost(l)).toBeGreaterThan(levelCost(l - 1))
+  })
+
+  it('is gentler than the curve it replaced', () => {
+    expect(levelCost(5)).toBeLessThan(5 * 5 * 40)     // the old level² × 40
   })
 
   it('reports progress toward the next level', () => {
@@ -48,7 +60,7 @@ describe('level curve', () => {
 
   it('never goes negative or fractional', () => {
     expect(levelFor(-500).level).toBe(1)
-    expect(levelFor(123.7).intoNext).toBe(83)
+    expect(Number.isInteger(levelFor(123.7).intoNext)).toBe(true)
   })
 })
 

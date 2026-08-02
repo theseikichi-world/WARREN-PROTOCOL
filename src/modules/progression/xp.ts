@@ -8,7 +8,7 @@
 
 import type { GoalSlot, NodeTier } from './types'
 import { xpRateForSlot } from './types'
-import { LAST_GATED_STAGE, stageComplete, stageQuests, type Quest } from './quests'
+import { LAST_GATED_STAGE, stageComplete, stageQuests, stageXp, type Quest } from './quests'
 
 export type XpEvent =
   | { kind: 'routine.run';       tier: NodeTier }   // a routine performed today
@@ -51,10 +51,24 @@ export function awardXp(e: XpEvent, slot: GoalSlot, fuelMultiplier = 1): number 
 }
 
 // ─── Level curve ──────────────────────────────────────────────────────────────
-// level² × 40: level 2 at 160, level 5 at 1000, level 12 at 5760. Slow enough
-// that a slot is genuinely earned, not slow enough to feel inert.
+// A gated level costs exactly what its stage pays out, so finishing the stage
+// fills the bar and levels you in the same motion. The alternative — a fixed
+// curve — meant level 1 cost 40 while stage 1 paid 130, so the bar slammed to
+// full on the first quest and then sat there saying HELD. A bar that maxes out
+// two thirds of the way through the work it represents is just noise.
+//
+// The floor keeps the curve rising even where a stage happens to pay less than
+// the one before, and carries it past the last gated level. It is deliberately
+// gentler than the old level² × 40: that reached 1000 at level 5, this reaches
+// 440, because the gate is what paces early progress now — not the grind.
 
-export const levelCost = (level: number): number => level * level * 40
+const BASE_COST = 120
+const COST_STEP = 80
+
+export function levelCost(level: number): number {
+  const floor = BASE_COST + Math.max(0, level - 1) * COST_STEP
+  return Math.max(stageXp(level), floor)
+}
 
 export interface LevelState {
   level:    number

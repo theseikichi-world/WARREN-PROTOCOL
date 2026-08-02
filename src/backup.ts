@@ -62,11 +62,29 @@ export function downloadBackup(): void {
 // ─── Start over ───────────────────────────────────────────────────────────────
 
 /**
- * What survives a reset: the app, never the record. Settings carry the API key,
- * the accent and the display name — re-entering those is friction, not a fresh
- * start — and the locale is a preference, not progress.
+ * What survives a reset: the app's configuration, never anything about you.
+ * The API key and the accent colour are machine setup — re-entering a key after
+ * a reset is pure friction and tells you nothing about starting over.
  */
 export const RESET_KEEP = [SETTINGS_KEY, 'warren_locale'] as const
+
+/**
+ * ...except the profile inside settings, which IS about you. Starting over has
+ * to mean starting over: the name, the gender and the hours go, `onboardedAt`
+ * goes with them, and FIRST CONTACT asks again on the next load.
+ */
+export const RESET_PROFILE_FIELDS = ['displayName', 'gender', 'wakeTime', 'sleepTime', 'onboardedAt'] as const
+
+/** Settings with every trace of the person stripped out. */
+export function stripProfile(settingsJson: string): string {
+  try {
+    const s = JSON.parse(settingsJson) as Record<string, unknown>
+    for (const f of RESET_PROFILE_FIELDS) delete s[f]
+    return JSON.stringify(s)
+  } catch {
+    return settingsJson
+  }
+}
 
 /**
  * Everything a reset removes.
@@ -89,6 +107,10 @@ export function resetProgress(): number {
   }
   const doomed = resetKeys(all)
   for (const key of doomed) localStorage.removeItem(key)
+
+  const settings = localStorage.getItem(SETTINGS_KEY)
+  if (settings) localStorage.setItem(SETTINGS_KEY, stripProfile(settings))
+
   return doomed.length
 }
 

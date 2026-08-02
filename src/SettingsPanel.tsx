@@ -4,6 +4,7 @@ import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart'
 import { type Settings, ACCENT_PRESETS, CLAUDE_MODELS, DEFAULT_MODEL, AI_TASKS, modelForTask, saveSettings, applySettings, isTauri } from './settings'
 import { downloadBackup, exportAllJson, importBackup, resetProgress, resetKeys } from './backup'
 import { useLocale, setLocale, t } from './i18n'
+import { forgetTours } from './tour'
 import { chronotype, CHRONOTYPE_LABEL, type Gender } from './profile'
 
 const GENDER_OPTIONS: { value: Gender; en: string; ru: string }[] = [
@@ -286,6 +287,16 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
 
           <Row label="Show intro animation" sub="Matrix boot screen on launch">
             <Toggle on={settings.showIntro} onChange={v => update({ showIntro: v })} accent={acc} />
+          </Row>
+
+          <Row label={t('Replay the guided tours', 'Показать обучение заново')}
+            sub={t('Step-by-step walkthrough on every screen, from the top', 'Пошаговое объяснение на каждом экране, с начала')}>
+            <button onClick={() => { forgetTours(); setBackupMsg('✓ Tours will play again') }}
+              style={{ padding: '5px 11px', borderRadius: 6, cursor: 'pointer',
+                fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700, letterSpacing: '0.1em',
+                color: acc, background: 'transparent', border: `1px solid ${acc}40` }}>
+              ↻ {t('REPLAY', 'ЗАНОВО')}
+            </button>
           </Row>
 
           {/* "Boot into Big Screen" lived here. Warren OS is dormant
@@ -600,8 +611,8 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           <Section label={t('Start over', 'Начать заново')} />
           <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
             lineHeight: 1.6, marginBottom: 10 }}>
-            {t('Wipes the whole record — uplinks, routines and their integration, XP, quests, dreams, journal, kitchen, texts, library. Settings and your API key stay. Export a backup first; there is no undo.',
-               'Стирает всю запись — каналы, рутины и их интеграцию, опыт, задания, мечты, журнал, кухню, тексты, библиотеку. Настройки и API-ключ остаются. Сначала выгрузите копию — отменить нельзя.')}
+            {t('Wipes the whole record — uplinks, routines and their automatism, XP, quests, dreams, journal, kitchen, texts, library — and your profile with it: name, gender and hours all go, so Warren asks who you are again on the next load. Only the API key and appearance survive. Export a backup first; there is no undo.',
+               'Стирает всю запись — каналы, рутины и их автоматизм, опыт, задания, мечты, журнал, кухню, тексты, библиотеку — и профиль вместе с ней: имя, пол и часы исчезнут, при следующем запуске Warren спросит заново. Останутся только API-ключ и оформление. Сначала выгрузите копию — отменить нельзя.')}
           </p>
 
           {!resetArmed ? (

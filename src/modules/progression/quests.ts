@@ -168,6 +168,10 @@ export const LAST_GATED_STAGE = QUEST_LINE.reduce((m, q) => Math.max(m, q.stage)
 
 export const stageQuests = (stage: number): Quest[] => QUEST_LINE.filter(q => q.stage === stage)
 
+/** Everything a stage pays out. The level curve is built from this — see xp.ts. */
+export const stageXp = (stage: number): number =>
+  stageQuests(stage).reduce((sum, q) => sum + q.xp, 0)
+
 /** Current reading against an objective. */
 export function measure(objective: Objective, ctx: QuestContext): number {
   const { sums, goals, tasks } = ctx
