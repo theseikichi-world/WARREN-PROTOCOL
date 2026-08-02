@@ -17,7 +17,7 @@ import {
 
 const KEY = 'warren_progression_v1'
 
-const INITIAL: ProgressionState = { goals: [], seeded: false, xp: 0, quests: {}, initiatedAt: null }
+const INITIAL: ProgressionState = { goals: [], seeded: false, xp: 0, quests: {}, initiatedAt: null, celebratedLevel: 1 }
 
 export function loadProgression(): ProgressionState {
   try {
@@ -30,6 +30,7 @@ export function loadProgression(): ProgressionState {
       xp:     typeof parsed.xp === 'number' ? parsed.xp : 0,
       quests: (parsed.quests && typeof parsed.quests === 'object') ? parsed.quests : {},
       initiatedAt: typeof parsed.initiatedAt === 'string' ? parsed.initiatedAt : null,
+      celebratedLevel: typeof parsed.celebratedLevel === 'number' ? parsed.celebratedLevel : 1,
     }
   } catch {
     return structuredClone(INITIAL)

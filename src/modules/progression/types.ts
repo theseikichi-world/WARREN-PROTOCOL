@@ -86,6 +86,8 @@ export interface ProgressionState {
   quests:  Record<string, string>  // quest id → cleared at
   /** When the operator was first briefed. The arrival plays exactly once. */
   initiatedAt?: string | null
+  /** Highest level already celebrated, so the moment fires once per threshold. */
+  celebratedLevel?: number
 }
 
 // ─── Slot rules ───────────────────────────────────────────────────────────────

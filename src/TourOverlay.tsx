@@ -151,10 +151,18 @@ export function TourOverlay({ tour, onDone }: { tour: Tour; onDone: () => void }
   )
 }
 
+/** Started this session, whether or not it was finished — belt to the braces below. */
+const startedThisSession = new Set<string>()
+
 /**
- * Runs the tour for whatever surface you're on, once ever, and never while
- * something more important is on screen. Mounting it is the whole integration —
- * a module needs no code of its own beyond `data-tour` attributes.
+ * Runs the tour for whatever surface you're on, ONCE, and never while something
+ * more important is on screen. Mounting it is the whole integration — a module
+ * needs no code of its own beyond `data-tour` attributes.
+ *
+ * Seen is marked when it STARTS, not when it finishes. It used to be marked on
+ * completion, so walking away mid-tour left it unseen and it ambushed you again
+ * on the next visit — which reads as a bug, not a courtesy. Settings has an
+ * explicit REPLAY for when you actually want it back.
  */
 export function RouteTour({ enabled }: { enabled: boolean }) {
   const location = useLocation()
@@ -163,15 +171,19 @@ export function RouteTour({ enabled }: { enabled: boolean }) {
   useEffect(() => {
     if (!enabled) { setActive(null); return }
     const tour = tourForPath(location.pathname)
-    if (!tour || hasSeenTour(tour.id)) { setActive(null); return }
+    if (!tour || hasSeenTour(tour.id) || startedThisSession.has(tour.id)) { setActive(null); return }
     // The hub tour is the first welcome, and nothing else runs before it. Opening
     // a module early used to stack a second tour on top of an unfinished one.
     if (tour.id !== 'hub' && !hasSeenTour('hub')) { setActive(null); return }
     // Let the screen paint before measuring anything on it
-    const id = setTimeout(() => setActive(tour), 420)
+    const id = setTimeout(() => {
+      startedThisSession.add(tour.id)
+      markTourSeen(tour.id)
+      setActive(tour)
+    }, 420)
     return () => clearTimeout(id)
   }, [location.pathname, enabled])
 
   if (!active) return null
-  return <TourOverlay tour={active} onDone={() => { markTourSeen(active.id); setActive(null) }} />
+  return <TourOverlay tour={active} onDone={() => setActive(null)} />
 }

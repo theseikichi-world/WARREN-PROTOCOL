@@ -58,6 +58,13 @@ button {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+/* Opacity only. For anything that stays on screen and occupies layout: a
+   transform-based entrance can leave a residual translate, which paints the
+   element off its own box and over whatever sits below it. */
+@keyframes fadeInPlace {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }

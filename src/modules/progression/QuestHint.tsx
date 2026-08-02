@@ -18,12 +18,16 @@ export function QuestHintBanner() {
   if (!quest || dismissed) return null
 
   return (
+    // In the flow, not floating over it. Absolutely positioned, this landed on
+    // top of whatever header the module had — PATHFINDER's title bar, in the
+    // report — and covering the name of the screen you just arrived at is a
+    // strange way to explain why you are there.
     <div style={{
-      position: 'absolute', top: 8, left: 12, right: 12, zIndex: 40,
-      display: 'flex', alignItems: 'flex-start', gap: 9, padding: '9px 11px', borderRadius: 9,
+      flexShrink: 0, display: 'flex', alignItems: 'flex-start', gap: 9,
+      margin: '8px 12px 0', padding: '9px 11px', borderRadius: 9,
       background: 'rgba(8,14,26,0.96)', border: `1px solid ${GOLD}45`,
-      boxShadow: `0 6px 22px rgba(0,0,0,0.55), 0 0 16px ${GOLD}18`,
-      animation: 'slideUp 0.25s ease',
+      boxShadow: `0 4px 18px rgba(0,0,0,0.45), 0 0 14px ${GOLD}18`,
+      animation: 'fadeInPlace 0.25s ease',
     }}>
       <span style={{ fontSize: 10, color: GOLD, flexShrink: 0, marginTop: 1 }}>⚑</span>
       <div style={{ flex: 1, minWidth: 0 }}>

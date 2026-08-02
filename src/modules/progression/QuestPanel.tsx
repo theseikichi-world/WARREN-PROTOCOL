@@ -34,13 +34,22 @@ export function QuestPanel() {
     // the hub is where most people will see a quest complete.
     const { state, cleared } = syncQuests(base, ctx)
     if (cleared.length) saveProgression(state)
-    return { state, ctx }
+    return { state, ctx, cleared }
   }, [])
 
   const [{ state, ctx }, setData] = useState(read)
+  /** The quest that just cleared, held long enough to be seen. */
+  const [celebrating, setCelebrating] = useState<Quest | null>(null)
 
   useEffect(() => {
-    const refresh = () => { setData(read()); setTick(t => t + 1) }
+    const refresh = () => {
+      const next = read()
+      setData(next)
+      setTick(t => t + 1)
+      // A quest clearing silently was the flattest moment in the loop: real work
+      // landed and the only trace was a number changing somewhere off-screen.
+      if (next.cleared.length) setCelebrating(next.cleared[next.cleared.length - 1])
+    }
     refresh()
     window.addEventListener('warren:sync', refresh)
     window.addEventListener('focus', refresh)
@@ -50,6 +59,12 @@ export function QuestPanel() {
     }
   }, [read])
   void tick
+
+  useEffect(() => {
+    if (!celebrating) return
+    const id = setTimeout(() => setCelebrating(null), 4200)
+    return () => clearTimeout(id)
+  }, [celebrating])
 
   const stage = stageState(state.quests, ctx)
   const lvl   = gatedLevel(state.xp, state.quests)
@@ -89,9 +104,11 @@ export function QuestPanel() {
   }
 
   return (
-    <div style={{ marginBottom: 16, padding: '11px 13px', borderRadius: 10,
+    <div style={{ marginBottom: 16, padding: '11px 13px', borderRadius: 10, position: 'relative',
       background: `linear-gradient(140deg, ${GOLD}0e, rgba(6,14,26,0.5))`,
       border: `1px solid ${GOLD}35` }}>
+
+      {celebrating && <QuestCleared quest={celebrating} />}
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
         <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.2em',
@@ -114,6 +131,25 @@ export function QuestPanel() {
           : tr(`Finish all ${stage.total} to reach level ${lvl.level + 1}.`,
                `Пройдите все ${stage.total}, чтобы достичь уровня ${lvl.level + 1}.`)}
       </p>
+
+      {/* The bar that the stage actually fills. A gated level costs exactly what
+          its stage pays, so this reaching the end and the stage finishing are the
+          same event — worth showing rather than leaving to arithmetic. */}
+      <div style={{ height: 5, borderRadius: 3, marginTop: 8, overflow: 'hidden',
+        background: 'rgba(255,255,255,0.07)' }}>
+        <div style={{ height: '100%', borderRadius: 3,
+          width: `${Math.round((lvl.capped ? stage.cleared / Math.max(1, stage.total) : lvl.progress) * 100)}%`,
+          background: `linear-gradient(90deg, ${GOLD}, #ffe98a)`,
+          boxShadow: `0 0 10px ${GOLD}90`, transition: 'width 0.8s cubic-bezier(0.2,0.8,0.2,1)' }} />
+      </div>
+      <div style={{ display: 'flex', marginTop: 4 }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM }}>
+          {lvl.capped ? `${stage.cleared}/${stage.total} ${tr('objectives', 'задач')}` : `${lvl.intoNext} / ${lvl.needed} XP`}
+        </span>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${GOLD}90`, marginLeft: 'auto' }}>
+          {tr('LEVEL', 'УРОВЕНЬ')} {lvl.level} → {lvl.level + 1}
+        </span>
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 9 }}>
         {stage.quests.map(p => {
@@ -163,6 +199,36 @@ export function QuestPanel() {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// ─── A quest clearing, made impossible to miss ────────────────────────────────
+
+function QuestCleared({ quest }: { quest: Quest }) {
+  return (
+    <div style={{
+      position: 'absolute', inset: -1, zIndex: 5, borderRadius: 10,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      gap: 4, padding: '14px 16px', textAlign: 'center',
+      background: 'radial-gradient(ellipse at 50% 50%, rgba(255,215,0,0.18), rgba(6,14,26,0.97) 72%)',
+      border: `1px solid ${GOLD}`, boxShadow: `0 0 30px ${GOLD}45, inset 0 0 40px ${GOLD}12`,
+      animation: 'fadeIn 0.25s ease',
+    }}>
+      <span style={{ fontSize: 18, animation: 'pulse 1.1s ease-in-out infinite',
+        filter: `drop-shadow(0 0 10px ${GOLD})` }}>⚑</span>
+      <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.24em',
+        color: `${GOLD}c0`, animation: 'slideUp 0.3s ease' }}>
+        {tr('OBJECTIVE CLEARED', 'ЗАДАЧА ВЫПОЛНЕНА')}
+      </p>
+      <p style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 900, letterSpacing: '0.08em',
+        color: GOLD, textShadow: `0 0 16px ${GOLD}80`, animation: 'slideUp 0.36s ease' }}>
+        {tr(quest.title, quest.ru)}
+      </p>
+      <p style={{ fontFamily: 'var(--font)', fontSize: 15, fontWeight: 900, color: '#ffe98a',
+        textShadow: `0 0 18px ${GOLD}`, marginTop: 2, animation: 'slideUp 0.44s ease' }}>
+        +{quest.xp} XP
+      </p>
     </div>
   )
 }

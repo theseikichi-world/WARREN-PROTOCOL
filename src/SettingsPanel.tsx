@@ -291,7 +291,11 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
 
           <Row label={t('Replay the guided tours', 'Показать обучение заново')}
             sub={t('Step-by-step walkthrough on every screen, from the top', 'Пошаговое объяснение на каждом экране, с начала')}>
-            <button onClick={() => { forgetTours(); setBackupMsg('✓ Tours will play again') }}
+            <button onClick={() => {
+              forgetTours()
+              setBackupMsg('✓ Replaying the tours — reloading…')
+              setTimeout(() => window.location.reload(), 700)
+            }}
               style={{ padding: '5px 11px', borderRadius: 6, cursor: 'pointer',
                 fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700, letterSpacing: '0.1em',
                 color: acc, background: 'transparent', border: `1px solid ${acc}40` }}>

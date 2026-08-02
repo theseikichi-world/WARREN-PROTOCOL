@@ -9,6 +9,8 @@ import SettingsPanel from './SettingsPanel'
 import { Onboarding } from './Onboarding'
 import { RouteTour } from './TourOverlay'
 import { Initiation } from './modules/progression/Initiation'
+import { LevelUp } from './modules/progression/LevelUp'
+import { gatedLevel } from './modules/progression/xp'
 import { loadProgression, saveProgression } from './modules/progression/store'
 import { QuestHintBanner } from './modules/progression/QuestHint'
 import Scrap7    from './modules/scrap7/Scrap7'
@@ -527,6 +529,7 @@ export default function App() {
   const [intro, setIntro]       = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [initiated, setInitiated] = useState(() => !!loadProgression().initiatedAt)
+  const [levelUp, setLevelUp] = useState<number | null>(null)
   const entitlements: Entitlements = {}
 
   // Apply settings on mount and whenever they change
@@ -538,6 +541,23 @@ export default function App() {
     const open = () => setSettingsOpen(true)
     window.addEventListener('warren:open-settings', open)
     return () => window.removeEventListener('warren:open-settings', open)
+  }, [])
+
+  // Watched at the top rather than inside a screen: a threshold can be crossed
+  // by logging water in SOLARIS, and the moment should land wherever you are.
+  useEffect(() => {
+    const check = () => {
+      const p = loadProgression()
+      const reached = gatedLevel(p.xp, p.quests).level
+      if (reached > (p.celebratedLevel ?? 1)) setLevelUp(reached)
+    }
+    check()
+    window.addEventListener('warren:sync', check)
+    window.addEventListener('focus', check)
+    return () => {
+      window.removeEventListener('warren:sync', check)
+      window.removeEventListener('focus', check)
+    }
   }, [])
 
   // Every launch starts at the hub. HashRouter restores the last route from the
@@ -567,7 +587,8 @@ export default function App() {
   const showIntro      = intro && settings.showIntro
   const showOnboarding = !showIntro && !settings.onboardedAt
   const showInitiation = !showIntro && !showOnboarding && !initiated && onHub
-  const tourEnabled    = !showIntro && !showOnboarding && !showInitiation && !settingsOpen
+  const showLevelUp    = levelUp !== null && !showIntro && !showOnboarding && !showInitiation
+  const tourEnabled    = !showIntro && !showOnboarding && !showInitiation && !showLevelUp && !settingsOpen
 
   const bgColor = `rgba(6, 11, 22, ${settings.opacity})`
 
@@ -621,6 +642,15 @@ export default function App() {
           }} />
       )}
 
+      {/* A threshold crossed. Says what changed, never "well done". */}
+      {showLevelUp && (
+        <LevelUp level={levelUp}
+          onDone={() => {
+            saveProgression({ ...loadProgression(), celebratedLevel: levelUp })
+            setLevelUp(null)
+          }} />
+      )}
+
       {/* Step-by-step, once per surface — and only once everything above it is done */}
       <RouteTour enabled={tourEnabled} />
 
@@ -631,7 +661,8 @@ export default function App() {
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
         {/* Main content */}
-        <main style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        <main style={{ flex: 1, overflow: 'hidden', position: 'relative',
+          display: 'flex', flexDirection: 'column' }}>
           {/* Settings panel */}
           {settingsOpen && (
             <SettingsPanel
@@ -643,6 +674,7 @@ export default function App() {
 
           <QuestHintBanner />
 
+          <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
           <Routes>
             <Route path="/" element={<Dashboard displayName={settings.displayName} />} />
             <Route path="/scrap7/*"    element={<Scrap7 />} />
@@ -656,6 +688,7 @@ export default function App() {
             {/* Unbuilt modules are hidden; any stray URL falls back to the Hub */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </div>
         </main>
 
         {/* Sidebar — RIGHT side */}

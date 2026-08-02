@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { baseXp, awardXp, levelCost, levelFor, gatedLevel, levelCap, isUnlockedAt, nextGate, GATES } from './xp'
+import { baseXp, awardXp, levelCost, levelFor, gatedLevel, levelCap, isUnlockedAt, nextGate, GATES, levelReward, rewardIsBare } from './xp'
 import { stageQuests, stageXp, LAST_GATED_STAGE } from './quests'
 import { deriveStats, overallRating } from './stats'
 import type { Task } from '../scrap7/types'
@@ -194,5 +194,32 @@ describe('the quest gate', () => {
     const g = gatedLevel(levelCost(1) + levelCost(2), {})
     expect(g.level).toBe(1)
     expect(g.xpLevel).toBe(3)
+  })
+})
+
+describe('what a level opens', () => {
+  it('names the capacity a level unlocks', () => {
+    expect(levelReward(5).gates.map(g => g.key)).toEqual(['secondary'])
+    expect(levelReward(3).gates.map(g => g.key)).toEqual(['inventory'])
+  })
+
+  it('never claims level 1 unlocked the thing you started with', () => {
+    expect(levelReward(1).gates).toEqual([])
+  })
+
+  it('reports a widened floor only on the levels that widen it', () => {
+    expect(levelReward(2).slots).toBe(2)
+    expect(levelReward(3).slots).toBeNull()
+    expect(levelReward(4).slots).toBe(3)
+  })
+
+  it('hands over the stage that just became reachable', () => {
+    expect(levelReward(2).quests).toEqual(stageQuests(2))
+  })
+
+  it('admits when a level opened nothing but the number', () => {
+    // Level 7 gates nothing, widens nothing and starts no stage
+    expect(rewardIsBare(levelReward(7))).toBe(true)
+    expect(rewardIsBare(levelReward(2))).toBe(false)
   })
 })

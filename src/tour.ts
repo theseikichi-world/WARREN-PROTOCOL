@@ -143,7 +143,11 @@ export function markTourSeen(id: string): void {
   catch { /* quota */ }
 }
 
-/** Replay everything — Settings offers this, and a reset gets it for free. */
+/**
+ * Replay everything — Settings offers this, and a reset gets it for free.
+ * Reloads, because tours are also guarded per-session in memory (see RouteTour)
+ * and clearing the flags alone would not bring them back until the next launch.
+ */
 export function forgetTours(): void {
   try { localStorage.removeItem(KEY) } catch { /* ignore */ }
 }
