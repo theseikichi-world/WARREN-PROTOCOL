@@ -75,6 +75,8 @@ export interface Goal {
   nodes:            ChainNode[]
   createdAt:        string
   lastSlotChangeAt: string
+  /** The L.O.G dream this uplink was promoted from, when it came from one. */
+  sourceDreamId?:   string | null
 }
 
 export interface ProgressionState {

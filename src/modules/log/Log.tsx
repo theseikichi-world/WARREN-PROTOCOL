@@ -15,13 +15,15 @@ import {
   syncPlanItemToScrap7,
 } from './store'
 import { aiJson, loadSettings, modelForTask, type AiMessage } from '../../settings'
+import { NewUplink } from '../progression/NewUplink'
+import { loadProgression } from '../progression/store'
 import { t as tr } from '../../i18n'
 
-// L.O.G is read-only while the progression system lands: its dreams are being
-// replaced by goal chains (PROTOCOLS), so new ones would only be written into a
-// structure that is about to change. Everything already here stays visible and
-// editable — only creation is closed.
-const LOG_FROZEN = true
+// L.O.G was frozen while the progression system landed, on the assumption that
+// goal chains replaced dreams. They don't: dreams are the layer *above* — the
+// unlimited list, from which two are chosen. So this is the inbox again, and a
+// dream is where an UPLINK comes from.
+const LOG_FROZEN = false
 
 const LOG_NEON  = '#c084fc'
 const LOG_DIM   = 'rgba(192,132,252,0.1)'
@@ -645,7 +647,8 @@ function MissionBlock({ mission, dream, state, onChange }: {
 }
 
 // ─── Dream card (star node) ───────────────────────────────────────────────────
-function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChange, onEdit, onMove }: {
+function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChange, onEdit, onMove,
+                     promoted, onPromote }: {
   dream:          Dream
   rank:           number
   total:          number
@@ -655,6 +658,9 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
   onChange:       (s: LogState) => void
   onEdit:         () => void
   onMove:         (dir: -1 | 1) => void
+  /** This dream already drives an uplink. */
+  promoted:       boolean
+  onPromote:      () => void
 }) {
   const [missionModal,  setMissionModal]    = useState(false)
   const [hovHeader,     setHovHeader]       = useState(false)
@@ -822,6 +828,31 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
               borderLeft: `2px solid ${LOG_NEON}20`, paddingLeft: 8,
             }}>{dream.description}</p>
           )}
+
+          {/* Promote — a dream is where an uplink comes from. Missions plan the
+              work; a PROTOCOL is the daily behaviour that actually produces it. */}
+          <button onClick={onPromote} disabled={promoted} style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            width: '100%', marginBottom: 10, padding: '8px 12px', borderRadius: 8,
+            cursor: promoted ? 'default' : 'pointer',
+            background: promoted ? 'rgba(0,245,255,0.04)' : 'rgba(0,245,255,0.07)',
+            border: `1px solid rgba(0,245,255,${promoted ? 0.16 : 0.32})`,
+            opacity: promoted ? 0.65 : 1, transition: 'all 0.18s',
+          }}>
+            <span style={{ fontSize: 13, filter: 'drop-shadow(0 0 4px #00f5ff)' }}>◈</span>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+                color: '#00f5ff', letterSpacing: '0.15em' }}>
+                {promoted ? tr('ALREADY AN UPLINK', 'УЖЕ КАНАЛ') : tr('PROMOTE TO UPLINK', 'ПРОДВИНУТЬ В КАНАЛ')}
+              </p>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 7,
+                color: 'rgba(0,245,255,0.5)', letterSpacing: '0.06em', marginTop: 1 }}>
+                {promoted
+                  ? tr('Its protocol lives in UPLINKS', 'Его протокол — в UPLINKS')
+                  : tr('The guide proposes a chain of routines — you edit every node', 'Гид предложит цепь рутин — вы правите каждый узел')}
+              </p>
+            </div>
+          </button>
 
           {/* Analyze button */}
           {!dream.analysis && !analyzing && (
@@ -1231,6 +1262,13 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
   )
 }
 
+/** Dreams that already drive an uplink — read from progression, never stored here. */
+function promotedDreamIds(): Set<string> {
+  return new Set(loadProgression().goals
+    .map(g => g.sourceDreamId)
+    .filter((id): id is string => !!id))
+}
+
 // ─── Main Log component ────────────────────────────────────────────────────────
 export default function Log() {
   const [state,         setState]         = useState<LogState>(() => loadLogState())
@@ -1238,6 +1276,8 @@ export default function Log() {
   const [dreamModal,    setDreamModal]    = useState<Dream | 'new' | null>(null)
   const [synthesizing,  setSynthesizing]  = useState(false)
   const [synthError,    setSynthError]    = useState('')
+  const [promoting,     setPromoting]     = useState<Dream | null>(null)
+  const [promotedIds,   setPromotedIds]   = useState<Set<string>>(() => promotedDreamIds())
 
   const persist = useCallback((s: LogState) => { saveLogState(s); setState(s) }, [])
 
@@ -1290,7 +1330,7 @@ export default function Log() {
 
   // Listen for SCRAP-7 sync completions (tasks marked done in SCRAP-7)
   useEffect(() => {
-    const handler = () => setState(loadLogState())
+    const handler = () => { setState(loadLogState()); setPromotedIds(promotedDreamIds()) }
     window.addEventListener('warren:sync', handler)
     return () => window.removeEventListener('warren:sync', handler)
   }, [])
@@ -1428,6 +1468,8 @@ export default function Log() {
             onChange={persist}
             onEdit={() => setDreamModal(dream)}
             onMove={dir => persist(moveDream(state, dream.id, dir))}
+            promoted={promotedIds.has(dream.id)}
+            onPromote={() => setPromoting(dream)}
           />
         ))}
 
@@ -1446,6 +1488,13 @@ export default function Log() {
           }}
           onCancel={() => setDreamModal(null)}
         />
+      )}
+
+      {/* Dream → protocol. Everything it writes lives in progression, not here. */}
+      {promoting && (
+        <NewUplink accent="#00f5ff" dream={promoting}
+          onClose={() => setPromoting(null)}
+          onCommitted={() => { setPromoting(null); setPromotedIds(promotedDreamIds()) }} />
       )}
     </div>
   )

@@ -4,10 +4,13 @@ import {
   loadProgression, saveProgression, seedIfEmpty, syncChain, installNode, recordRun, syncQuests,
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
   cooldownRemaining, promoteSecondary, assignPrimary, assignSecondary, archiveGoal,
-  trainingCount, hasCapacity,
+  trainingCount, hasCapacity, commitDraft,
 } from './store'
 import { SkillTree } from './SkillTree'
 import { CharacterSheet } from './CharacterSheet'
+import { ChainForge } from './ChainForge'
+import { NewUplink } from './NewUplink'
+import { goalToDraft, type ChainDraft } from './draft'
 import { nodeState } from './chain'
 import { levelFor, isUnlockedAt } from './xp'
 import { loadState as loadScrap7, saveState as saveScrap7, trackHabit } from '../scrap7/store'
@@ -29,17 +32,19 @@ export default function Uplinks() {
   const [view, setView]   = useState<'character' | 'primary' | 'secondary'>('character')
   const [sums, setSums]   = useState<ModuleSummaries>(() => getModuleSummaries())
   const [toast, setToast] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [forging, setForging]   = useState<ChainDraft | null>(null)
 
+  // Re-read from storage rather than from React state: the forge and the
+  // bandwidth strip write progression too, and `prev` would clobber them.
   const reconcile = useCallback(() => {
     const tasksNow = loadScrap7().tasks
     const sumsNow  = getModuleSummaries()
-    setState(prev => {
-      const chained = syncChain(seedIfEmpty(prev))
-      const { state: next, cleared } = syncQuests(chained, { sums: sumsNow, goals: chained.goals, tasks: tasksNow })
-      saveProgression(next)
-      if (cleared.length) flash(`⚑ ${tr(cleared[0].title, cleared[0].ru)} — +${cleared[0].xp} XP`)
-      return next
-    })
+    const chained  = syncChain(seedIfEmpty(loadProgression()))
+    const { state: next, cleared } = syncQuests(chained, { sums: sumsNow, goals: chained.goals, tasks: tasksNow })
+    saveProgression(next)
+    if (cleared.length) flash(`⚑ ${tr(cleared[0].title, cleared[0].ru)} — +${cleared[0].xp} XP`)
+    setState(next)
     setTasks(tasksNow)
     setSums(sumsNow)
   }, [])
@@ -103,6 +108,18 @@ export default function Uplinks() {
     reconcile()
   }, [reconcile])
 
+  /** Save an edited protocol. Nothing earned is lost — see applyDraft. */
+  const handleForgeCommit = useCallback((draft: ChainDraft) => {
+    const res = commitDraft(loadProgression(), draft)
+    saveProgression(syncChain(res.state))
+    setForging(null)
+    reconcile()
+    flash(res.detached.length
+      ? tr(`◆ PROTOCOL SAVED · ${res.detached.length} released to SCRAP-7`,
+           `◆ ПРОТОКОЛ СОХРАНЁН · ${res.detached.length} возвращено в SCRAP-7`)
+      : tr('◆ PROTOCOL SAVED', '◆ ПРОТОКОЛ СОХРАНЁН'))
+  }, [reconcile])
+
   const primary   = primaryGoal(state)
   const secondary = secondaryGoal(state)
   const archived  = archivedGoals(state)
@@ -124,6 +141,11 @@ export default function Uplinks() {
             {tr('BANDWIDTH', 'ПОЛОСА')} {bandwidthUsed(state)}/2
           </p>
         </div>
+        <button onClick={() => setCreating(true)} style={{
+          padding: '5px 10px', borderRadius: 6, cursor: 'pointer', background: 'transparent',
+          border: `1px solid ${CYAN}35`, fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700,
+          letterSpacing: '0.1em', color: CYAN, flexShrink: 0,
+        }}>+ {tr('UPLINK', 'КАНАЛ')}</button>
       </div>
 
       {/* Character, then a tab per uplink */}
@@ -186,14 +208,28 @@ export default function Uplinks() {
 
             <GoalActions goal={shown} view={view} cooldown={cooldown}
               canInstallMore={hasCapacity(shown, tasks)}
+              onEdit={() => setForging(goalToDraft(shown))}
               onPromote={() => persist(promoteSecondary(state, now))}
               onDemote={() => persist(assignSecondary(state, shown.id, now))}
               onFreeze={() => persist(archiveGoal(state, shown.id, now))} />
           </>
         ) : view !== 'character' ? (
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, color: DIM, textAlign: 'center', padding: '40px 12px' }}>
-            {tr('This uplink is unallocated.', 'Этот канал свободен.')}
-          </p>
+          <div style={{ textAlign: 'center', padding: '36px 16px' }}>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 9, color: DIM }}>
+              {tr('This uplink is unallocated.', 'Этот канал свободен.')}
+            </p>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(148,163,184,0.35)',
+              marginTop: 7, lineHeight: 1.7, maxWidth: 300, marginLeft: 'auto', marginRight: 'auto' }}>
+              {tr('Promote a dream from L.O.G, start from a template, or write the chain yourself.',
+                  'Продвиньте мечту из L.O.G, начните с шаблона или напишите цепь сами.')}
+            </p>
+            <button onClick={() => setCreating(true)} style={{
+              marginTop: 12, padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
+              fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
+              color: '#02121a', background: `linear-gradient(135deg, ${accent}, ${accent}b0)`,
+              border: 'none', boxShadow: `0 0 16px ${accent}45`,
+            }}>◈ {tr('NEW UPLINK', 'НОВЫЙ КАНАЛ')}</button>
+          </div>
         ) : null}
 
         {/* Frozen goals — recoverable, never deleted */}
@@ -226,6 +262,25 @@ export default function Uplinks() {
         )}
       </div>
 
+      {creating && (
+        <NewUplink accent={CYAN}
+          onClose={() => setCreating(false)}
+          onCommitted={(_, title) => {
+            setCreating(false)
+            reconcile()
+            flash(`◆ ${title || tr('UPLINK', 'КАНАЛ')} ${tr('ONLINE', 'В СЕТИ')}`)
+          }} />
+      )}
+
+      {forging && (
+        <ChainForge draft={forging} accent={accent === GOLD ? GOLD : CYAN}
+          installedKeys={new Set(
+            (shown?.nodes ?? []).filter(n => n.scrapTaskId)
+              .map(n => n.id.slice((shown?.id.length ?? 0) + 1)))}
+          onCommit={handleForgeCommit}
+          onCancel={() => setForging(null)} />
+      )}
+
       {toast && (
         <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
           padding: '9px 20px', borderRadius: 9, zIndex: 60,
@@ -240,9 +295,9 @@ export default function Uplinks() {
 }
 
 /** Slot actions, tucked under the tree where they don't compete with it. */
-function GoalActions({ goal, view, cooldown, canInstallMore, onPromote, onDemote, onFreeze }: {
+function GoalActions({ goal, view, cooldown, canInstallMore, onEdit, onPromote, onDemote, onFreeze }: {
   goal: Goal; view: 'primary' | 'secondary'; cooldown: number; canInstallMore: boolean
-  onPromote: () => void; onDemote: () => void; onFreeze: () => void
+  onEdit: () => void; onPromote: () => void; onDemote: () => void; onFreeze: () => void
 }) {
   const btn = (disabled: boolean): React.CSSProperties => ({
     padding: '5px 10px', borderRadius: 6, cursor: disabled ? 'default' : 'pointer',
@@ -252,6 +307,7 @@ function GoalActions({ goal, view, cooldown, canInstallMore, onPromote, onDemote
   })
   return (
     <div style={{ display: 'flex', gap: 6, marginTop: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+      <button onClick={onEdit} style={{ ...btn(false), color: DIM }}>✎ {tr('EDIT', 'ПРАВИТЬ')}</button>
       {view === 'secondary' && (
         <button onClick={onPromote} style={{ ...btn(false), color: CYAN, borderColor: `${CYAN}35` }}>
           ▲ {tr('PROMOTE', 'ПОВЫСИТЬ')}

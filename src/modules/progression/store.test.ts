@@ -4,6 +4,7 @@ import {
   cooldownRemaining, canReassignPrimary, promoteSecondary, assignPrimary, assignSecondary,
   archiveGoal, addGoal,
 } from './store'
+import { TEMPLATES, draftToGoal } from './draft'
 import { estimateDays, xpRateForSlot, type Goal, type ProgressionState } from './types'
 
 const NOW = new Date('2026-08-01T10:00:00.000Z')
@@ -17,32 +18,39 @@ const goal = (id: string, slot: Goal['slot'], changed = daysAgo(30)): Goal => ({
 const state = (...goals: Goal[]): ProgressionState => ({ goals, seeded: true, xp: 0, quests: {} })
 
 describe('seeding', () => {
-  it('installs the two reference uplinks exactly once', () => {
-    const first = seedIfEmpty({ goals: [], seeded: false, xp: 0, quests: {} })
-    expect(first.goals.map(g => g.title)).toEqual(['ACTOR', 'CAPOEIRA'])
-    expect(primaryGoal(first)?.title).toBe('ACTOR')
-    expect(secondaryGoal(first)?.title).toBe('CAPOEIRA')
-
-    // Re-running must never duplicate or resurrect deleted goals
-    const cleared = seedIfEmpty({ goals: [], seeded: true, xp: 0, quests: {} })
-    expect(cleared.goals).toHaveLength(0)
+  it('never installs a goal — an uplink you did not choose is not yours', () => {
+    const fresh = seedIfEmpty({ goals: [], seeded: false, xp: 0, quests: {} })
+    expect(fresh.goals).toHaveLength(0)
+    expect(fresh.seeded).toBe(true)
   })
 
-  it('seeds routines with a cue and an ordered threshold ladder', () => {
-    const s = seedIfEmpty({ goals: [], seeded: false, xp: 0, quests: {} })
-    const nodes = s.goals.flatMap(g => g.nodes)
+  it('leaves an already-seeded state exactly as it found it', () => {
+    const existing = state(goal('a', 'primary'))
+    expect(seedIfEmpty(existing)).toBe(existing)
+  })
+})
+
+// The reference chains that used to seed themselves now live as templates. The
+// structural guarantees they carried are still guarantees.
+describe('reference templates', () => {
+  const goals = TEMPLATES.map(t => draftToGoal(t, []))
+
+  it('offers ACTOR and CAPOEIRA', () => {
+    expect(goals.map(g => g.title)).toEqual(['ACTOR', 'CAPOEIRA'])
+  })
+
+  it('every routine has a cue and an ordered threshold ladder', () => {
+    const nodes = goals.flatMap(g => g.nodes)
     expect(nodes.length).toBeGreaterThan(10)
     expect(nodes.every(n => n.cue.trim().length > 0)).toBe(true)
     expect(nodes.every(n => n.thresholds.length >= 2)).toBe(true)
-    // Each chain has exactly one entry point
-    for (const g of s.goals) {
+    for (const g of goals) {
       expect(g.nodes.filter(n => n.prerequisiteIds.length === 0)).toHaveLength(1)
     }
   })
 
   it('points every prerequisite and chapter at a real node', () => {
-    const s = seedIfEmpty({ goals: [], seeded: false, xp: 0, quests: {} })
-    for (const g of s.goals) {
+    for (const g of goals) {
       const ids = new Set(g.nodes.map(n => n.id))
       for (const n of g.nodes) for (const p of n.prerequisiteIds) expect(ids.has(p)).toBe(true)
       for (const c of g.chapters) for (const nid of c.nodeIds) expect(ids.has(nid)).toBe(true)

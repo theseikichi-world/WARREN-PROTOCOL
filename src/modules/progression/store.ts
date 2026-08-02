@@ -6,7 +6,7 @@ import {
   type Goal, type GoalSlot, type ProgressionState,
   SWAP_COOLDOWN_DAYS, SECONDARY_MAX_NODES, THRESHOLD_UNLOCK_AT,
 } from './types'
-import { SEED_GOALS } from './seed'
+import { applyDraft, draftToGoal, type ChainDraft } from './draft'
 import { evaluateUnlocks, isUnlocked, nodeScore, routineTaskId } from './chain'
 import { awardXp, levelFor, type XpEvent } from './xp'
 import { evaluateQuests, type Quest, type QuestContext } from './quests'
@@ -39,12 +39,18 @@ export function saveProgression(s: ProgressionState): void {
 }
 
 /**
- * Install the reference uplinks once, on a genuinely empty state. Hand-written
- * chains — never generated, never derived from L.O.G.
+ * Nothing installs itself — including a goal.
+ *
+ * Two reference uplinks used to appear on first run. They were scaffolding for
+ * a system with no way to author a chain; now that a dream can be promoted, an
+ * uplink you didn't choose is just someone else's life in your character sheet.
+ * The same two chains survive as TEMPLATES in `draft.ts`, offered and editable.
+ *
+ * Kept as a no-op so an already-seeded state is untouched and `seeded` keeps its
+ * meaning if an older build ever reads this data back.
  */
 export function seedIfEmpty(state: ProgressionState): ProgressionState {
-  if (state.seeded || state.goals.length > 0) return { ...state, seeded: true }
-  return { ...state, goals: structuredClone(SEED_GOALS), seeded: true }
+  return state.seeded ? state : { ...state, seeded: true }
 }
 
 // ─── Reads ────────────────────────────────────────────────────────────────────
@@ -288,6 +294,69 @@ export function hasCapacity(goal: Goal, tasks: ReturnType<typeof loadScrap7>['ta
 export function addGoal(s: ProgressionState, goal: Goal, now = new Date()): ProgressionState {
   const slot: GoalSlot = !primaryGoal(s) ? 'primary' : !secondaryGoal(s) ? 'secondary' : 'archived'
   return { ...s, goals: [...s.goals, stamp(goal, slot, now)] }
+}
+
+// ─── Authoring ────────────────────────────────────────────────────────────────
+
+/**
+ * Push an edit down into SCRAP-7, in one pass.
+ *
+ * DETACHED — a routine dropped from a chain is not deleted. Freeze never
+ * deletes and neither does editing: the habit becomes UNBOUND with its score
+ * and streak intact, to re-attach or archive by hand.
+ *
+ * RENAMED — a routine renamed in the tree is renamed on its habit. This patches
+ * the two display fields only; it never goes near createExternalTask, which
+ * would rebuild the task and wipe the score hanging off that id.
+ */
+function applyScrap7Edits(detached: string[], renames: Map<string, { text: string; category: string }>): void {
+  if (detached.length === 0 && renames.size === 0) return
+  const dropped = new Set(detached)
+  const s7 = loadScrap7()
+
+  let touched = false
+  const tasks = s7.tasks.map(t => {
+    if (dropped.has(t.id)) { touched = true; return { ...t, origin: 'manual' as const, frozen: false } }
+    const rename = renames.get(t.id)
+    if (!rename || (t.text === rename.text && t.category === rename.category)) return t
+    touched = true
+    return { ...t, text: rename.text, category: rename.category }
+  })
+
+  if (!touched) return
+  saveScrap7({ ...s7, tasks })
+  window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'progression' } }))
+}
+
+export interface CommitResult {
+  state:    ProgressionState
+  goalId:   string
+  /** Habits released to UNBOUND by this edit. */
+  detached: string[]
+}
+
+/**
+ * Commit a draft. Creates the uplink when the draft has no goal id, otherwise
+ * folds the edit into the existing one — where everything already earned
+ * survives, because nodes are matched by their permanent key.
+ */
+export function commitDraft(s: ProgressionState, draft: ChainDraft, now = new Date()): CommitResult {
+  const existing = draft.goalId ? s.goals.find(g => g.id === draft.goalId) : null
+
+  if (!existing) {
+    const goal = draftToGoal({ ...draft, goalId: null }, s.goals.map(g => g.id), now)
+    return { state: addGoal(s, goal, now), goalId: goal.id, detached: [] }
+  }
+
+  const { goal, detached } = applyDraft(existing, draft, now)
+  applyScrap7Edits(detached, new Map(goal.nodes
+    .filter(n => n.scrapTaskId)
+    .map(n => [n.scrapTaskId, { text: n.title, category: goal.title }])))
+  return {
+    state: { ...s, goals: s.goals.map(g => g.id === goal.id ? goal : g) },
+    goalId: goal.id,
+    detached,
+  }
 }
 
 // ─── Earning ──────────────────────────────────────────────────────────────────
