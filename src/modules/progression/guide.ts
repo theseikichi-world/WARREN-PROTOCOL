@@ -9,6 +9,7 @@
 // graph must still open in the editor rather than fail to render.
 
 import { aiJson, loadSettings, modelForTask, type AiMessage } from '../../settings'
+import { dayShape, profileBrief } from '../../profile'
 import type { Dream } from '../log/types'
 import type { NodeTier } from './types'
 import { TIER_META, PRIMARY_MAX_NODES } from './types'
@@ -168,9 +169,13 @@ export function dreamBrief(dream: Dream): string {
 /** Ask the guide for a chain. Throws on transport/auth failure; the caller shows it. */
 export async function proposeChain(dream: Dream): Promise<ChainDraft> {
   const settings = loadSettings()
+  // The operator's hours are a hard constraint on where cues can sit — a chain
+  // anchored to 6am for a night owl fails for reasons unrelated to willpower.
+  const brief = [profileBrief(dayShape(settings.sleepTime, settings.wakeTime)), dreamBrief(dream)]
+    .filter(Boolean).join('\n\n')
   const messages: AiMessage[] = [
     { role: 'system', content: GUIDE_SYSTEM },
-    { role: 'user',   content: dreamBrief(dream) },
+    { role: 'user',   content: brief },
   ]
   const raw = await aiJson<RawProposal>(messages, settings, {
     model: modelForTask(settings, GUIDE_TASK_ID),

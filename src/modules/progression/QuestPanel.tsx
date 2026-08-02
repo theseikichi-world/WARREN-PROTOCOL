@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { t as tr } from '../../i18n'
-import { loadSettings } from '../../settings'
 import { loadState as loadScrap7 } from '../scrap7/store'
 import { getModuleSummaries } from '../bigscreen/moduleStats'
 import { loadProgression, saveProgression, syncQuests } from './store'
@@ -10,6 +9,7 @@ import {
   stageState, questCta, QUEST_DESTINATIONS, LAST_GATED_STAGE,
   type Quest, type QuestContext,
 } from './quests'
+import { questNav } from './questNav'
 
 // ─── The quest log, on the hub ────────────────────────────────────────────────
 // Quests live where navigation lives. Every objective is one tap from the thing
@@ -27,9 +27,8 @@ export function QuestPanel() {
   const read = useCallback(() => {
     const tasks = loadScrap7().tasks
     const sums  = getModuleSummaries()
-    const name  = loadSettings().displayName
     const base  = loadProgression()
-    const ctx: QuestContext = { sums, goals: base.goals, tasks, name }
+    const ctx: QuestContext = { sums, goals: base.goals, tasks }
 
     // Clear anything the record now satisfies, here as well as in UPLINKS —
     // the hub is where most people will see a quest complete.
@@ -56,12 +55,18 @@ export function QuestPanel() {
   const lvl   = gatedLevel(state.xp, state.quests)
   const hasUplink = state.goals.some(g => g.slot !== 'archived')
 
+  /**
+   * Travel with the quest. The brief rides along so the destination can restate
+   * it, and a spotlight tells a screen which control to point at — landing on a
+   * whole module and being left to hunt is the failure this replaces.
+   */
   const go = (quest: Quest) => {
     const path = QUEST_DESTINATIONS[quest.target].path
-    if (!path) { window.dispatchEvent(new CustomEvent('warren:open-settings')); return }
+    if (!path) return
     // The uplink steps resolve against what exists: with no goal, "install a
     // routine" should land on the place you create one.
-    navigate(path, { state: quest.target === 'uplink' && !hasUplink ? { openNewUplink: true } : undefined })
+    const spotlight = quest.target === 'uplink' && !hasUplink ? 'new-uplink' : quest.spotlight
+    navigate(path, { state: questNav(quest, spotlight) })
   }
 
   // The starting zone is finite by design

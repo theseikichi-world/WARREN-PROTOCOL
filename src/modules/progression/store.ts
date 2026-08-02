@@ -7,7 +7,7 @@ import {
   SWAP_COOLDOWN_DAYS, THRESHOLD_UNLOCK_AT, maxNodesFor,
 } from './types'
 import { applyDraft, draftToGoal, type ChainDraft } from './draft'
-import { baselineTaskId, type LifeSupportTemplate } from './lifeSupport'
+import { baselineTaskId, customTaskId, type LifeSupportTemplate } from './lifeSupport'
 import { evaluateUnlocks, isUnlocked, nodeScore, routineTaskId } from './chain'
 import { awardXp, awardBaselineXp, gatedLevel, type XpEvent } from './xp'
 import { evaluateQuests, type Quest, type QuestContext } from './quests'
@@ -383,6 +383,30 @@ export function installLifeSupport(template: LifeSupportTemplate, title: string,
     unit,
   })
   return true
+}
+
+/**
+ * A basic you wrote yourself. Same rules, same small XP — the templates are a
+ * starting shelf, not the whole of what counts as looking after yourself.
+ */
+export function installCustomLifeSupport(title: string, target: number, unit: string): string | null {
+  const slug = title.toLowerCase().trim()
+    .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/^-|-$/g, '').slice(0, 20)
+  const existing = loadScrap7().tasks
+  let id = customTaskId(slug || 'basic')
+  for (let i = 2; existing.some(t => t.id === id); i++) id = `${customTaskId(slug || 'basic')}-${i}`
+
+  createExternalTask({
+    id,
+    text:      title.trim(),
+    category:  'Life support',
+    taskType:  'habit',
+    direction: 'positive',
+    origin:    'baseline',
+    target:    Math.max(1, Math.round(target)),
+    unit,
+  })
+  return id
 }
 
 /** Drop a baseline habit from life support. Kept, not deleted — it becomes yours. */

@@ -2,10 +2,12 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { useState, useEffect } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
-import { GUILD } from './guild'
+import { GUILD, type GuildMember, type ModuleId } from './guild'
 import { hasAccess, type Entitlements } from './entitlements'
 import { loadSettings, saveSettings, applySettings, isTauri, type Settings } from './settings'
 import SettingsPanel from './SettingsPanel'
+import { Onboarding } from './Onboarding'
+import { QuestHintBanner } from './modules/progression/QuestHint'
 import Scrap7    from './modules/scrap7/Scrap7'
 import Log       from './modules/log/Log'
 import Ardo      from './modules/ardo/Ardo'
@@ -32,6 +34,19 @@ import { CyberIcon } from './components/CyberIcon'
 // routines carry fixed time-of-day anchors.
 const WARREN_OS_ENABLED = false
 const INF8_ENABLED = GUILD.some(m => m.id === 'ravi' && m.built)
+
+// ─── Sidebar order ────────────────────────────────────────────────────────────
+// Hand-ordered rather than array-ordered: the kitchen comes first because the
+// body is what everything else runs on, then goals, then the day's tasks.
+const INSTRUMENT_ORDER: ModuleId[] = ['pomu', 'log', 'scrap7', 'hoot']
+
+const built = GUILD.filter(m => m.built)
+const NAV_ORDER = INSTRUMENT_ORDER
+  .map(id => built.find(m => m.id === id))
+  .filter((m): m is GuildMember => !!m)
+  // anything built, an instrument, and not hand-placed still gets a slot
+  .concat(built.filter(m => m.group === 'instrument' && !INSTRUMENT_ORDER.includes(m.id)))
+const NAV_UTILITIES = built.filter(m => m.group === 'utility')
 
 // ─── Matrix intro ─────────────────────────────────────────────────────────────
 const BOOT_LINES = [
@@ -257,7 +272,6 @@ function TitleBar() {
 }
 
 // ─── Sidebar button — cyberpunk icon ─────────────────────────────────────────
-import type { ModuleId } from './guild'
 
 function SidebarBtn({ iconId, neon, active, title, dim = false, onClick }: {
   iconId: ModuleId | 'hub' | 'set' | 'pwr' | 'uplink'
@@ -564,6 +578,13 @@ export default function App() {
         <IntroScreen onDone={() => setIntro(false)} displayName={settings.displayName} />
       )}
 
+      {/* First run. Nothing here works properly until it knows whose day it is
+          measuring, so this is a gate rather than a quest. */}
+      {!settings.onboardedAt && !(intro && settings.showIntro) && (
+        <Onboarding settings={settings}
+          onDone={patch => { const next = { ...settings, ...patch }; saveSettings(next); setSettings(next) }} />
+      )}
+
       {/* Title bar */}
       <TitleBar />
 
@@ -580,6 +601,8 @@ export default function App() {
               onChange={s => { saveSettings(s); setSettings(s) }}
             />
           )}
+
+          <QuestHintBanner />
 
           <Routes>
             <Route path="/" element={<Dashboard displayName={settings.displayName} />} />
@@ -612,14 +635,30 @@ export default function App() {
             title={t('Uplinks — goals & bandwidth', 'Каналы — цели и полоса')} onClick={() => go('/uplinks')} />
           <div style={{ width: 28, height: 1, background: 'var(--border)', margin: '2px 0' }} />
 
-          {/* Modules — only the ones that are actually shipped */}
-          {GUILD.filter(m => m.built).map(member => (
+          {/* INSTRUMENTS, then a divider, then UTILITIES. The split is the whole
+              point: instruments build the character, utilities serve the day. */}
+          {NAV_ORDER.map(member => (
             <SidebarBtn
               key={member.id}
               iconId={member.id}
               neon={member.neon}
               active={location.pathname.startsWith(member.path)}
               title={`${member.name} · ${member.role}`}
+              dim={!hasAccess(entitlements, member.id, member.free)}
+              onClick={() => go(member.path)}
+            />
+          ))}
+          {NAV_UTILITIES.length > 0 && (
+            <div title={t('Utilities — they serve the day, not the character', 'Утилиты — служат дню, а не персонажу')}
+              style={{ width: 20, height: 1, background: 'rgba(255,255,255,0.14)', margin: '5px 0' }} />
+          )}
+          {NAV_UTILITIES.map(member => (
+            <SidebarBtn
+              key={member.id}
+              iconId={member.id}
+              neon={member.neon}
+              active={location.pathname.startsWith(member.path)}
+              title={`${member.name} · ${member.role} · ${t('utility', 'утилита')}`}
               dim={!hasAccess(entitlements, member.id, member.free)}
               onClick={() => go(member.path)}
             />

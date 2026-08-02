@@ -4,6 +4,13 @@ import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart'
 import { type Settings, ACCENT_PRESETS, CLAUDE_MODELS, DEFAULT_MODEL, AI_TASKS, modelForTask, saveSettings, applySettings, isTauri } from './settings'
 import { downloadBackup, exportAllJson, importBackup, resetProgress, resetKeys } from './backup'
 import { useLocale, setLocale, t } from './i18n'
+import { chronotype, CHRONOTYPE_LABEL, type Gender } from './profile'
+
+const GENDER_OPTIONS: { value: Gender; en: string; ru: string }[] = [
+  { value: 'male',   en: 'MALE',   ru: 'МУЖСКОЙ' },
+  { value: 'female', en: 'FEMALE', ru: 'ЖЕНСКИЙ' },
+  { value: 'other',  en: 'OTHER',  ru: 'ДРУГОЕ' },
+]
 
 // ─── Toggle switch ────────────────────────────────────────────────────────────
 function Toggle({ on, onChange, accent }: { on: boolean; onChange: (v: boolean) => void; accent: string }) {
@@ -287,10 +294,13 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
               comes back with the surface it belongs to. */}
 
           {/* ── Profile ── */}
+          {/* Collected once at first run (see Onboarding.tsx). Editable here
+              because a typo in your own name should not be permanent, and the
+              hours genuinely change when a job or a baby does. */}
           <Section label={t('Profile', 'Профиль')} />
 
           <p style={{ fontSize: 9, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 6, letterSpacing: '0.06em' }}>
-            Display name
+            {t('Display name', 'Отображаемое имя')}
           </p>
           <input
             type="text"
@@ -308,10 +318,62 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
               letterSpacing: '0.06em',
               transition: 'border-color 0.15s',
               userSelect: 'text', WebkitUserSelect: 'text',
+              boxSizing: 'border-box',
             }}
             onFocus={e => e.target.style.borderColor = `${acc}50`}
             onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
           />
+
+          <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+            {GENDER_OPTIONS.map(g => {
+              const on = settings.gender === g.value
+              return (
+                <button key={g.value} onClick={() => update({ gender: on ? '' : g.value })}
+                  style={{ flex: 1, padding: '7px 4px', borderRadius: 6, cursor: 'pointer',
+                    fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700, letterSpacing: '0.1em',
+                    color: on ? '#02121a' : 'rgba(148,163,184,0.55)',
+                    background: on ? acc : 'transparent',
+                    border: `1px solid ${on ? acc : 'rgba(255,255,255,0.1)'}` }}>
+                  {t(g.en, g.ru)}
+                </button>
+              )
+            })}
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 8, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 5, letterSpacing: '0.08em' }}>
+                {t('I WAKE AT', 'ПОДЪЁМ В')}
+              </p>
+              <input type="time" value={settings.wakeTime} onChange={e => update({ wakeTime: e.target.value })}
+                style={{ width: '100%', padding: '7px 9px', borderRadius: 6, boxSizing: 'border-box',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                  fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(220,240,255,0.8)', outline: 'none' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 8, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 5, letterSpacing: '0.08em' }}>
+                {t('I SLEEP AT', 'ОТБОЙ В')}
+              </p>
+              <input type="time" value={settings.sleepTime} onChange={e => update({ sleepTime: e.target.value })}
+                style={{ width: '100%', padding: '7px 9px', borderRadius: 6, boxSizing: 'border-box',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                  fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(220,240,255,0.8)', outline: 'none' }} />
+            </div>
+          </div>
+
+          <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
+            lineHeight: 1.6, marginTop: 8 }}>
+            <strong style={{ color: acc }}>
+              {t(CHRONOTYPE_LABEL[chronotype(settings.sleepTime, settings.wakeTime)].en,
+                 CHRONOTYPE_LABEL[chronotype(settings.sleepTime, settings.wakeTime)].ru)}
+            </strong>
+            {' — '}
+            {t(CHRONOTYPE_LABEL[chronotype(settings.sleepTime, settings.wakeTime)].note,
+               CHRONOTYPE_LABEL[chronotype(settings.sleepTime, settings.wakeTime)].noteRu)}
+            {' '}
+            {t('The guide anchors every routine cue inside these hours.',
+               'Гид ставит якоря рутин внутри этих часов.')}
+          </p>
 
           {/* ── AI ── */}
           <Section label={t('AI Assistant', 'ИИ-ассистент')} />

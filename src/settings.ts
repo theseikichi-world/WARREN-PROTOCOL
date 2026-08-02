@@ -1,4 +1,5 @@
 import { aiLangSuffix } from './i18n'
+import type { Gender } from './profile'
 
 // ─── Claude models (the only AI provider Warren uses) ─────────────────────────
 export interface ClaudeModel {
@@ -59,7 +60,12 @@ export interface Settings {
   startOnStartup: boolean
   showIntro:      boolean
   bootBigScreen:  boolean                   // desktop: launch straight into fullscreen Warren OS
+  // ── Operator profile, collected once on first run (see profile.ts) ──
   displayName:    string
+  gender:         Gender
+  wakeTime:       string                    // 'HH:MM' — anchors every routine cue
+  sleepTime:      string                    // 'HH:MM'
+  onboardedAt:    string | null             // null until the first-run questions are answered
   // AI — Claude only
   aiApiKey:       string
   aiModel:        string                    // global default / fallback model
@@ -88,6 +94,10 @@ export const DEFAULT_SETTINGS: Settings = {
   showIntro:      true,
   bootBigScreen:  true,
   displayName:    '',
+  gender:         '',
+  wakeTime:       '07:00',
+  sleepTime:      '23:00',
+  onboardedAt:    null,
   aiApiKey:       '',
   aiModel:        DEFAULT_MODEL,
   taskModels:     {},

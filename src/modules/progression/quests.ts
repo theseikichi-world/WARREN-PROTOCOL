@@ -23,12 +23,9 @@ export interface QuestContext {
   sums:  ModuleSummaries
   goals: Goal[]
   tasks: Task[]
-  /** The operator's display name — level 1 asks you to have one. */
-  name:  string
 }
 
 export type Objective =
-  | { kind: 'character.named';    need: number }  // 1 once a display name is set
   | { kind: 'journal.entries';    need: number }
   | { kind: 'journal.streak';     need: number }
   | { kind: 'hydration.today';    need: number }  // % of the day's water target
@@ -43,7 +40,14 @@ export type Objective =
  * Where the quest actually happens. A brief that says "reach your water target"
  * and then leaves you to find the kitchen is a puzzle, not a starting zone.
  */
-export type QuestTarget = 'settings' | 'journal' | 'solaris' | 'ardo' | 'log' | 'character' | 'uplink'
+export type QuestTarget = 'journal' | 'solaris' | 'ardo' | 'log' | 'character' | 'uplink'
+
+/**
+ * A control the destination should highlight on arrival. Landing on SOLARIS
+ * with "reach your water target" still leaves you looking at six panels, so a
+ * screen that knows how points at the thing itself.
+ */
+export type Spotlight = 'life-support' | 'new-uplink' | 'install-routine'
 
 export interface Quest {
   id:        string
@@ -54,6 +58,7 @@ export interface Quest {
   briefRu:   string
   objective: Objective
   target:    QuestTarget     // one tap from the brief to the doing
+  spotlight?: Spotlight      // ...and the destination points at the control
   xp:        number
   grants?:   string          // the instrument this quest puts in your hands
 }
@@ -66,7 +71,6 @@ export interface QuestDestination {
 }
 
 export const QUEST_DESTINATIONS: Record<QuestTarget, QuestDestination> = {
-  settings: { path: null,       label: 'OPEN SETTINGS',      ru: 'ОТКРЫТЬ НАСТРОЙКИ' },
   journal:  { path: '/journal', label: 'OPEN THE JOURNAL',   ru: 'ОТКРЫТЬ ЖУРНАЛ' },
   solaris:  { path: '/solaris', label: 'OPEN THE KITCHEN',   ru: 'ОТКРЫТЬ КУХНЮ' },
   ardo:     { path: '/ardo',    label: 'OPEN A.R.D.O',       ru: 'ОТКРЫТЬ A.R.D.O' },
@@ -98,12 +102,6 @@ export function questCta(quest: Quest, hasUplink: boolean): { en: string; ru: st
 export const QUEST_LINE: Quest[] = [
   // ── Stage 1 — SETUP ─────────────────────────────────────────────────────────
   {
-    id: 's1-identity', stage: 1, title: 'IDENTIFY YOURSELF', ru: 'НАЗОВИТЕ СЕБЯ',
-    brief:   'Put your name in. Everything in here is measured off one specific person, and it should know which one.',
-    briefRu: 'Впишите своё имя. Всё здесь измеряет одного конкретного человека — пусть знает, какого.',
-    objective: { kind: 'character.named', need: 1 }, target: 'settings', xp: 20,
-  },
-  {
     id: 's1-first-light', stage: 1, title: 'FIRST LIGHT', ru: 'ПЕРВЫЙ СВЕТ',
     brief:   'Open the log and write one entry. Any length. The owl reads everything and judges none of it.',
     briefRu: 'Откройте журнал и напишите одну запись. Любой длины. Сова читает всё и не судит.',
@@ -113,7 +111,7 @@ export const QUEST_LINE: Quest[] = [
     id: 's1-life-support', stage: 1, title: 'KEEP YOURSELF RUNNING', ru: 'ОБЕСПЕЧЬТЕ СЕБЯ',
     brief:   'Add one life support habit on the character tab. The floor first — goals built on no sleep do not hold.',
     briefRu: 'Добавьте одну привычку жизнеобеспечения во вкладке персонажа. Сначала основа — цели на бессоннице не держатся.',
-    objective: { kind: 'baseline.installed', need: 1 }, target: 'character', xp: 30,
+    objective: { kind: 'baseline.installed', need: 1 }, target: 'character', spotlight: 'life-support', xp: 30,
   },
   {
     id: 's1-first-uplink', stage: 1, title: 'CHOOSE ONE DREAM', ru: 'ВЫБЕРИТЕ ОДНУ МЕЧТУ',
@@ -127,7 +125,7 @@ export const QUEST_LINE: Quest[] = [
     id: 'q3-first-routine', stage: 2, title: 'FIRST ROUTINE', ru: 'ПЕРВАЯ РУТИНА',
     brief:   'Open your protocol and install one routine. Pick the one you would do anyway.',
     briefRu: 'Откройте протокол и установите одну рутину. Выберите ту, что делали бы и так.',
-    objective: { kind: 'routine.installed', need: 1 }, target: 'uplink', xp: 60,
+    objective: { kind: 'routine.installed', need: 1 }, target: 'uplink', spotlight: 'install-routine', xp: 60,
   },
   {
     id: 'q2-water', stage: 2, title: 'WATER DISCIPLINE', ru: 'ДИСЦИПЛИНА ВОДЫ',
@@ -172,12 +170,11 @@ export const stageQuests = (stage: number): Quest[] => QUEST_LINE.filter(q => q.
 
 /** Current reading against an objective. */
 export function measure(objective: Objective, ctx: QuestContext): number {
-  const { sums, goals, tasks, name } = ctx
+  const { sums, goals, tasks } = ctx
   const live = goals.filter(g => g.slot !== 'archived')
   const installed = live.flatMap(g => g.nodes.filter(n => n.scrapTaskId))
 
   switch (objective.kind) {
-    case 'character.named':    return name.trim() ? 1 : 0
     case 'journal.entries':    return sums.journal?.entries ?? 0
     case 'journal.streak':     return sums.journal?.streak ?? 0
     case 'hydration.today':    return sums.solaris?.waterPct ?? 0

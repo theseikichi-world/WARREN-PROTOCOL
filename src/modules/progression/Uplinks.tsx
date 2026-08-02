@@ -6,7 +6,7 @@ import {
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
   cooldownRemaining, promoteSecondary, assignPrimary, assignSecondary, archiveGoal,
   trainingCount, hasCapacity, commitDraft,
-  installLifeSupport, releaseLifeSupport, adoptAsLifeSupport, recordBaselineRun,
+  installLifeSupport, installCustomLifeSupport, releaseLifeSupport, adoptAsLifeSupport, recordBaselineRun,
 } from './store'
 import { Initiation } from './Initiation'
 import type { LifeSupportTemplate } from './lifeSupport'
@@ -47,7 +47,7 @@ export default function Uplinks() {
     const sumsNow  = getModuleSummaries()
     const chained  = syncChain(seedIfEmpty(loadProgression()))
     const { state: next, cleared } = syncQuests(chained, {
-      sums: sumsNow, goals: chained.goals, tasks: tasksNow, name: loadSettings().displayName })
+      sums: sumsNow, goals: chained.goals, tasks: tasksNow })
     saveProgression(next)
     if (cleared.length) flash(`⚑ ${tr(cleared[0].title, cleared[0].ru)} — +${cleared[0].xp} XP`)
     setState(next)
@@ -73,7 +73,10 @@ export default function Uplinks() {
   // The hub's CREATE YOUR FIRST UPLINK quest asks for the picker, not just the
   // screen — arriving with nowhere to go would be the same dead end one level down.
   useEffect(() => {
-    if ((location.state as { openNewUplink?: boolean } | null)?.openNewUplink) setCreating(true)
+    const nav = location.state as { spotlight?: string } | null
+    if (nav?.spotlight === 'new-uplink') setCreating(true)
+    if (nav?.spotlight === 'life-support') setView('character')
+    if (nav?.spotlight === 'install-routine') setView(v => v === 'character' ? 'primary' : v)
   }, [location.state])
 
   const persist = useCallback((next: ProgressionState) => {
@@ -137,6 +140,12 @@ export default function Uplinks() {
     if (reward.levelUp) flash(tr(`LEVEL ${reward.levelUp}`, `УРОВЕНЬ ${reward.levelUp}`))
     else if (reward.gained) flash(`+${reward.gained} XP`)
     window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'uplinks' } }))
+  }, [])
+
+  const handleCustomLifeInstall = useCallback((title: string, target: number, unit: string) => {
+    installCustomLifeSupport(title, target, unit)
+    setTasks(loadScrap7().tasks)
+    flash(tr('◆ LIFE SUPPORT ONLINE', '◆ ЖИЗНЕОБЕСПЕЧЕНИЕ АКТИВНО'))
   }, [])
 
   const handleLifeInstall = useCallback((template: LifeSupportTemplate) => {
@@ -249,10 +258,12 @@ export default function Uplinks() {
           <CharacterSheet goals={state.goals} tasks={tasks} xp={state.xp}
             sums={sums} name={loadSettings().displayName} quests={state.quests}
             life={{
-              onTrack:   handleBaselineTrack,
-              onInstall: handleLifeInstall,
-              onAdopt:   handleAdopt,
-              onRelease: handleLifeRelease,
+              level,
+              onTrack:         handleBaselineTrack,
+              onInstall:       handleLifeInstall,
+              onInstallCustom: handleCustomLifeInstall,
+              onAdopt:         handleAdopt,
+              onRelease:       handleLifeRelease,
             }} />
         )}
 

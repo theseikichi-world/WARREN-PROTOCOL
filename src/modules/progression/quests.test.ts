@@ -28,11 +28,10 @@ const habit = (id: string, score = 0, runs = 0): Task => ({
 } as Task)
 
 const ctx = (over: Partial<QuestContext> = {}): QuestContext =>
-  ({ sums: EMPTY_SUMS, goals: [], tasks: [], name: 'Seikichi', ...over })
+  ({ sums: EMPTY_SUMS, goals: [], tasks: [], ...over })
 
 /** Everything stage 1 asks for, satisfied at once. */
 const setupDone = () => ctx({
-  name:  'Seikichi',
   sums:  { ...EMPTY_SUMS, journal: { streak: 0, writtenToday: true, stickers: 0, entries: 1 } },
   tasks: [{ ...habit('life:sleep'), origin: 'baseline' } as Task],
   goals: [goal([], 'primary')],
@@ -46,9 +45,9 @@ describe('quest line', () => {
     expect(QUEST_LINE.every(q => q.brief.length > 0 && q.briefRu.length > 0)).toBe(true)
   })
 
-  it('asks stage 1 for the four things that put a person in the app', () => {
+  it('asks stage 1 for the three things that put a person in the app', () => {
     expect(stageQuests(1).map(q => q.objective.kind).sort()).toEqual(
-      ['baseline.installed', 'character.named', 'journal.entries', 'uplink.created'])
+      ['baseline.installed', 'journal.entries', 'uplink.created'])
   })
 
   it('numbers its stages without a gap', () => {
@@ -67,12 +66,6 @@ describe('measure', () => {
   it('reads hydration only — calories are not this quest', () => {
     const sums = { ...EMPTY_SUMS, solaris: { member: 'You', kcalLeft: 0, kcalPct: 100, macros: [], waterPct: 55 } }
     expect(measure({ kind: 'hydration.today', need: 80 }, ctx({ sums }))).toBe(55)
-  })
-
-  it('knows whether the operator has a name', () => {
-    expect(measure({ kind: 'character.named', need: 1 }, ctx({ name: '' }))).toBe(0)
-    expect(measure({ kind: 'character.named', need: 1 }, ctx({ name: '   ' }))).toBe(0)
-    expect(measure({ kind: 'character.named', need: 1 }, ctx({ name: 'Seikichi' }))).toBe(1)
   })
 
   it('counts life support only — a routine is not a basic', () => {
@@ -116,7 +109,6 @@ describe('measure', () => {
 describe('stages', () => {
   it('clears stage 1 in any order — setup is a checklist, not a queue', () => {
     const partial = ctx({
-      name: '',
       sums: { ...EMPTY_SUMS, journal: { streak: 0, writtenToday: true, stickers: 0, entries: 1 } },
     })
     const { completed, cleared } = evaluateQuests({}, partial, NOW)
@@ -127,7 +119,7 @@ describe('stages', () => {
 
   it('clears the whole of stage 1 when everything is in place', () => {
     const { completed, cleared } = evaluateQuests({}, setupDone(), NOW)
-    expect(cleared).toHaveLength(4)
+    expect(cleared).toHaveLength(3)
     expect(stageComplete(1, completed)).toBe(true)
     expect(activeStage(completed)).toBe(2)
   })
@@ -135,7 +127,7 @@ describe('stages', () => {
   it('will not clear a later stage while setup is outstanding', () => {
     // A routine installed, run twenty times and nearly automatic — but no name,
     // no journal entry, no life support. None of stage 2 or 3 may clear.
-    const later = ctx({ name: '', goals: [goal([node('a', 't1')])], tasks: [habit('t1', 0.9, 20)] })
+    const later = ctx({ goals: [goal([node('a', 't1')])], tasks: [habit('t1', 0.9, 20)] })
     const { cleared } = evaluateQuests({}, later, NOW)
     expect(cleared.every(q => q.stage === 1)).toBe(true)
   })
@@ -148,12 +140,11 @@ describe('stages', () => {
   })
 
   it('reports what the current stage still wants', () => {
-    const st = stageState({}, ctx({ name: 'Seikichi' }))
+    const st = stageState({}, ctx())
     expect(st.stage).toBe(1)
-    expect(st.total).toBe(4)
+    expect(st.total).toBe(3)
     expect(st.cleared).toBe(0)
     expect(st.remaining.map(q => q.id)).toContain('s1-first-light')
-    expect(st.quests.find(q => q.quest.id === 's1-identity')?.done).toBe(true)
   })
 
   it('runs out — the starting zone is finite', () => {
@@ -167,7 +158,7 @@ describe('stages', () => {
 describe('missing ledger', () => {
   it('survives a state saved before quests existed', () => {
     expect(activeQuest(undefined)?.stage).toBe(1)
-    expect(evaluateQuests(undefined, ctx({ name: '' }), NOW).cleared).toHaveLength(0)
+    expect(evaluateQuests(undefined, ctx(), NOW).cleared).toHaveLength(0)
   })
 })
 
@@ -178,7 +169,6 @@ describe('quest destinations', () => {
 
   it('sends each quest where its objective is actually measured', () => {
     const byId = Object.fromEntries(QUEST_LINE.map(q => [q.id, q.target]))
-    expect(byId['s1-identity']).toBe('settings')
     expect(byId['s1-first-light']).toBe('journal')
     expect(byId['s1-life-support']).toBe('character')
     expect(byId['s1-first-uplink']).toBe('log')     // a dream is written before it is promoted
@@ -186,9 +176,7 @@ describe('quest destinations', () => {
     expect(byId['q6-memory']).toBe('ardo')
   })
 
-  it('routes to real modules, and leaves the overlay without a path', () => {
-    expect(QUEST_DESTINATIONS.settings.path).toBeNull()   // Settings is an overlay, not a route
-
+  it('routes every destination at a real module', () => {
     // Checked against the guild rather than string literals, so a module that
     // moves or is un-built breaks the test instead of the quest.
     const shipped = new Set([...GUILD.filter(m => m.built).map(m => m.path), '/uplinks'])
