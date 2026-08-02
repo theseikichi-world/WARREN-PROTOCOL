@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   QUEST_LINE, measure, questProgress, activeQuest, evaluateQuests,
-  type QuestContext,
+  QUEST_DESTINATIONS, questCta, type QuestContext,
 } from './quests'
+import { GUILD } from '../../guild'
 import type { Task } from '../scrap7/types'
 import type { ChainNode, Goal } from './types'
 import type { ModuleSummaries } from '../bigscreen/moduleStats'
@@ -132,5 +133,53 @@ describe('activeQuest', () => {
   it('returns null when the starting zone is finished', () => {
     const all = Object.fromEntries(QUEST_LINE.map(q => [q.id, NOW.toISOString()]))
     expect(activeQuest(all)).toBeNull()
+  })
+})
+
+describe('quest destinations', () => {
+  it('points every quest at somewhere real', () => {
+    for (const q of QUEST_LINE) {
+      expect(QUEST_DESTINATIONS[q.target]).toBeDefined()
+    }
+  })
+
+  it('sends each quest where its objective is actually measured', () => {
+    const byId = Object.fromEntries(QUEST_LINE.map(q => [q.id, q.target]))
+    expect(byId['q1-first-light']).toBe('journal')
+    expect(byId['q2-water']).toBe('solaris')       // the kitchen, not "somewhere"
+    expect(byId['q5-record']).toBe('journal')
+    expect(byId['q6-memory']).toBe('ardo')
+    for (const id of ['q3-first-routine', 'q4-steady', 'q7-hold']) {
+      expect(byId[id]).toBe('uplink')
+    }
+  })
+
+  it('routes the module quests off to a real path and keeps uplink work here', () => {
+    expect(QUEST_DESTINATIONS.uplink.path).toBeNull()
+
+    // Checked against the guild rather than string literals, so a module that
+    // moves or is un-built breaks the test instead of the quest.
+    const shipped = new Set(GUILD.filter(m => m.built).map(m => m.path))
+    for (const dest of Object.values(QUEST_DESTINATIONS)) {
+      if (dest.path) expect(shipped).toContain(dest.path)
+    }
+  })
+
+  it('names a destination in both languages for every target', () => {
+    for (const dest of Object.values(QUEST_DESTINATIONS)) {
+      expect(dest.label.trim()).not.toBe('')
+      expect(dest.ru.trim()).not.toBe('')
+    }
+  })
+
+  it('does not tell you to open a protocol you do not have', () => {
+    const q3 = QUEST_LINE.find(q => q.id === 'q3-first-routine')!
+    expect(questCta(q3, false).en).toMatch(/CREATE/)
+    expect(questCta(q3, true).en).toMatch(/OPEN/)
+  })
+
+  it('names the destination the same way regardless of uplink state elsewhere', () => {
+    const q2 = QUEST_LINE.find(q => q.id === 'q2-water')!
+    expect(questCta(q2, false)).toEqual(questCta(q2, true))
   })
 })

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { t as tr } from '../../i18n'
 import type { Task } from '../scrap7/types'
 import type { Goal } from './types'
@@ -5,7 +6,7 @@ import { levelFor, nextGate, GATES, isUnlockedAt } from './xp'
 import { deriveStats, overallRating, type Stat } from './stats'
 import { nodeState } from './chain'
 import type { ModuleSummaries } from '../bigscreen/moduleStats'
-import { activeQuest, questProgress, QUEST_LINE } from './quests'
+import { activeQuest, questProgress, questCta, QUEST_LINE, type Quest } from './quests'
 import { LifeSupportPanel } from './LifeSupportPanel'
 
 const CYAN = '#00f5ff'
@@ -17,7 +18,7 @@ const DIM  = 'rgba(148,163,184,0.5)'
 // you actually did, which is the only version of an RPG sheet that stays true
 // when the character is a real person.
 
-export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life }: {
+export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life, onQuestGo }: {
   goals:  Goal[]
   tasks:  Task[]
   xp:     number
@@ -26,6 +27,8 @@ export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life }: {
   quests: Record<string, string>
   /** Life-support handlers — the character sheet owns the habits with no tree. */
   life:   Omit<Parameters<typeof LifeSupportPanel>[0], 'tasks'>
+  /** Take the operator to wherever the active quest actually happens. */
+  onQuestGo: (quest: Quest) => void
 }) {
   const lvl    = levelFor(xp)
   const stats  = deriveStats(goals, tasks, sums)
@@ -87,7 +90,8 @@ export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life }: {
       </div>
 
       {/* Main quest — the starting zone hands you one verb at a time */}
-      <MainQuest quests={quests} ctx={{ sums, goals, tasks }} />
+      <MainQuest quests={quests} ctx={{ sums, goals, tasks }}
+        hasUplink={live.length > 0} onGo={onQuestGo} />
 
       {/* Life support — the habits that answer to no goal */}
       <LifeSupportPanel tasks={tasks} {...life} />
@@ -163,11 +167,20 @@ function StatRow({ stat }: { stat: Stat }) {
   )
 }
 
-/** The active step of the main quest, plus how far the line runs. */
-function MainQuest({ quests, ctx }: {
-  quests: Record<string, string>
-  ctx:    Parameters<typeof questProgress>[1]
+/**
+ * The active step of the main quest, plus how far the line runs.
+ *
+ * The whole card is the button. A brief that names a thing to do and then
+ * leaves you hunting the sidebar for the module is a puzzle, not a starting
+ * zone — so it states where it goes and takes you there.
+ */
+function MainQuest({ quests, ctx, hasUplink, onGo }: {
+  quests:    Record<string, string>
+  ctx:       Parameters<typeof questProgress>[1]
+  hasUplink: boolean
+  onGo:      (quest: Quest) => void
 }) {
+  const [hover, setHover] = useState(false)
   const active = activeQuest(quests)
   const doneCount = QUEST_LINE.filter(q => quests[q.id]).length
 
@@ -185,12 +198,18 @@ function MainQuest({ quests, ctx }: {
     )
   }
 
-  const p = questProgress(active, ctx)
+  const p   = questProgress(active, ctx)
+  const cta = questCta(active, hasUplink)
 
   return (
-    <div style={{ marginTop: 14, padding: '12px 13px', borderRadius: 10,
-      background: `linear-gradient(140deg, ${GOLD}0e, rgba(6,14,26,0.5))`,
-      border: `1px solid ${GOLD}35` }}>
+    <button onClick={() => onGo(active)}
+      onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
+      style={{ display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+        marginTop: 14, padding: '12px 13px', borderRadius: 10,
+        background: `linear-gradient(140deg, ${GOLD}${hover ? '18' : '0e'}, rgba(6,14,26,0.5))`,
+        border: `1px solid ${GOLD}${hover ? '60' : '35'}`,
+        boxShadow: hover ? `0 0 18px ${GOLD}25` : 'none',
+        transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
         <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.2em',
           color: `${GOLD}b0` }}>⚑ {tr('MAIN QUEST', 'ОСНОВНОЙ КВЕСТ')}</span>
@@ -219,6 +238,18 @@ function MainQuest({ quests, ctx }: {
         </span>
         <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM }}>+{active.xp} XP</span>
       </div>
-    </div>
+
+      {/* Where it happens — the whole point of the card being a button */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10,
+        paddingTop: 9, borderTop: `1px solid ${GOLD}20` }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 8.5, fontWeight: 800,
+          letterSpacing: '0.14em', color: GOLD,
+          textShadow: hover ? `0 0 10px ${GOLD}70` : 'none' }}>
+          {tr(cta.en, cta.ru)}
+        </span>
+        <span style={{ fontSize: 10, color: GOLD, marginLeft: 'auto',
+          transform: hover ? 'translateX(3px)' : 'none', transition: 'transform 0.15s' }}>→</span>
+      </div>
+    </button>
   )
 }

@@ -27,6 +27,13 @@ export type Objective =
   | { kind: 'routine.depth';    need: number }   // best integration × 100
   | { kind: 'ardo.texts';       need: number }
 
+/**
+ * Where the quest actually happens. A brief that says "reach your water target"
+ * and then leaves you to find the kitchen is a puzzle, not a starting zone —
+ * every step has to be one tap from the thing it asks for.
+ */
+export type QuestTarget = 'journal' | 'solaris' | 'ardo' | 'uplink'
+
 export interface Quest {
   id:        string
   title:     string
@@ -34,8 +41,35 @@ export interface Quest {
   brief:     string          // what the guild actually says to you
   briefRu:   string
   objective: Objective
+  target:    QuestTarget     // one tap from the brief to the doing
   xp:        number
   grants?:   string          // the instrument this quest puts in your hands
+}
+
+export interface QuestDestination {
+  /** Route to navigate to; null means it happens right here in UPLINKS. */
+  path:  string | null
+  label: string
+  ru:    string
+}
+
+export const QUEST_DESTINATIONS: Record<QuestTarget, QuestDestination> = {
+  journal: { path: '/journal', label: 'OPEN THE JOURNAL',  ru: 'ОТКРЫТЬ ЖУРНАЛ' },
+  solaris: { path: '/solaris', label: 'OPEN THE KITCHEN',  ru: 'ОТКРЫТЬ КУХНЮ' },
+  ardo:    { path: '/ardo',    label: 'OPEN A.R.D.O',      ru: 'ОТКРЫТЬ A.R.D.O' },
+  uplink:  { path: null,       label: 'OPEN YOUR PROTOCOL', ru: 'ОТКРЫТЬ ПРОТОКОЛ' },
+}
+
+/**
+ * The uplink quests read differently depending on whether there is anything to
+ * open yet — "open your protocol" is useless advice when you have none.
+ */
+export function questCta(quest: Quest, hasUplink: boolean): { en: string; ru: string } {
+  const dest = QUEST_DESTINATIONS[quest.target]
+  if (quest.target === 'uplink' && !hasUplink) {
+    return { en: 'CREATE YOUR FIRST UPLINK', ru: 'СОЗДАТЬ ПЕРВЫЙ КАНАЛ' }
+  }
+  return { en: dest.label, ru: dest.ru }
 }
 
 /**
@@ -47,43 +81,43 @@ export const QUEST_LINE: Quest[] = [
     id: 'q1-first-light', title: 'FIRST LIGHT', ru: 'ПЕРВЫЙ СВЕТ',
     brief:   'Open the log and write one entry. Any length. The owl reads everything and judges none of it.',
     briefRu: 'Откройте журнал и напишите одну запись. Любой длины. Сова читает всё и не судит.',
-    objective: { kind: 'journal.entries', need: 1 }, xp: 40, grants: 'journal',
+    objective: { kind: 'journal.entries', need: 1 }, target: 'journal', xp: 40, grants: 'journal',
   },
   {
     id: 'q2-water', title: 'WATER DISCIPLINE', ru: 'ДИСЦИПЛИНА ВОДЫ',
     brief:   'Reach your water target once. Ignore calories, ignore macros — the kitchen has one job today.',
     briefRu: 'Достигните нормы воды один раз. Забудьте о калориях и макросах — у кухни сегодня одна задача.',
-    objective: { kind: 'hydration.today', need: 80 }, xp: 50, grants: 'solaris',
+    objective: { kind: 'hydration.today', need: 80 }, target: 'solaris', xp: 50, grants: 'solaris',
   },
   {
     id: 'q3-first-routine', title: 'FIRST ROUTINE', ru: 'ПЕРВАЯ РУТИНА',
     brief:   'Open your uplink and install one routine. Pick the one you would do anyway.',
     briefRu: 'Откройте канал и установите одну рутину. Выберите ту, что делали бы и так.',
-    objective: { kind: 'routine.installed', need: 1 }, xp: 60,
+    objective: { kind: 'routine.installed', need: 1 }, target: 'uplink', xp: 60,
   },
   {
     id: 'q4-steady', title: 'STEADY HAND', ru: 'ТВЁРДАЯ РУКА',
     brief:   'Run your routines seven times. Not seven days — seven runs. Missing one is allowed.',
     briefRu: 'Выполните рутины семь раз. Не семь дней — семь выполнений. Пропуск допустим.',
-    objective: { kind: 'routine.runs', need: 7 }, xp: 100,
+    objective: { kind: 'routine.runs', need: 7 }, target: 'uplink', xp: 100,
   },
   {
     id: 'q5-record', title: 'THE RECORD', ru: 'ЛЕТОПИСЬ',
     brief:   'Keep the log seven days running. This is the instrument that tells you what the numbers cannot.',
     briefRu: 'Ведите журнал семь дней подряд. Этот инструмент скажет то, чего не скажут цифры.',
-    objective: { kind: 'journal.streak', need: 7 }, xp: 120,
+    objective: { kind: 'journal.streak', need: 7 }, target: 'journal', xp: 120,
   },
   {
     id: 'q6-memory', title: 'COMMIT TO MEMORY', ru: 'ЗАПОМНИТЬ',
     brief:   'Load one text into A.R.D.O. A monologue, a poem, a paragraph you want to own.',
     briefRu: 'Загрузите один текст в A.R.D.O. Монолог, стих, абзац — то, чем хотите владеть.',
-    objective: { kind: 'ardo.texts', need: 1 }, xp: 80, grants: 'ardo',
+    objective: { kind: 'ardo.texts', need: 1 }, target: 'ardo', xp: 80, grants: 'ardo',
   },
   {
     id: 'q7-hold', title: 'HOLD THE LINE', ru: 'ДЕРЖАТЬ ЛИНИЮ',
     brief:   'Take one routine to strong. Roughly a month of showing up — the point where it stops costing you.',
     briefRu: 'Доведите одну рутину до «прочно». Примерно месяц регулярности — точка, где она перестаёт стоить усилий.',
-    objective: { kind: 'routine.depth', need: 65 }, xp: 200,
+    objective: { kind: 'routine.depth', need: 65 }, target: 'uplink', xp: 200,
   },
 ]
 

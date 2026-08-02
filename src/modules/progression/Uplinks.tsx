@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { t as tr } from '../../i18n'
+import { QUEST_DESTINATIONS, type Quest } from './quests'
 import {
   loadProgression, saveProgression, seedIfEmpty, syncChain, installNode, recordRun, syncQuests,
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
@@ -29,6 +31,7 @@ const DIM  = 'rgba(148,163,184,0.55)'
 // ─── UPLINKS — two goals, two trees ───────────────────────────────────────────
 
 export default function Uplinks() {
+  const navigate = useNavigate()
   const [state, setState] = useState<ProgressionState>(() => seedIfEmpty(loadProgression()))
   const [tasks, setTasks] = useState<Task[]>(() => loadScrap7().tasks)
   const [now, setNow]     = useState(() => new Date())
@@ -148,6 +151,18 @@ export default function Uplinks() {
     flash(tr('◆ ADOPTED — it counts now', '◆ ПРИНЯТО — теперь считается'))
   }, [])
 
+  /**
+   * Take the quest where it points. The uplink steps resolve against what
+   * actually exists: with no goal yet, "install a routine" opens the place you
+   * create one rather than a tab with nothing on it.
+   */
+  const handleQuestGo = useCallback((quest: Quest) => {
+    const path = QUEST_DESTINATIONS[quest.target].path
+    if (path) { navigate(path); return }
+    if (!primaryGoal(state) && !secondaryGoal(state)) { setCreating(true); return }
+    setView(primaryGoal(state) ? 'primary' : 'secondary')
+  }, [navigate, state])
+
   /** Save an edited protocol. Nothing earned is lost — see applyDraft. */
   const handleForgeCommit = useCallback((draft: ChainDraft) => {
     const res = commitDraft(loadProgression(), draft)
@@ -244,7 +259,8 @@ export default function Uplinks() {
               onInstall: handleLifeInstall,
               onAdopt:   handleAdopt,
               onRelease: handleLifeRelease,
-            }} />
+            }}
+            onQuestGo={handleQuestGo} />
         )}
 
         {view !== 'character' && shown ? (
