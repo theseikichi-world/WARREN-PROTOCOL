@@ -22,8 +22,10 @@ DREAMS (unlimited, in L.O.G)
                            └─ instruments deepen by use (FIRMWARE tiers)
 ```
 
-**[BUILT]** two uplink slots, tech tree with gating, install-by-choice,
-integration scoring, XP, levels, character sheet, main quest line.
+**[BUILT]** the whole spine: dreams in L.O.G, promote-to-uplink with the guide
+proposing a chain you then edit node by node, two uplink slots, tech tree with
+gating, install-by-choice, integration scoring, XP, levels, character sheet,
+main quest line.
 
 ---
 
@@ -181,9 +183,10 @@ there is nothing to farm.
   SCRAP-7's Habits tab. UPLINK should be the only habit surface; SCRAP-7 keeps
   todos and dailies. Existing habits land in an UNBOUND section to attach or
   archive.
-- **[NEXT] Dream → tree pipeline.** L.O.G unfreezes as the dream inbox; the
-  guide proposes a chain from a dream; every node editable before it commits.
-  The seeded ACTOR/CAPOEIRA chains are scaffolding until this exists.
+- **[BUILT] Dream → tree pipeline.** L.O.G is the dream inbox again; the guide
+  proposes a chain from a dream; every node is editable before it commits, and
+  an existing protocol is editable afterwards without losing anything earned.
+  ACTOR/CAPOEIRA are templates now — offered, never installed.
 - **[PLANNED] FUEL multiplier.** SOLARIS as a passive multiplier on all XP
   (<40 → ×0.8, >70 → ×1.2) rather than a chain participant.
 - **[PLANNED] Data durability.** localStorage in a WebView2 profile is one

@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `6b1820f` · 210 tests · tsc/build/lint clean.
+**State as of the last commit:** `7024ab2` · 249 tests · tsc/build/lint clean.
 
 ---
 
@@ -32,8 +32,8 @@ modules to avoid clashing with local `t` loop variables.
 ## 2. The system, in one diagram
 
 ```
-DREAMS (unlimited, L.O.G — currently FROZEN read-only)
-   └─ guide helps you choose — life is finite          ← NOT BUILT YET
+DREAMS (unlimited, in L.O.G — the inbox)
+   └─ PROMOTE TO UPLINK → the guide proposes → you edit every node
        └─ UPLINK  (2 slots: primary 1.0× / secondary 0.6×, 2nd at level 5)
            └─ PROTOCOL — a tech tree of ROUTINES
                └─ ROUTINE = a SCRAP-7 habit carrying INTEGRATION (score 0–1)
@@ -58,7 +58,11 @@ CACHE = inventory · CREDITS · FIRMWARE v0–v3 = tool tier.
 | `store.ts` | slots, cooldown, freeze/thaw, `syncChain`, `installNode`, `recordRun`, `syncQuests` |
 | `chain.ts` | pure gating: `unlockRequirements`, `evaluateUnlocks`, `chapterState`, `nodeState` |
 | `layout.ts` | tech-tree geometry — depth from the graph, fixed grid, connector edges |
-| `seed.ts` | hand-written ACTOR + CAPOEIRA chains (**scaffolding**, see §6) |
+| `seed.ts` | the ACTOR + CAPOEIRA chains — now the source of `TEMPLATES`, not installed |
+| `draft.ts` | `ChainDraft`, validation, `applyDraft`/`draftToGoal`, `TEMPLATES` |
+| `guide.ts` | dream → proposed chain: prompt + `normalizeProposal` (paranoid, pure) |
+| `ChainForge.tsx` | the editor + live layout preview; nothing commits from anywhere else |
+| `NewUplink.tsx` | the picker (dream / template / blank) and the guide call |
 | `xp.ts` | XP events, level curve (`level² × 40`), level gates |
 | `stats.ts` | six character attributes derived from real module data |
 | `quests.ts` | main quest line + objective measurement |
@@ -72,6 +76,7 @@ CACHE = inventory · CREDITS · FIRMWARE v0–v3 = tool tier.
 - `scrap7/types.ts` — `TaskOrigin`, `Task.origin`, `Task.frozen`, `taskOrigin()`,
   `feedsProgression()`, `isUnbound()`
 - `scrap7/store.ts` — v4 key + origin migration, half-rate decay for frozen
+- `log/Log.tsx` — `LOG_FROZEN = false`; PROMOTE TO UPLINK on each dream card
 - `solaris/Solaris.tsx` — UI gated by firmware tier
 - `pictures/radar.ts` + `ReleaseRadar.tsx` — hub release radar
 - `App.tsx` — `WARREN_OS_ENABLED`/`INF8_ENABLED` dormancy flags, `/uplinks` route
@@ -108,6 +113,12 @@ These were each decided deliberately; breaking one silently breaks the product.
 11. **`ALPHA = 0.05` is not to be changed.** The score curve is Loop Habit
     Tracker's and it's correct.
 12. **Don't delete features.** Anything cut goes behind the `built` flag.
+13. **A routine's KEY is permanent.** Node ids derive from it and habit ids
+    derive from those, so the integration score hangs off the key. Titles are
+    free to change; keys are never re-derived. This is what makes editing a
+    live protocol safe.
+14. **Editing never deletes a habit either.** A routine dropped from a chain is
+    released to SCRAP-7 (`origin: 'manual'`), score and streak intact.
 
 ---
 
@@ -124,33 +135,38 @@ From the original spec (`§10`):
 | — | Character, XP, levels | ✅ `3fe5e6e` |
 | — | Main quest line | ✅ `98a5c58` |
 | — | SOLARIS firmware tiers | ✅ `6b1820f` |
+| 9 | **Dream → tree pipeline** (was step 9, taken early) | ✅ `7024ab2` |
 | 4 | **Miss penalties + threshold upgrades** | ⬜ next in spec |
 | 5 | FUEL multiplier from SOLARIS | ⬜ |
 | 6 | Inventory + credits (CACHE) | ⬜ |
 | 7 | Level gates — *partly done in `xp.ts`* | 🟡 |
 | 8 | Tool tiers for A.R.D.O + JOURNAL | ⬜ |
-| 9 | L.O.G rewrite → AI generates chains | ⬜ |
 
-### The two candidates the user was choosing between
-- **Dream → tree pipeline** (bigger unlock): unfreeze L.O.G as the unlimited
-  dream inbox, add PROMOTE TO UPLINK, guide proposes a chain, every node
-  editable before commit. **This makes the seeded chains obsolete** — see §6.
-- **Move habits out of SCRAP-7** (smaller, removes real confusion): habits show
-  in both the tree and SCRAP-7's Habits tab today. UPLINK should be the only
-  habit surface; SCRAP-7 keeps todos + dailies; existing habits land in an
-  UNBOUND section to attach or archive.
+### The obvious next one
+**Move habits out of SCRAP-7.** Habits show in both the tree and SCRAP-7's
+Habits tab. UPLINK should be the only habit surface; SCRAP-7 keeps todos +
+dailies; hand-made habits land in an UNBOUND section to attach or archive.
+`isUnbound()` in `scrap7/types.ts` already exists and **has no UI consuming it**
+— that section is the missing half. The forge's release path (rule 14) writes
+exactly the state that section is designed to show, so this is now the natural
+follow-on rather than a parallel candidate.
 
 ---
 
 ## 6. Known gaps and honest caveats
 
-- **ACTOR/CAPOEIRA are scaffolding.** Hardcoded in `seed.ts`. The user's real
-  model is: unlimited dreams in L.O.G → guide helps pick → 2 become trees.
-  There is currently **no way to create your own goal**. This is the biggest
-  gap between what's built and what was described.
+- **The guide's proposal quality is untested against a real key.** The prompt,
+  the normaliser and every failure mode are covered by tests and were driven
+  live, but the browser profile has no API key, so no real proposal has been
+  read end to end. Worth doing once on the desktop app before trusting it.
+- **A blank routine's key is `routine`/`routine-2`** — keys are permanent and
+  derived at creation, so one added before it's named keeps the placeholder.
+  Internal only; ids are never shown. Deliberate: re-deriving keys would break
+  rule 13.
+- **UNBOUND has no UI.** The forge's release path sets `origin: 'manual'`
+  correctly, so a released habit is an ordinary SCRAP-7 habit today. The copy
+  says exactly that and does not promise a section that doesn't exist.
 - **Habits appear twice** — in the tree and in SCRAP-7's Habits tab.
-- **L.O.G is frozen read-only** (`LOG_FROZEN = true` in `Log.tsx`). Intended as
-  temporary; it turns out L.O.G is *central* to the vision, not obsolete.
 - **Miss penalties and threshold upgrades are specced but not built** — spec
   step 4. `THRESHOLD_UNLOCK_AT` / `THRESHOLD_COST` constants exist unused.
 - **FUEL multiplier** — `awardXp` takes a `fuelMultiplier` argument that is
@@ -200,5 +216,5 @@ npm test                                    # 210 green
 - `v0.1.0-dashboard` tag — the full dashboard era, restorable with
   `git checkout v0.1.0-dashboard`.
 
-**Ask before assuming** on: which of the two next steps to take (§5), and
-whether the seeded chains should survive the dream pipeline.
+**Ask before assuming** on: whether the next step is spec step 4 (miss
+penalties + threshold upgrades) or moving habits out of SCRAP-7 (§5).
