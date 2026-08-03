@@ -4,6 +4,7 @@
 // and surfaces the FREE TIME that's left — so you can relax without guilt.
 
 import { loadState as loadScrap7, todayScheduledDailies } from '../scrap7/store'
+import { loadSettings } from '../../settings'
 import type { Task } from '../scrap7/types'
 import { t as tr } from '../../i18n'
 
@@ -51,13 +52,35 @@ const DEFAULT_ANCHORS: Anchors = {
 
 const INITIAL: Inf8State = { anchors: DEFAULT_ANCHORS, durations: {}, prefTime: {}, events: {}, overrides: {} }
 
+/**
+ * The day starts from the operator's own hours.
+ *
+ * Wake and sleep are collected at FIRST CONTACT and were, until now, read only
+ * by the guide when it wrote a chain. A timeline that laid the day out between
+ * 07:30 and 23:00 regardless of when this particular person is awake would be
+ * describing somebody else's day. Meals and work stay local to this module —
+ * they're scheduling detail, not identity.
+ */
+function profileAnchors(): Anchors {
+  try {
+    const { wakeTime, sleepTime } = loadSettings()
+    return {
+      ...DEFAULT_ANCHORS,
+      ...(wakeTime  ? { wake:  wakeTime  } : {}),
+      ...(sleepTime ? { sleep: sleepTime } : {}),
+    }
+  } catch {
+    return DEFAULT_ANCHORS
+  }
+}
+
 export function loadInf8State(): Inf8State {
   try {
     const raw = localStorage.getItem(KEY)
-    if (!raw) return structuredClone(INITIAL)
+    if (!raw) return { ...structuredClone(INITIAL), anchors: profileAnchors() }
     const p = JSON.parse(raw)
     return {
-      anchors:   { ...DEFAULT_ANCHORS, ...(p.anchors ?? {}) },
+      anchors:   { ...profileAnchors(), ...(p.anchors ?? {}) },
       durations: p.durations ?? {},
       prefTime:  p.prefTime ?? {},
       events:    p.events ?? {},

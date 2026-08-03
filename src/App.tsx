@@ -11,7 +11,7 @@ import { RouteTour } from './TourOverlay'
 import { Initiation } from './modules/progression/Initiation'
 import { LevelUp } from './modules/progression/LevelUp'
 import { gatedLevel } from './modules/progression/xp'
-import { loadProgression, saveProgression } from './modules/progression/store'
+import { loadProgression, saveProgression, adoptOrphanHabits } from './modules/progression/store'
 import { moduleLevel, moduleUnlocked } from './moduleAccess'
 import { bootLines } from './boot'
 import { QuestHintBanner } from './modules/progression/QuestHint'
@@ -546,6 +546,10 @@ export default function App() {
 
   // Apply settings on mount and whenever they change
   useEffect(() => { applySettings(settings) }, [settings])
+
+  // A habit belonging to no system has nowhere to be seen now that SCRAP-7
+  // keeps only the day. Adopt them into life support before anything renders.
+  useEffect(() => { adoptOrphanHabits() }, [])
 
   // The IDENTIFY YOURSELF quest points at Settings, which is an overlay owned
   // here rather than a route — so it asks for it by event.

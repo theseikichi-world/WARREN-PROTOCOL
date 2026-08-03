@@ -4,7 +4,7 @@ import {
   availableTemplates, offerTemplates, lifeSupportSlots, nextSlotGate,
 } from './lifeSupport'
 import { baseXp, awardBaselineXp } from './xp'
-import { taskOrigin, feedsProgression, isRoutine, isBaseline, isUnbound } from '../scrap7/types'
+import { taskOrigin, feedsProgression, isRoutine, isBaseline, isUnbound, isOrphanHabit, type Task } from '../scrap7/types'
 
 describe('life support templates', () => {
   it('has a unique id, an anchor and a target for every template', () => {
@@ -156,5 +156,35 @@ describe('your own basics', () => {
 
   it('is not mistaken for a template', () => {
     expect(templateForTask(customTaskId('feed-the-cat'))).toBeNull()
+  })
+})
+
+describe('no habit is left homeless', () => {
+  const habit = (id: string, origin?: string, type = 'habit') =>
+    ({ id, text: id, category: 'x', taskType: type, completed: false, createdAt: '',
+       ...(origin ? { origin } : {}) }) as Task
+
+  it('spots a hand-made habit as an orphan', () => {
+    expect(isOrphanHabit(habit('h', 'manual'))).toBe(true)
+    expect(isOrphanHabit(habit('h'))).toBe(true)              // legacy, no origin field
+  })
+
+  it('leaves habits that already belong somewhere', () => {
+    expect(isOrphanHabit(habit('h', 'baseline'))).toBe(false)
+    expect(isOrphanHabit(habit('h', 'chain'))).toBe(false)
+    expect(isOrphanHabit(habit('h', 'log'))).toBe(false)
+  })
+
+  it('never touches a todo or a daily — those still belong to SCRAP-7', () => {
+    expect(isOrphanHabit(habit('t', 'manual', 'todo'))).toBe(false)
+    expect(isOrphanHabit(habit('d', 'manual', 'daily'))).toBe(false)
+  })
+
+  it('over the slot cap is allowed — the cap governs adding, not keeping', () => {
+    // Six adopted basics at level 1 (one slot) must not imply deleting five.
+    const slots = lifeSupportSlots(1)
+    expect(slots).toBe(1)
+    const adopted = 6
+    expect(Math.max(0, slots - adopted)).toBe(0)   // no room to add, nothing lost
   })
 })

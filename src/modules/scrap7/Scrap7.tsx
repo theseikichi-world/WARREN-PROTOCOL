@@ -1,15 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import {
-  getHabitTier, HABIT_MILESTONES, MILESTONE_LABELS, WEEKDAYS,
+  HABIT_MILESTONES, MILESTONE_LABELS, WEEKDAYS,
   thisWeekDates, weeklyDoneSet, calcStreak,
   type Task, type TaskType, type Priority, type Direction,
 } from './types'
 import {
-  loadState, saveState, applyDailyReset, createTask, trackHabit, skipHabitDay,
+  loadState, saveState, applyDailyReset, createTask,
   completeTask, uncompleteTask, deleteTask, updateTask, addMessage, addCategory,
   todayScheduledDailies, fuzzyMatchTask, type NewTaskData,
 } from './store'
 import { parseCommand } from './commandParser'
+import Infinity8 from '../infinity8/Infinity8'
 import { t as tr } from '../../i18n'
 import { loadSettings, aiJson, modelForTask, type AiMessage } from '../../settings'
 
@@ -18,7 +19,7 @@ const NEON = '#00b4ff'
 const SCRAP7_SYSTEM = `You are SCRAP-7, a cyber-raccoon task engineer. You turn what the user says into structured tasks.
 
 Reply with ONLY a JSON object, no markdown fences, no prose outside it:
-{"reply": string, "tasks": [{"text": string, "type": "habit"|"daily"|"todo", "category": string, "schedule": "everyday"|"weekly"|null, "days": ["mon","tue","wed","thu","fri","sat","sun"] }], "delete": [number]}
+{"reply": string, "tasks": [{"text": string, "type": "daily"|"todo", "category": string, "schedule": "everyday"|"weekly"|null, "days": ["mon","tue","wed","thu","fri","sat","sun"] }], "delete": [number]}
 
 DELETING:
 - To REMOVE existing tasks, put their NUMBERS (from the numbered EXISTING TASKS list below) in "delete". e.g. "delete": [1, 2].
@@ -29,7 +30,7 @@ DELETING:
 CHOOSING THE TYPE — this matters, get it right:
 - "todo"  = a FINITE task that will be DONE one day, then gone. Even if tackled bit-by-bit over several days, a project with an end is a to-do. e.g. "Tidy up the cabinets", "Buy a desk", "Fix the bike".
 - "daily" = an indefinitely recurring routine with NO finish line, checked off each day. e.g. "Make the bed", "Take vitamins".
-- "habit" = a behaviour the user is BUILDING and wants tracked by streak/strength, no end. e.g. "Drink water", "Read 10 pages", "Exercise".
+- There is NO "habit" type here. A behaviour the user is BUILDING — reading, exercise, drills — belongs to UPLINKS, not to this module: goal routines come from a PROTOCOL and the basics from LIFE SUPPORT. If asked for one, make it a "daily" only if it is a genuine scheduled obligation; otherwise say plainly that habits are set up in UPLINKS and add nothing.
 
 NAMING:
 - Give a short, clean, imperative title (2-5 words). Strip filler like "I want to", "at a time", "doing one per day".
@@ -160,187 +161,6 @@ function StreakCalendar({ tasks }: { tasks: Task[] }) {
           </div>
         )
       })}
-    </div>
-  )
-}
-
-// ─── Habit card ───────────────────────────────────────────────────────────────
-function HabitCard({ task, onTrack, onSkip, onEdit, onDelete }: {
-  task:     Task
-  onTrack:  (dir: 1 | -1) => void
-  onSkip:   () => void
-  onEdit:   () => void
-  onDelete: () => void
-}) {
-  const [hov, setHov] = useState(false)
-
-  const score        = task.score ?? 0
-  const tier         = getHabitTier(score)
-  const target       = task.target ?? 1
-  const todayCount   = task.todayCount ?? 0
-  const todayDone    = todayCount >= target
-  const doseProgress = Math.min(100, (todayCount / target) * 100)
-  const streak       = task.streak ?? 0
-  const isNeg        = task.direction === 'negative'
-  const isSkipped    = (task.skippedDates ?? []).includes(new Date().toISOString().slice(0, 10))
-  const milestone    = MILESTONE_LABELS[streak]
-
-  const scoreDisplay = Math.round(score * 100)
-
-  const DOW: Record<string, string> = { mon: 'Mo', tue: 'Tu', wed: 'We', thu: 'Th', fri: 'Fr', sat: 'Sa', sun: 'Su' }
-  const schedDays = task.schedule?.type === 'weekly' && task.schedule.days?.length
-    ? task.schedule.days.slice().sort((a, b) => ['mon','tue','wed','thu','fri','sat','sun'].indexOf(a) - ['mon','tue','wed','thu','fri','sat','sun'].indexOf(b)).map(d => DOW[d] ?? d).join(' ')
-    : null
-
-  return (
-    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{
-        margin: '6px 12px', borderRadius: 10, overflow: 'hidden',
-        background: isSkipped
-          ? 'rgba(148,163,184,0.03)'
-          : todayDone ? `rgba(0,180,255,0.06)` : 'rgba(13,24,48,0.5)',
-        border: `1px solid ${isSkipped
-          ? 'rgba(148,163,184,0.08)'
-          : todayDone ? `${NEON}28` : 'rgba(255,255,255,0.06)'}`,
-        boxShadow: todayDone && !isSkipped ? `0 0 14px ${NEON}0d` : 'none',
-        transition: 'all 0.2s',
-        opacity: isSkipped ? 0.5 : 1,
-      }}>
-
-      {/* Score bar (top) */}
-      <div style={{ height: 3, background: 'rgba(255,255,255,0.05)' }}>
-        <div style={{
-          height: '100%', width: `${scoreDisplay}%`,
-          background: tier.color, boxShadow: `0 0 4px ${tier.color}60`,
-          transition: 'width 0.6s ease',
-        }} />
-      </div>
-
-      <div style={{ padding: '10px 12px' }}>
-        {/* Header row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: target > 1 ? 8 : 0 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              {/* Done-today checkmark */}
-              {todayDone && !isSkipped && (
-                <span style={{ fontSize: 10, color: NEON, textShadow: `0 0 6px ${NEON}`, flexShrink: 0 }}>✓</span>
-              )}
-              {isSkipped && (
-                <span style={{ fontSize: 10, color: 'rgba(148,163,184,0.4)', flexShrink: 0 }}>—</span>
-              )}
-              <p style={{
-                fontFamily: 'var(--font)', fontSize: 'var(--fs-lg)',
-                color: isSkipped
-                  ? 'rgba(148,163,184,0.35)'
-                  : todayDone ? 'rgba(220,240,255,0.55)' : 'rgba(220,240,255,0.9)',
-                letterSpacing: '0.02em',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>{task.text}</p>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
-                color: tier.color, fontWeight: 700, letterSpacing: '0.08em' }}>
-                {tier.label.toUpperCase()}
-              </span>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: 'rgba(148,163,184,0.3)' }}>
-                {scoreDisplay}%
-              </span>
-              {schedDays && (
-                <span title={tr('Scheduled days', 'Дни по расписанию')} style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
-                  fontWeight: 700, color: '#22d3ee', letterSpacing: '0.06em',
-                  padding: '1px 5px', borderRadius: 3, border: '1px solid rgba(34,211,238,0.3)',
-                  background: 'rgba(34,211,238,0.08)' }}>{schedDays}</span>
-              )}
-              {streak > 0 && (
-                <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: '#ff6b00' }}>
-                  🔥 {streak}d
-                </span>
-              )}
-              {milestone && (
-                <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
-                  color: '#f59e0b', fontWeight: 700 }}>
-                  {milestone.icon} {milestone.label}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 12 }}>
-            {hov && !isSkipped && (
-              <>
-                <button onClick={onSkip} title={tr('Skip today — no score penalty', 'Пропустить сегодня — без штрафа')}
-                  style={{ fontSize: 13, color: 'rgba(148,163,184,0.25)', padding: '2px 5px', transition: 'color 0.12s' }}
-                  onMouseEnter={e => e.currentTarget.style.color = 'rgba(148,163,184,0.7)'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(148,163,184,0.25)'}
-                >—</button>
-                <button onClick={onEdit} title={tr('Edit', 'Изменить')}
-                  style={{ fontSize: 12, color: `${NEON}50`, padding: '2px 5px', transition: 'color 0.12s' }}
-                  onMouseEnter={e => e.currentTarget.style.color = NEON}
-                  onMouseLeave={e => e.currentTarget.style.color = `${NEON}50`}
-                >✎</button>
-                <button onClick={onDelete} title={tr('Delete', 'Удалить')}
-                  style={{ fontSize: 13, color: 'rgba(255,0,51,0.25)', padding: '2px 5px', transition: 'color 0.12s' }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,0,51,0.25)'}
-                >×</button>
-              </>
-            )}
-
-            {!isSkipped && (
-              <>
-                {/* Decrease */}
-                <button onClick={() => onTrack(-1)} style={{
-                  width: 30, height: 30, borderRadius: 6, flexShrink: 0,
-                  border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)',
-                  fontFamily: 'var(--font)', fontSize: 'var(--fs-md)', color: 'rgba(148,163,184,0.35)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,0,51,0.1)'; e.currentTarget.style.color = '#ff4444' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = 'rgba(148,163,184,0.35)' }}
-                >−</button>
-
-                {/* Track / over-achieve */}
-                <button onClick={() => onTrack(1)} style={{
-                  height: 30, minWidth: 44, paddingInline: 10, borderRadius: 6, flexShrink: 0,
-                  border: `1px solid ${todayDone ? `${NEON}20` : `${NEON}55`}`,
-                  background: todayDone ? `${NEON}08` : `${NEON}18`,
-                  fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800,
-                  color: todayDone ? `${NEON}55` : NEON,
-                  textShadow: todayDone ? 'none' : `0 0 6px ${NEON}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', transition: 'all 0.15s', letterSpacing: '0.06em',
-                }}
-                  onMouseEnter={e => e.currentTarget.style.background = `${NEON}22`}
-                  onMouseLeave={e => e.currentTarget.style.background = todayDone ? `${NEON}08` : `${NEON}18`}
-                >
-                  {isNeg ? '−' : todayDone ? (target > 1 ? `${todayCount}/${target}` : '✓') : '+1'}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Dose progress bar (multi-dose habits only) */}
-        {target > 1 && !isSkipped && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-            <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%', width: `${doseProgress}%`,
-                background: todayDone ? NEON : tier.color,
-                boxShadow: todayDone ? `0 0 6px ${NEON}50` : 'none',
-                borderRadius: 2, transition: 'width 0.3s ease',
-              }} />
-            </div>
-            <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
-              color: todayDone ? NEON : 'rgba(148,163,184,0.45)', flexShrink: 0, minWidth: 50, textAlign: 'right' }}>
-              {todayCount}/{target} {task.unit ?? ''}
-            </span>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
@@ -735,13 +555,14 @@ function ChatMsg({ text, sender }: { text: string; sender: 'user' | 'scrap7' }) 
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-type TabKey  = 'habit' | 'daily' | 'todo'
+type TabKey  = 'daily' | 'todo'
 type ViewKey = 'tasks' | 'chat'
 
 export default function Scrap7() {
   const [state, setState]   = useState(() => applyDailyReset(loadState()))
   const [view, setView]     = useState<ViewKey>('tasks')
-  const [tab,  setTab]      = useState<TabKey>('todo')
+  const [tab,  setTab]      = useState<TabKey>('daily')
+  const [timeline, setTimeline] = useState(false)
   const [input, setInput]   = useState('')
   const [thinking, setThinking] = useState(false)
   const [lastReply, setLastReply] = useState<string | null>(null)
@@ -793,7 +614,6 @@ export default function Scrap7() {
     if (t === 'daily') return todayScheduledDailies(state.tasks).sort((a, b) =>
       a.completed === b.completed ? 0 : a.completed ? 1 : -1
     )
-    if (t === 'habit') return state.tasks.filter(tk => tk.taskType === 'habit')
     return state.tasks.filter(tk => tk.taskType === 'todo').sort((a, b) =>
       a.completed === b.completed ? 0 : a.completed ? 1 : -1
     )
@@ -814,10 +634,14 @@ export default function Scrap7() {
         for (const action of parsed.actions) {
           if (action.type === 'complete_task' && action.task_id)
             s = completeTask(s, action.task_id)
-          else if (action.type === 'track_habit' && action.task_id) {
-            const r = trackHabit(s, action.task_id)
-            s = r.state
-            if (r.milestone) setMilestone(r.milestone)
+          // 'track_habit' is deliberately unhandled. Habits live in UPLINKS, and
+          // tracking one from here would move its score without awarding the XP
+          // that recordRun/recordBaselineRun attach to a run — a silent economy
+          // leak. The reply below says where to go instead.
+          else if (action.type === 'track_habit') {
+            s = addMessage(s, { text: tr('Habits are tracked in UPLINKS now — routines on the tree, basics on the character sheet.',
+                                         'Привычки теперь в UPLINKS — рутины на дереве, основы на листе персонажа.'),
+                                sender: 'scrap7' })
           }
           else if (action.type === 'delete_task' && action.task_id)
             s = deleteTask(s, action.task_id)
@@ -908,18 +732,13 @@ export default function Scrap7() {
     setThinking(false)
   }
 
-  const handleHabitTrack = (task: Task, dir: 1 | -1) => {
-    const r = trackHabit(state, task.id, dir)
-    if (r.milestone) setMilestone(r.milestone)
-    persist(r.state)
-  }
 
-  const handleHabitSkip = (task: Task) => {
-    persist(skipHabitDay(state, task.id))
-  }
 
+  // Habits left. They are character work — goal routines live in a PROTOCOL and
+  // the basics in LIFE SUPPORT — and having them here as well was the same
+  // behaviour shown in two places with two different meanings. SCRAP-7 keeps
+  // the day: obligations on a schedule, and things with an end.
   const TABS: { id: TabKey; label: string }[] = [
-    { id: 'habit', label: tr('Habits', 'Привычки')  },
     { id: 'daily', label: tr('Dailies', 'Ежедневные') },
     { id: 'todo',  label: tr("To-Do's", 'Задачи') },
   ]
@@ -956,7 +775,19 @@ export default function Scrap7() {
           ))}
         </div>
 
-        {view === 'tasks' && (
+        {/* The day, two ways: the list you edit and the timeline it lands on.
+            INFINITY-8 owns no tasks of its own — it reads these — so it was
+            never a separate module, only a second way to look at this one. */}
+        <button onClick={() => setTimeline(v => !v)}
+          title={tr('Timeline — INFINITY-8', 'Таймлайн — INFINITY-8')}
+          style={{
+            padding: '9px 12px', fontFamily: 'var(--font)', fontSize: 13, cursor: 'pointer',
+            color: timeline ? '#22d3ee' : 'rgba(148,163,184,0.35)',
+            textShadow: timeline ? '0 0 8px #22d3ee' : 'none',
+            borderRight: '1px solid rgba(255,255,255,0.06)', transition: 'color 0.15s',
+          }}>∞</button>
+
+        {view === 'tasks' && !timeline && (
           <div style={{ display: 'flex', flex: 1 }}>
             {TABS.map(({ id, label }) => {
               const cnt = tabTasks(id).filter(t => !t.completed).length
@@ -994,8 +825,13 @@ export default function Scrap7() {
         >+</button>
       </div>
 
+      {/* ── The day on a line ── */}
+      {view === 'tasks' && timeline && (
+        <div style={{ flex: 1, overflow: 'hidden' }}><Infinity8 /></div>
+      )}
+
       {/* ── Tasks ── */}
-      {view === 'tasks' && (
+      {view === 'tasks' && !timeline && (
         <div style={{ flex: 1, overflowY: 'auto' }}>
 
           {/* 14-day calendar on Dailies */}
@@ -1005,7 +841,7 @@ export default function Scrap7() {
             <div style={{ padding: '28px 16px', textAlign: 'center' }}>
               <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-md)',
                 color: 'rgba(148,163,184,0.22)', marginBottom: 6 }}>
-                {tab === 'habit' ? tr('No habits tracked', 'Нет привычек') : tab === 'daily' ? tr('No dailies today', 'Нет задач на сегодня') : tr('Queue empty', 'Очередь пуста')}
+                {tab === 'daily' ? tr('No dailies today', 'Нет задач на сегодня') : tr('Queue empty', 'Очередь пуста')}
               </p>
               <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
                 color: `${NEON}28`, letterSpacing: '0.06em' }}>
@@ -1014,18 +850,7 @@ export default function Scrap7() {
             </div>
           )}
 
-          {/* Habits use HabitCard */}
-          {tab === 'habit' && activeTasks.map(t => (
-            <HabitCard key={t.id} task={t}
-              onTrack={dir => handleHabitTrack(t, dir)}
-              onSkip={() => handleHabitSkip(t)}
-              onEdit={() => setEditingTask(t)}
-              onDelete={() => persist(deleteTask(state, t.id))}
-            />
-          ))}
-
-          {/* Dailies / todos use TaskRow */}
-          {tab !== 'habit' && activeTasks.map(t => (
+          {activeTasks.map(t => (
             <TaskRow key={t.id} task={t}
               onCheck={() => t.completed ? persist(uncompleteTask(state, t.id)) : persist(completeTask(state, t.id))}
               onDelete={() => persist(deleteTask(state, t.id))}
@@ -1042,15 +867,7 @@ export default function Scrap7() {
                   color: 'rgba(148,163,184,0.2)', letterSpacing: '0.12em' }}>{tr('DONE', 'ГОТОВО')}</span>
                 <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.03)' }} />
               </div>
-              {tab === 'habit' && doneTasks.map(t => (
-                <HabitCard key={t.id} task={t}
-                  onTrack={dir => handleHabitTrack(t, dir)}
-                  onSkip={() => handleHabitSkip(t)}
-                  onEdit={() => setEditingTask(t)}
-                  onDelete={() => persist(deleteTask(state, t.id))}
-                />
-              ))}
-              {tab !== 'habit' && doneTasks.map(t => (
+              {doneTasks.map(t => (
                 <TaskRow key={t.id} task={t}
                   onCheck={() => persist(uncompleteTask(state, t.id))}
                   onDelete={() => persist(deleteTask(state, t.id))}

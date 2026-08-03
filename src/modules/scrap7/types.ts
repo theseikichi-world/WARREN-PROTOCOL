@@ -88,10 +88,21 @@ export const isRoutine = (t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): 
 export const isBaseline = (t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): boolean =>
   taskOrigin(t) === 'baseline'
 
-/** Yours: made by hand, belongs to no system. Listed so it can be adopted. */
+/**
+ * Made by hand, belonging to no system. Only ever a TODO or a DAILY now — a
+ * hand-made HABIT is a basic, so `adoptOrphanHabits` moves it to life support
+ * on load. See rule 32.
+ */
 export function isUnbound(t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): boolean {
   return taskOrigin(t) === 'manual'
 }
+
+/**
+ * A habit with no home. There is exactly one place for a habit that isn't a
+ * goal routine — LIFE SUPPORT — so this should always be empty after a load.
+ */
+export const isOrphanHabit = (t: Task): boolean =>
+  t.taskType === 'habit' && taskOrigin(t) === 'manual'
 
 // ─── Milestone labels (cyberpunk-flavoured) ───────────────────────────────────
 export const MILESTONE_LABELS: Record<number, { label: string; icon: string }> = {

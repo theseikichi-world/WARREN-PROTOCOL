@@ -14,6 +14,7 @@ import { evaluateQuests, type Quest, type QuestContext } from './quests'
 import {
   loadState as loadScrap7, saveState as saveScrap7, createExternalTask,
 } from '../scrap7/store'
+import { isOrphanHabit } from '../scrap7/types'
 
 const KEY = 'warren_progression_v1'
 
@@ -300,11 +301,35 @@ export function addGoal(s: ProgressionState, goal: Goal, now = new Date()): Prog
 // ─── Authoring ────────────────────────────────────────────────────────────────
 
 /**
+ * Every habit that isn't a goal routine becomes LIFE SUPPORT.
+ *
+ * A hand-made habit and a basic were always the same thing described twice, and
+ * once SCRAP-7 stopped showing habits the hand-made ones had nowhere left to
+ * be seen. Rather than leave data alive and invisible, they are adopted.
+ *
+ * Over the slot cap is fine and deliberate: the cap governs what you may ADD,
+ * not what you already have. Deleting someone's history to satisfy a number we
+ * introduced afterwards would be the worse of the two wrongs.
+ */
+export function adoptOrphanHabits(): number {
+  const s7 = loadScrap7()
+  const orphans = s7.tasks.filter(isOrphanHabit)
+  if (orphans.length === 0) return 0
+
+  saveScrap7({
+    ...s7,
+    tasks: s7.tasks.map(t => isOrphanHabit(t) ? { ...t, origin: 'baseline' as const } : t),
+  })
+  window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'progression' } }))
+  return orphans.length
+}
+
+/**
  * Push an edit down into SCRAP-7, in one pass.
  *
  * DETACHED — a routine dropped from a chain is not deleted. Freeze never
- * deletes and neither does editing: the habit becomes UNBOUND with its score
- * and streak intact, to re-attach or archive by hand.
+ * deletes and neither does editing: the habit keeps its score and streak and
+ * moves to LIFE SUPPORT, which is where a habit without a goal lives.
  *
  * RENAMED — a routine renamed in the tree is renamed on its habit. This patches
  * the two display fields only; it never goes near createExternalTask, which
@@ -317,7 +342,9 @@ function applyScrap7Edits(detached: string[], renames: Map<string, { text: strin
 
   let touched = false
   const tasks = s7.tasks.map(t => {
-    if (dropped.has(t.id)) { touched = true; return { ...t, origin: 'manual' as const, frozen: false } }
+    // Released from a chain, but still a habit — so it lands in life support
+    // rather than in a category that no longer has a screen (rule 32)
+    if (dropped.has(t.id)) { touched = true; return { ...t, origin: 'baseline' as const, frozen: false } }
     const rename = renames.get(t.id)
     if (!rename || (t.text === rename.text && t.category === rename.category)) return t
     touched = true
