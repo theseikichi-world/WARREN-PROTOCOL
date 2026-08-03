@@ -71,37 +71,24 @@ export function IconRavi(p: IconProps) {
   )
 }
 
-/* ── L.O.G: Beaver scientist — orbital monocle + constellation graph ── */
+/* ── PATHFINDER: a compass rose over a plotted route ── */
 export function IconLog(p: IconProps) {
   const c = p.color ?? 'currentColor'
   return (
     <Svg {...p}>
-      {/* Constellation graph (3 dots connected above head) */}
-      <circle cx="8.5" cy="3.5" r="1" fill={c}/>
-      <circle cx="12"  cy="2"   r="1" fill={c}/>
-      <circle cx="15.5"cy="3.5" r="1" fill={c}/>
-      <line x1="8.5" y1="3.5" x2="12"   y2="2"   stroke={c} strokeWidth="0.65" opacity="0.55"/>
-      <line x1="12"  y1="2"   x2="15.5" y2="3.5" stroke={c} strokeWidth="0.65" opacity="0.55"/>
-      <line x1="8.5" y1="3.5" x2="15.5" y2="3.5" stroke={c} strokeWidth="0.5"  opacity="0.35"/>
-      {/* Small ears */}
-      <circle cx="7.5"  cy="7.5" r="2"   fill={c} opacity="0.75"/>
-      <circle cx="16.5" cy="7.5" r="2"   fill={c} opacity="0.75"/>
-      {/* Head */}
-      <circle cx="12" cy="13" r="6.5" fill={c} opacity="0.85"/>
-      {/* Left eye — normal */}
-      <circle cx="9.5" cy="12" r="1.1" fill="#000" opacity="0.7"/>
-      <circle cx="9.5" cy="12" r="0.45" fill={c}/>
-      {/* Right eye — orbital monocle */}
-      <circle cx="14.5" cy="12" r="2.3" stroke={c} strokeWidth="0.9" fill="#000" opacity="0.65"/>
-      <circle cx="14.5" cy="12" r="1.2" stroke={c} strokeWidth="0.55" fill="none" opacity="0.5"/>
-      <circle cx="14.5" cy="12" r="0.45" fill={c}/>
-      <line x1="12.2" y1="12" x2="16.8" y2="12" stroke={c} strokeWidth="0.4" opacity="0.45"/>
-      <line x1="14.5" y1="9.7" x2="14.5" y2="14.3" stroke={c} strokeWidth="0.4" opacity="0.45"/>
-      {/* Monocle chain */}
-      <path d="M16.8 10.8 Q18 10 19 11" stroke={c} strokeWidth="0.6" fill="none" strokeLinecap="round" opacity="0.4"/>
-      {/* Buckteeth */}
-      <rect x="10.5" y="17.5" width="1.4" height="2"   rx="0.3" fill="#fff" opacity="0.75"/>
-      <rect x="12.5" y="17.5" width="1.4" height="2"   rx="0.3" fill="#fff" opacity="0.75"/>
+      {/* The route: three waypoints, the last one reached */}
+      <circle cx="4"  cy="19" r="1.4" fill={c} opacity="0.55"/>
+      <circle cx="10" cy="15" r="1.4" fill={c} opacity="0.7"/>
+      <circle cx="19" cy="5"  r="2"   fill={c}/>
+      <path d="M4 19 L10 15" stroke={c} strokeWidth="1.1" opacity="0.5" strokeLinecap="round"/>
+      <path d="M10 15 L19 5" stroke={c} strokeWidth="1.3" strokeLinecap="round"
+        strokeDasharray="2.6 2" opacity="0.85"/>
+      {/* Compass rose — the needle pointing along the route */}
+      <circle cx="9.5" cy="9.5" r="5.6" fill="none" stroke={c} strokeWidth="1.1" opacity="0.75"/>
+      <circle cx="9.5" cy="9.5" r="0.9" fill={c}/>
+      <path d="M9.5 4.6 L11.1 9 L9.5 14.4 L7.9 9 Z" fill={c} opacity="0.9"/>
+      <line x1="3.9" y1="9.5" x2="5.4" y2="9.5" stroke={c} strokeWidth="1" opacity="0.6"/>
+      <line x1="13.6" y1="9.5" x2="15.1" y2="9.5" stroke={c} strokeWidth="1" opacity="0.6"/>
     </Svg>
   )
 }

@@ -7,7 +7,7 @@ import {
 import {
   loadState, saveState, applyDailyReset, createTask,
   completeTask, uncompleteTask, deleteTask, updateTask, addMessage, addCategory,
-  todayScheduledDailies, fuzzyMatchTask, type NewTaskData,
+  todayScheduledDailies, fuzzyMatchTask, pickableCategories, type NewTaskData,
 } from './store'
 import { parseCommand } from './commandParser'
 import Infinity8 from '../infinity8/Infinity8'
@@ -405,9 +405,9 @@ function TaskModal({ categories, initialTask, initialText = '', initialType = 't
 
         {/* Type tabs */}
         <div style={{ display: 'flex', gap: 5 }}>
-          {(['habit', 'daily', 'todo'] as TaskType[]).map(t => (
+          {(['daily', 'todo'] as TaskType[]).map(t => (
             <button key={t} onClick={() => setTaskType(t)} style={chip(taskType === t, NEON)}>
-              {t === 'habit' ? tr('Habit', 'Привычка') : t === 'daily' ? tr('Daily', 'Ежедневная') : tr('To-Do', 'Задача')}
+              {t === 'daily' ? tr('Daily', 'Ежедневная') : tr('To-Do', 'Задача')}
             </button>
           ))}
         </div>
@@ -415,7 +415,7 @@ function TaskModal({ categories, initialTask, initialText = '', initialType = 't
         {/* Title */}
         <input ref={ref} value={text} onChange={e => setText(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') onCancel() }}
-          placeholder={taskType === 'habit' ? tr('Habit name...', 'Название привычки...') : taskType === 'daily' ? tr('Daily task...', 'Ежедневная задача...') : tr('Task description...', 'Описание задачи...')}
+          placeholder={taskType === 'daily' ? tr('Daily task...', 'Ежедневная задача...') : tr('Task description...', 'Описание задачи...')}
           style={inp}
           onFocus={e => e.target.style.borderColor = `${NEON}45`}
           onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
@@ -952,7 +952,7 @@ export default function Scrap7() {
 
       {/* Create modal */}
       {modal !== null && (
-        <TaskModal categories={state.categories} initialText={modal.text} initialType={modal.type ?? tab}
+        <TaskModal categories={pickableCategories(state)} initialText={modal.text} initialType={modal.type ?? tab}
           onSave={data => { persist(createTask(state, data)); setModal(null) }}
           onCancel={() => setModal(null)}
           onNewCategory={name => persist(addCategory(state, name))}
@@ -961,7 +961,7 @@ export default function Scrap7() {
 
       {/* Edit modal */}
       {editingTask !== null && (
-        <TaskModal categories={state.categories} initialTask={editingTask}
+        <TaskModal categories={pickableCategories(state)} initialTask={editingTask}
           onSave={data => { persist(updateTask(state, editingTask.id, data)); setEditingTask(null) }}
           onCancel={() => setEditingTask(null)}
           onNewCategory={name => persist(addCategory(state, name))}

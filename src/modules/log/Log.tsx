@@ -265,7 +265,7 @@ function AnalysisPanel({ result, dream, state, onChange, onClose }: {
         background: `${LOG_NEON}08`,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, filter: `drop-shadow(0 0 5px ${LOG_NEON})` }}>🦫</span>
+          <span style={{ fontSize: 12, filter: `drop-shadow(0 0 5px ${LOG_NEON})` }}>⊹</span>
           <div>
             <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
               color: LOG_NEON, letterSpacing: '0.2em' }}>PATHFINDER ANALYSIS</p>
@@ -865,7 +865,7 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
               onMouseEnter={e => { e.currentTarget.style.background = `${LOG_NEON}12`; e.currentTarget.style.borderColor = `${LOG_NEON}55` }}
               onMouseLeave={e => { e.currentTarget.style.background = `${LOG_NEON}07`; e.currentTarget.style.borderColor = `${LOG_NEON}30` }}
             >
-              <span style={{ fontSize: 14, filter: `drop-shadow(0 0 4px ${LOG_NEON})` }}>🦫</span>
+              <span style={{ fontSize: 14, filter: `drop-shadow(0 0 4px ${LOG_NEON})` }}>⊹</span>
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
                   color: LOG_NEON, letterSpacing: '0.15em' }}>{tr('ANALYZE WITH PATHFINDER', 'АНАЛИЗ С PATHFINDER')}</p>
@@ -884,7 +884,7 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
               padding: '10px 12px', marginBottom: 10, borderRadius: 8,
               background: `${LOG_NEON}06`, border: `1px solid ${LOG_NEON}20` }}>
               <span style={{ fontSize: 14, animation: 'pulse 1.5s ease-in-out infinite',
-                filter: `drop-shadow(0 0 6px ${LOG_NEON})` }}>🦫</span>
+                filter: `drop-shadow(0 0 6px ${LOG_NEON})` }}>⊹</span>
               <div>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
                   color: LOG_NEON, letterSpacing: '0.15em' }}>{tr('COMPUTING TRAJECTORY...', 'ВЫЧИСЛЯЮ ТРАЕКТОРИЮ...')}</p>

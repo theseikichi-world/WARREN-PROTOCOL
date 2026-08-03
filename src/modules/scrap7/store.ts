@@ -379,6 +379,31 @@ export function todayScheduledDailies(tasks: Task[]): Task[] {
   })
 }
 
+/**
+ * Categories another system owns, and which must never be offered here.
+ *
+ * A task's category is only a label — picking "BECOME A SUPERMAN" for a to-do
+ * does NOT attach it to that uplink, and picking "Life support" does not make
+ * it a basic. Offering them implied a connection the data doesn't have, which
+ * is worse than not offering them at all: routines are created by the forge and
+ * basics by the character sheet, never from this modal.
+ */
+export const SYSTEM_CATEGORIES = ['Life support', 'Goals', 'Constellation']
+
+/**
+ * What the category picker may show: the user's own categories, minus anything
+ * another system stamped on its own tasks (a goal title arrives as a category
+ * when a routine is installed).
+ */
+export function pickableCategories(state: Scrap7State): string[] {
+  const owned = new Set<string>(SYSTEM_CATEGORIES)
+  for (const t of state.tasks) {
+    if (t.taskType === 'habit' && t.category) owned.add(t.category)
+  }
+  const usable = state.categories.filter(c => !owned.has(c))
+  return usable.length ? usable : ['Personal']
+}
+
 export function taskSummaryStats(tasks: Task[]) {
   const dailies        = todayScheduledDailies(tasks)
   const habits         = tasks.filter(t => t.taskType === 'habit')
