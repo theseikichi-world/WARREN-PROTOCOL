@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `20e5b90` · 321 tests · tsc/build/lint clean.
+**State as of the last commit:** `ede7c66` · 339 tests · tsc/build/lint clean.
 
 ---
 
@@ -101,6 +101,8 @@ Flavour belongs on what you read once. (Internal identifiers still say
 - `guild.ts` — `built` flag, `group: instrument | utility`; INFINITY-8 `false`
 - `profile.ts` + `Onboarding.tsx` — first-run gate; chronotype from mid-sleep
 - `tour.ts` + `TourOverlay.tsx` — per-surface walkthroughs, anchored by `data-tour`
+- `moduleAccess.ts` — which level opens which module; **invariant tested**
+- `boot.ts` — the boot log, read off real state
 - `settings.ts` — profile fields (`gender`, `wakeTime`, `sleepTime`, `onboardedAt`)
 
 ---
@@ -196,6 +198,19 @@ These were each decided deliberately; breaking one silently breaks the product.
     transform-based entrance can leave a residual translate and paint the
     element over its neighbour — exactly how the quest banner ended up on the
     module's header. Use `fadeInPlace` for anything in the flow.
+29. **A module opens with a level, and never after the quest that needs it.**
+    `moduleAccess.ts` holds the table; `moduleAccess.test.ts` pins the invariant
+    that every quest destination is unlocked at or before that quest's stage.
+    Break it and the starting zone hands you an unreachable objective. Rule 8
+    still holds: a level withholds a whole instrument, never a feature of one
+    you already use.
+30. **A locked thing is visible, dimmed, and says what opens it.** Hiding it
+    would erase the shape of what's coming; doing nothing on click is worse than
+    saying "OPENS AT LEVEL 4". Same principle as rule 5.
+31. **An effect that schedules timers must cancel them, and must not depend on
+    a callback prop.** A parent's inline `onDone` is a new identity every
+    render; the boot log listed it as a dependency and restarted its own chain
+    on every re-render, printing each line two to four times.
 
 ---
 
