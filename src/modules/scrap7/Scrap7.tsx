@@ -7,7 +7,7 @@ import {
 import {
   loadState, saveState, applyDailyReset, createTask,
   completeTask, uncompleteTask, deleteTask, updateTask, addMessage, addCategory,
-  todayScheduledDailies, fuzzyMatchTask, pickableCategories, type NewTaskData,
+  fuzzyMatchTask, pickableCategories, orbitTasks, type NewTaskData,
 } from './store'
 import { parseCommand } from './commandParser'
 import Infinity8 from '../infinity8/Infinity8'
@@ -16,7 +16,7 @@ import { loadSettings, aiJson, modelForTask, type AiMessage } from '../../settin
 
 const NEON = '#00b4ff'
 
-const SCRAP7_SYSTEM = `You are SCRAP-7, a cyber-raccoon task engineer. You turn what the user says into structured tasks.
+const SCRAP7_SYSTEM = `You are ORBIT, a cyber-raccoon task engineer. You turn what the user says into structured tasks.
 
 Reply with ONLY a JSON object, no markdown fences, no prose outside it:
 {"reply": string, "tasks": [{"text": string, "type": "daily"|"todo", "category": string, "schedule": "everyday"|"weekly"|null, "days": ["mon","tue","wed","thu","fri","sat","sun"] }], "delete": [number]}
@@ -403,19 +403,21 @@ function TaskModal({ categories, initialTask, initialText = '', initialType = 't
         backdropFilter: 'blur(16px)', padding: '16px', display: 'flex', flexDirection: 'column', gap: 9,
         maxHeight: '85%', overflowY: 'auto' }}>
 
-        {/* Type tabs */}
+        {/* Not "what kind of task" — there is only one kind. Just: does it
+            come back? Everything else about a task follows from that. */}
         <div style={{ display: 'flex', gap: 5 }}>
-          {(['daily', 'todo'] as TaskType[]).map(t => (
-            <button key={t} onClick={() => setTaskType(t)} style={chip(taskType === t, NEON)}>
-              {t === 'daily' ? tr('Daily', 'Ежедневная') : tr('To-Do', 'Задача')}
-            </button>
-          ))}
+          <button onClick={() => setTaskType('todo')} style={chip(taskType === 'todo', NEON)}>
+            {tr('ONCE', 'ОДИН РАЗ')}
+          </button>
+          <button onClick={() => setTaskType('daily')} style={chip(taskType === 'daily', NEON)}>
+            ↻ {tr('REPEATS', 'ПОВТОРЯЕТСЯ')}
+          </button>
         </div>
 
         {/* Title */}
         <input ref={ref} value={text} onChange={e => setText(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') onCancel() }}
-          placeholder={taskType === 'daily' ? tr('Daily task...', 'Ежедневная задача...') : tr('Task description...', 'Описание задачи...')}
+          placeholder={taskType === 'daily' ? tr('Something that comes back...', 'То, что возвращается...') : tr('Something to get done...', 'То, что нужно сделать...')}
           style={inp}
           onFocus={e => e.target.style.borderColor = `${NEON}45`}
           onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
@@ -555,13 +557,11 @@ function ChatMsg({ text, sender }: { text: string; sender: 'user' | 'scrap7' }) 
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-type TabKey  = 'daily' | 'todo'
 type ViewKey = 'tasks' | 'chat'
 
 export default function Scrap7() {
   const [state, setState]   = useState(() => applyDailyReset(loadState()))
   const [view, setView]     = useState<ViewKey>('tasks')
-  const [tab,  setTab]      = useState<TabKey>('daily')
   const [timeline, setTimeline] = useState(false)
   const [input, setInput]   = useState('')
   const [thinking, setThinking] = useState(false)
@@ -610,14 +610,6 @@ export default function Scrap7() {
     if (view === 'chat') chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [state.chatHistory, view, thinking])
 
-  const tabTasks = (t: TabKey): Task[] => {
-    if (t === 'daily') return todayScheduledDailies(state.tasks).sort((a, b) =>
-      a.completed === b.completed ? 0 : a.completed ? 1 : -1
-    )
-    return state.tasks.filter(tk => tk.taskType === 'todo').sort((a, b) =>
-      a.completed === b.completed ? 0 : a.completed ? 1 : -1
-    )
-  }
 
   const handleSend = async () => {
     const raw = input.trim()
@@ -639,8 +631,8 @@ export default function Scrap7() {
           // that recordRun/recordBaselineRun attach to a run — a silent economy
           // leak. The reply below says where to go instead.
           else if (action.type === 'track_habit') {
-            s = addMessage(s, { text: tr('Habits are tracked in UPLINKS now — routines on the tree, basics on the character sheet.',
-                                         'Привычки теперь в UPLINKS — рутины на дереве, основы на листе персонажа.'),
+            s = addMessage(s, { text: tr('Habits are tracked in UPLINKS — routines on the tree, basics on the character sheet. ORBIT keeps what has to happen.',
+                                         'Привычки — в UPLINKS: рутины на дереве, основы на листе персонажа. ORBIT держит то, что нужно сделать.'),
                                 sender: 'scrap7' })
           }
           else if (action.type === 'delete_task' && action.task_id)
@@ -648,7 +640,8 @@ export default function Scrap7() {
           else if (action.type === 'open_task_modal')
             setModal({ text: action.suggestion, type: action.taskType })
           else if (action.type === 'create_direct') {
-            const type: TaskType = (action.taskType as TaskType) ?? tab
+            // No tab to inherit from any more: a task is one-off unless it says otherwise
+            const type: TaskType = (action.taskType as TaskType) ?? 'todo'
             const isWeekly = action.recurrence === 'weekly' && (action.recurDays?.length ?? 0) > 0
             s = createTask(s, {
               text: action.suggestion ?? raw, category: action.category ?? 'Health',
@@ -734,16 +727,12 @@ export default function Scrap7() {
 
 
 
-  // Habits left. They are character work — goal routines live in a PROTOCOL and
-  // the basics in LIFE SUPPORT — and having them here as well was the same
-  // behaviour shown in two places with two different meanings. SCRAP-7 keeps
-  // the day: obligations on a schedule, and things with an end.
-  const TABS: { id: TabKey; label: string }[] = [
-    { id: 'daily', label: tr('Dailies', 'Ежедневные') },
-    { id: 'todo',  label: tr("To-Do's", 'Задачи') },
-  ]
-
-  const shownTasks  = tabTasks(tab)
+  // One list. The DAILIES/TO-DO split was two names for the same thing —
+  // something you have to do — differing only in whether it comes back, which
+  // is a property of a task and not a category of task. Habits aren't here at
+  // all: the line is BUILDS YOU vs JUST HAS TO HAPPEN, and the first half lives
+  // in UPLINKS where it is scored, streaked and capped.
+  const shownTasks  = orbitTasks(state.tasks)
   const activeTasks = shownTasks.filter(t => !t.completed)
   const doneTasks   = shownTasks.filter(t => t.completed)
 
@@ -775,45 +764,39 @@ export default function Scrap7() {
           ))}
         </div>
 
-        {/* The day, two ways: the list you edit and the timeline it lands on.
-            INFINITY-8 owns no tasks of its own — it reads these — so it was
-            never a separate module, only a second way to look at this one. */}
-        <button onClick={() => setTimeline(v => !v)}
-          title={tr('Timeline — INFINITY-8', 'Таймлайн — INFINITY-8')}
-          style={{
-            padding: '9px 12px', fontFamily: 'var(--font)', fontSize: 13, cursor: 'pointer',
-            color: timeline ? '#22d3ee' : 'rgba(148,163,184,0.35)',
-            textShadow: timeline ? '0 0 8px #22d3ee' : 'none',
-            borderRight: '1px solid rgba(255,255,255,0.06)', transition: 'color 0.15s',
-          }}>∞</button>
-
-        {view === 'tasks' && !timeline && (
+        {/* The day, two ways: what has to happen, and when it lands. The
+            timeline owns no tasks of its own — it reads these — so it was never
+            a second module, only the other half of this one. */}
+        {view === 'tasks' && (
           <div style={{ display: 'flex', flex: 1 }}>
-            {TABS.map(({ id, label }) => {
-              const cnt = tabTasks(id).filter(t => !t.completed).length
-              const on  = tab === id
+            {([false, true] as const).map(tl => {
+              const on = timeline === tl
               return (
-                <button key={id} onClick={() => setTab(id)} style={{
-                  flex: 1, padding: '9px 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                <button key={String(tl)} onClick={() => setTimeline(tl)} style={{
+                  flex: 1, padding: '9px 4px', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', gap: 6,
                   fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: on ? 700 : 400,
+                  letterSpacing: '0.1em', cursor: 'pointer', background: 'transparent',
                   color: on ? NEON : 'rgba(148,163,184,0.4)',
-                  textShadow: on ? `0 0 8px ${NEON}` : 'none', background: 'transparent', cursor: 'pointer',
-                  borderBottom: on ? `2px solid ${NEON}` : '2px solid transparent', transition: 'all 0.15s',
+                  textShadow: on ? `0 0 8px ${NEON}` : 'none',
+                  borderBottom: on ? `2px solid ${NEON}` : '2px solid transparent',
+                  transition: 'all 0.15s',
                 }}>
-                  {label}
-                  {cnt > 0 && (
+                  {tl ? '∞' : '≡'} {tl ? tr('TIMELINE', 'ТАЙМЛАЙН') : tr('LIST', 'СПИСОК')}
+                  {!tl && activeTasks.length > 0 && (
                     <span style={{ minWidth: 16, height: 15, borderRadius: 7, padding: '0 4px',
                       background: on ? `${NEON}20` : 'rgba(255,255,255,0.06)',
                       border: `1px solid ${on ? `${NEON}35` : 'rgba(255,255,255,0.08)'}`,
                       fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: 'var(--font)',
                       color: on ? NEON : 'rgba(148,163,184,0.35)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{cnt}</span>
+                      display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{activeTasks.length}</span>
                   )}
                 </button>
               )
             })}
           </div>
         )}
+
 
         <button onClick={() => setModal({})} style={{
           padding: '9px 12px', fontFamily: 'var(--font)', fontSize: 18, fontWeight: 700,
@@ -834,18 +817,19 @@ export default function Scrap7() {
       {view === 'tasks' && !timeline && (
         <div style={{ flex: 1, overflowY: 'auto' }}>
 
-          {/* 14-day calendar on Dailies */}
-          {tab === 'daily' && <StreakCalendar tasks={state.tasks} />}
+          {/* The fortnight behind you — repeating work is the only thing with a
+              history worth drawing, so it only shows when there is some. */}
+          {state.tasks.some(t => t.taskType === 'daily') && <StreakCalendar tasks={state.tasks} />}
 
           {shownTasks.length === 0 && (
             <div style={{ padding: '28px 16px', textAlign: 'center' }}>
               <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-md)',
                 color: 'rgba(148,163,184,0.22)', marginBottom: 6 }}>
-                {tab === 'daily' ? tr('No dailies today', 'Нет задач на сегодня') : tr('Queue empty', 'Очередь пуста')}
+                {tr('Nothing due today', 'На сегодня ничего')}
               </p>
               <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
                 color: `${NEON}28`, letterSpacing: '0.06em' }}>
-                {tr('Talk to SCRAP-7 or press + ↑', 'Напишите SCRAP-7 или нажмите + ↑')}
+                {tr('Talk to ORBIT or press + ↑', 'Напишите ORBIT или нажмите + ↑')}
               </p>
             </div>
           )}
@@ -952,7 +936,7 @@ export default function Scrap7() {
 
       {/* Create modal */}
       {modal !== null && (
-        <TaskModal categories={pickableCategories(state)} initialText={modal.text} initialType={modal.type ?? tab}
+        <TaskModal categories={pickableCategories(state)} initialText={modal.text} initialType={modal.type ?? 'todo'}
           onSave={data => { persist(createTask(state, data)); setModal(null) }}
           onCancel={() => setModal(null)}
           onNewCategory={name => persist(addCategory(state, name))}

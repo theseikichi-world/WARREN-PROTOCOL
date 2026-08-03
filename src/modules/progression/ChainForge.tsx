@@ -467,8 +467,8 @@ function NodeEditor({
               border: `1px solid ${WARN}35` }}>
               <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${WARN}d0`, lineHeight: 1.6 }}>
                 {live
-                  ? tr('This routine has a habit with real history. Removing it hands the habit back to SCRAP-7 as your own — score and streak intact. It stops earning progression. Nothing is deleted.',
-                       'У этой рутины есть привычка с реальной историей. Удаление вернёт её в SCRAP-7 как вашу собственную — счёт и серия сохранятся. Она перестанет давать прогресс. Ничего не удаляется.')
+                  ? tr('This routine has a habit with real history. Removing it moves the habit to LIFE SUPPORT — score and streak intact. Nothing is deleted.',
+                       'У этой рутины есть привычка с реальной историей. Удаление переместит её в ЖИЗНЕОБЕСПЕЧЕНИЕ — счёт и серия сохранятся. Ничего не удаляется.')
                   : tr('Remove this routine from the protocol?', 'Убрать рутину из протокола?')}
               </p>
               <div style={{ display: 'flex', gap: 6, marginTop: 7 }}>

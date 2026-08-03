@@ -1,6 +1,25 @@
 // ─── Task types ───────────────────────────────────────────────────────────────
 
+/**
+ * ORBIT presents ONE kind of thing: a task, which may repeat. `taskType` is the
+ * storage-level spelling of that — `'daily'` means "repeats", `'todo'` means
+ * "once" — and keeping the two names avoids migrating every stored task and the
+ * daily-reset machinery that already reads them.
+ *
+ * `'habit'` is not creatable in ORBIT at all. It belongs to UPLINKS: a goal
+ * routine (`origin: 'chain'`) or a basic (`origin: 'baseline'`). The line is
+ * BUILDS YOU vs JUST HAS TO HAPPEN, not repeats vs doesn't — which is why
+ * repeating tasks are uncapped and unscored while basics are capped and scored.
+ * You choose your basics; you mostly don't choose your obligations.
+ */
 export type TaskType  = 'habit' | 'daily' | 'todo'
+
+/** A task that comes back when you complete it. */
+export const isRepeating = (t: Pick<Task, 'taskType'>): boolean => t.taskType === 'daily'
+
+/** Everything ORBIT owns: the day's obligations, repeating or not. */
+export const isOrbitTask = (t: Pick<Task, 'taskType'>): boolean =>
+  t.taskType === 'daily' || t.taskType === 'todo'
 
 /**
  * Where a task came from. Decides who it answers to:

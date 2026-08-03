@@ -163,8 +163,8 @@ export default function Uplinks() {
     setForging(null)
     reconcile()
     flash(res.detached.length
-      ? tr(`◆ PROTOCOL SAVED · ${res.detached.length} released to SCRAP-7`,
-           `◆ ПРОТОКОЛ СОХРАНЁН · ${res.detached.length} возвращено в SCRAP-7`)
+      ? tr(`◆ PROTOCOL SAVED · ${res.detached.length} moved to LIFE SUPPORT`,
+           `◆ ПРОТОКОЛ СОХРАНЁН · ${res.detached.length} в ЖИЗНЕОБЕСПЕЧЕНИЕ`)
       : tr('◆ PROTOCOL SAVED', '◆ ПРОТОКОЛ СОХРАНЁН'))
   }, [reconcile])
 

@@ -31,10 +31,10 @@ export const GUILD: GuildMember[] = [
     desc: 'The day that flows endlessly. Reads every module, lays your day on the line, and guards your free time.',
   },
   {
-    id: 'scrap7', group: 'instrument' as GuildGroup, name: 'SCRAP-7',      unit: 'S-7', animal: 'Raccoon',
-    role: 'Tasks & Habits',
+    id: 'scrap7', group: 'instrument' as GuildGroup, name: 'ORBIT',        unit: 'ORB', animal: 'Raccoon',
+    role: 'What comes round, and when',
     neon: '#00b4ff', path: '/scrap7', free: true, built: true,
-    desc: 'Cyber-raccoon engineer. Iron heart. Cyber eye. Task completion at any cost.',
+    desc: 'What has to happen, and when it lands. The raccoon keeps the day; nothing here builds you — that lives in UPLINKS.',
   },
   {
     id: 'log', group: 'instrument' as GuildGroup,   name: 'PATHFINDER',    unit: 'PTH', animal: 'Beaver',

@@ -404,6 +404,26 @@ export function pickableCategories(state: Scrap7State): string[] {
   return usable.length ? usable : ['Personal']
 }
 
+/**
+ * ORBIT's single list: everything due today, repeating or not, open first.
+ *
+ * A repeating task only appears on the days it is scheduled for; a one-off
+ * appears until it's done. There are no tabs because there is no second kind of
+ * thing here — the repeat mark is a property of a task, not a category of task.
+ */
+export function orbitTasks(tasks: Task[]): Task[] {
+  const dueToday = new Set(todayScheduledDailies(tasks).map(t => t.id))
+  return tasks
+    .filter(t => (t.taskType === 'todo') || dueToday.has(t.id))
+    .sort((a, b) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1
+      // Repeating things anchor the day, so they lead
+      const ar = a.taskType === 'daily' ? 0 : 1
+      const br = b.taskType === 'daily' ? 0 : 1
+      return ar - br
+    })
+}
+
 export function taskSummaryStats(tasks: Task[]) {
   const dailies        = todayScheduledDailies(tasks)
   const habits         = tasks.filter(t => t.taskType === 'habit')

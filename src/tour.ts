@@ -76,9 +76,12 @@ export const TOURS: Record<string, Tour> = {
   scrap7: {
     id: 'scrap7',
     steps: [
-      { title: 'SCRAP-7 — THE DAY', titleRu: 'SCRAP-7 — ДЕНЬ',
-        body: 'Todos and dailies: the things that need doing but do not build a character. Anything that shapes who you are lives in UPLINKS instead.',
-        bodyRu: 'Задачи и ежедневки — то, что нужно сделать, но что не строит персонажа. Всё формирующее — в КАНАЛАХ.' },
+      { title: 'ORBIT — WHAT COMES ROUND', titleRu: 'ORBIT — ЧТО ВОЗВРАЩАЕТСЯ',
+        body: 'One list: things that have to happen. Some come back — mark them REPEATS and they return when you complete them. Nothing here is scored and nothing here builds you; that lives in UPLINKS.',
+        bodyRu: 'Один список: то, что должно случиться. Часть возвращается — отметьте ПОВТОРЯЕТСЯ, и задача вернётся после выполнения. Здесь ничего не оценивается и не строит вас — это в UPLINKS.' },
+      { title: 'AND WHEN IT LANDS', titleRu: 'И КОГДА ЭТО ЛЯЖЕТ',
+        body: 'TIMELINE lays the same list across your actual waking hours and shows the free time left over. It owns nothing — it is this list, seen as a day.',
+        bodyRu: 'ТАЙМЛАЙН раскладывает тот же список по вашим реальным часам бодрствования и показывает свободное время. Он ничем не владеет — это тот же список, но как день.' },
     ],
   },
 

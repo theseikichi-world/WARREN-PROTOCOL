@@ -19,7 +19,7 @@ export const MODULE_LEVEL: Partial<Record<ModuleId, number>> = {
   log:    1,   // PATHFINDER — stage 1 sends you here for CHOOSE ONE DREAM
   hoot:   1,   // JOURNAL    — stage 1 sends you here for FIRST LIGHT
   pomu:   2,   // SOLARIS    — stage 2 sends you here for WATER DISCIPLINE
-  scrap7: 2,   // SCRAP-7    — the day's admin, once the character exists
+  scrap7: 2,   // ORBIT      — the day's obligations, once the character exists
   foxy:   3,   // PICTURES   — a utility, and the first thing that is purely yours
   ardo:   4,   // A.R.D.O    — stage 4 sends you here for COMMIT TO MEMORY
 }
