@@ -101,11 +101,14 @@ export function questCta(quest: Quest, hasUplink: boolean): { en: string; ru: st
  */
 export const QUEST_LINE: Quest[] = [
   // ── Stage 1 — SETUP ─────────────────────────────────────────────────────────
+  // Order matters even though the stage is a checklist: the dream comes first
+  // because everything else is in service of it, then the floor it stands on,
+  // then somewhere to put what you notice along the way.
   {
-    id: 's1-first-light', stage: 1, title: 'FIRST LIGHT', ru: 'ПЕРВЫЙ СВЕТ',
-    brief:   'Open the log and write one entry. Any length. The owl reads everything and judges none of it.',
-    briefRu: 'Откройте журнал и напишите одну запись. Любой длины. Сова читает всё и не судит.',
-    objective: { kind: 'journal.entries', need: 1 }, target: 'journal', xp: 40, grants: 'journal',
+    id: 's1-first-uplink', stage: 1, title: 'CHOOSE ONE DREAM', ru: 'ВЫБЕРИТЕ ОДНУ МЕЧТУ',
+    brief:   'Write a dream in PATHFINDER, then promote it to an uplink. Dreams are unlimited; bandwidth is two. That choice is the whole game.',
+    briefRu: 'Запишите мечту в PATHFINDER и продвиньте её в канал. Мечты бесконечны, каналов — два. Этот выбор и есть вся игра.',
+    objective: { kind: 'uplink.created', need: 1 }, target: 'log', xp: 60,
   },
   {
     id: 's1-life-support', stage: 1, title: 'KEEP YOURSELF RUNNING', ru: 'ОБЕСПЕЧЬТЕ СЕБЯ',
@@ -114,10 +117,10 @@ export const QUEST_LINE: Quest[] = [
     objective: { kind: 'baseline.installed', need: 1 }, target: 'character', spotlight: 'life-support', xp: 30,
   },
   {
-    id: 's1-first-uplink', stage: 1, title: 'CHOOSE ONE DREAM', ru: 'ВЫБЕРИТЕ ОДНУ МЕЧТУ',
-    brief:   'Write a dream in PATHFINDER, then promote it to an uplink. Dreams are unlimited; bandwidth is two. That choice is the whole game.',
-    briefRu: 'Запишите мечту в PATHFINDER и продвиньте её в канал. Мечты бесконечны, каналов — два. Этот выбор и есть вся игра.',
-    objective: { kind: 'uplink.created', need: 1 }, target: 'log', xp: 60,
+    id: 's1-first-light', stage: 1, title: 'FIRST LIGHT', ru: 'ПЕРВЫЙ СВЕТ',
+    brief:   'Open the log and write one entry. Any length. The owl reads everything and judges none of it.',
+    briefRu: 'Откройте журнал и напишите одну запись. Любой длины. Сова читает всё и не судит.',
+    objective: { kind: 'journal.entries', need: 1 }, target: 'journal', xp: 40, grants: 'journal',
   },
 
   // ── Stage 2 — THE FIRST ROUTINE ─────────────────────────────────────────────

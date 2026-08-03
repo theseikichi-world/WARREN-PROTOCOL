@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { t as tr } from '../../i18n'
 import { levelReward, rewardIsBare } from './xp'
+import { GUILD } from '../../guild'
 
 // ─── LEVEL REACHED ────────────────────────────────────────────────────────────
 // The same shape as the arrival, on purpose: a full-screen beat, typed in, that
@@ -21,6 +22,11 @@ export function LevelUp({ level, onDone }: { level: number; onDone: () => void }
   const [shown, setShown] = useState(0)   // how many reward lines have landed
 
   const lines = [
+    // Modules first: a new instrument is the biggest thing a level can hand you
+    ...reward.modules.map(id => {
+      const m = GUILD.find(g => g.id === id)
+      return { icon: '◆', en: `${m?.name ?? id} — ${tr(m?.role ?? '', m?.role ?? '')}`, tone: m?.neon ?? CYAN }
+    }),
     ...reward.gates.map(g => ({ icon: '⊕', en: tr(g.label, g.ru), tone: CYAN })),
     ...(reward.slots !== null
       ? [{ icon: '🫀', en: tr(`Life support widens to ${reward.slots} slots`,
@@ -49,7 +55,7 @@ export function LevelUp({ level, onDone }: { level: number; onDone: () => void }
 
       <div style={{ position: 'relative', width: '100%', maxWidth: 380, textAlign: 'center' }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.26em',
-          color: `${CYAN}70`, animation: 'fadeIn 0.4s ease' }}>
+          color: `${CYAN}70`, animation: 'fadeInPlace 0.4s ease' }}>
           {tr('THRESHOLD CROSSED', 'ПОРОГ ПРОЙДЕН')}
         </p>
 

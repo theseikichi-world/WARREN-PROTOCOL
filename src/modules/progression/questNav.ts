@@ -34,12 +34,14 @@ export function useSpotlight(which: Spotlight): boolean {
   const nav = useQuestNav()
   const [on, setOn] = useState(nav?.spotlight === which)
 
-  // A spotlight is an arrival cue, not a permanent state — it fades on its own
-  // so the screen doesn't stay decorated forever.
+  // A spotlight waits for the person, not for a stopwatch. Nine seconds was
+  // long enough to notice and too short to read the panel and decide — it went
+  // out while you were still working out what it wanted. The long stop is only
+  // there so a screen left open overnight isn't still pulsing in the morning.
   useEffect(() => {
     if (nav?.spotlight !== which) { setOn(false); return }
     setOn(true)
-    const id = setTimeout(() => setOn(false), 9000)
+    const id = setTimeout(() => setOn(false), 5 * 60_000)
     return () => clearTimeout(id)
   }, [nav?.spotlight, which])
 

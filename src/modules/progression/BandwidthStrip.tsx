@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { t } from '../../i18n'
 import { loadProgression, seedIfEmpty, saveProgression, primaryGoal, secondaryGoal, bandwidthUsed } from './store'
 import type { Goal, ProgressionState } from './types'
+import { gatedLevel, isUnlockedAt, GATES } from './xp'
+
+const SECOND_SLOT_LEVEL = GATES.find(g => g.key === 'secondary')?.level ?? 5
 
 const CYAN = '#00f5ff'
 const GOLD = '#ffd700'
@@ -30,6 +33,8 @@ export function BandwidthStrip() {
 
   const primary   = primaryGoal(state)
   const secondary = secondaryGoal(state)
+  // The second slot is a level reward; claiming both are open is just untrue
+  const secondOpen = isUnlockedAt('secondary', gatedLevel(state.xp, state.quests).level)
 
   // Nothing allocated yet. This used to render null, which left a labelled hole
   // in the hub — and the guided tour dutifully pointed at it. An empty slot is
@@ -49,12 +54,15 @@ export function BandwidthStrip() {
             {t('BANDWIDTH', 'ПРОПУСКНАЯ СПОСОБНОСТЬ')}
           </span>
           <span style={{ fontSize: 7.5, fontWeight: 800, color: `${CYAN}70`, marginLeft: 'auto' }}>
-            0/2 {t('ALLOCATED', 'ЗАНЯТО')}
+            0/{secondOpen ? 2 : 1} {t('ALLOCATED', 'ЗАНЯТО')}
           </span>
         </div>
-        <p style={{ fontSize: 9, color: 'rgba(215,232,248,0.72)', lineHeight: 1.6, marginTop: 7 }}>
-          {t('Both slots are open. A goal starts as a dream — write one in PATHFINDER and promote it.',
-             'Оба слота свободны. Цель начинается с мечты — запишите её в PATHFINDER и продвиньте.')}
+<p style={{ fontSize: 9, color: 'rgba(215,232,248,0.72)', lineHeight: 1.6, marginTop: 7 }}>
+          {secondOpen
+            ? t('Both slots are open. A goal starts as a dream — write one in PATHFINDER and promote it.',
+                'Оба слота свободны. Цель начинается с мечты — запишите её в PATHFINDER и продвиньте.')
+            : t(`One slot now, the second at level ${SECOND_SLOT_LEVEL}. A goal starts as a dream — write one in PATHFINDER and promote it.`,
+                `Сейчас один слот, второй — на уровне ${SECOND_SLOT_LEVEL}. Цель начинается с мечты — запишите её в PATHFINDER и продвиньте.`)}
         </p>
         <p style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.14em', color: CYAN, marginTop: 8 }}>
           {t('OPEN PATHFINDER', 'ОТКРЫТЬ PATHFINDER')} →

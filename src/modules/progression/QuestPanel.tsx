@@ -166,7 +166,8 @@ export function QuestPanel() {
                 opacity: cleared ? 0.65 : 1,
               }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 9, flexShrink: 0, color: cleared ? '#39ff14' : GOLD }}>
+                <span style={{ fontSize: 9, flexShrink: 0, width: 9, textAlign: 'center',
+                  color: cleared ? '#39ff14' : GOLD }}>
                   {cleared ? '✓' : '◈'}
                 </span>
                 <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 9,
@@ -175,10 +176,12 @@ export function QuestPanel() {
                   textDecoration: cleared ? 'line-through' : 'none' }}>
                   {tr(p.quest.title, p.quest.ru)}
                 </span>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, flexShrink: 0 }}>
+<span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, flexShrink: 0,
+                  width: 26, textAlign: 'right' }}>
                   {p.have}/{p.need}
                 </span>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${GOLD}70`, flexShrink: 0 }}>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${GOLD}70`, flexShrink: 0,
+                  width: 26, textAlign: 'right' }}>
                   +{p.quest.xp}
                 </span>
               </div>
@@ -186,11 +189,11 @@ export function QuestPanel() {
               {!cleared && (
                 <>
                   <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, lineHeight: 1.6, marginTop: 5,
-                    color: 'rgba(215,232,248,0.72)' }}>
+                    marginLeft: 17, color: 'rgba(215,232,248,0.72)' }}>
                     {tr(p.quest.brief, p.quest.briefRu)}
                   </p>
                   <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 800,
-                    letterSpacing: '0.12em', color: GOLD, marginTop: 6 }}>
+                    letterSpacing: '0.12em', color: GOLD, marginTop: 6, marginLeft: 17 }}>
                     {tr(cta.en, cta.ru)} →
                   </p>
                 </>

@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import { GUILD, type GuildMember, type ModuleId } from './guild'
@@ -12,6 +12,8 @@ import { Initiation } from './modules/progression/Initiation'
 import { LevelUp } from './modules/progression/LevelUp'
 import { gatedLevel } from './modules/progression/xp'
 import { loadProgression, saveProgression } from './modules/progression/store'
+import { moduleLevel, moduleUnlocked } from './moduleAccess'
+import { bootLines } from './boot'
 import { QuestHintBanner } from './modules/progression/QuestHint'
 import Scrap7    from './modules/scrap7/Scrap7'
 import Log       from './modules/log/Log'
@@ -53,23 +55,20 @@ const NAV_ORDER = INSTRUMENT_ORDER
   .concat(built.filter(m => m.group === 'instrument' && !INSTRUMENT_ORDER.includes(m.id)))
 const NAV_UTILITIES = built.filter(m => m.group === 'utility')
 
-// ─── Matrix intro ─────────────────────────────────────────────────────────────
-const BOOT_LINES = [
-  '> WARREN PROTOCOL v1.0.0',
-  '> INITIALIZING CORE SYSTEMS...',
-  '> CONNECTING TO GUILD NETWORK...',
-  '> SCANNING MODULES [7/7]...',
-  '> LOCAL DATA VAULT... SECURED',
-  '> INFINITY-8 CONDUCTOR... ONLINE',
-  '> ALL SYSTEMS NOMINAL',
-  '',
-]
-
 function IntroScreen({ onDone, displayName }: { onDone: () => void; displayName: string }) {
   const [lines, setLines]         = useState<string[]>([])
   const [username, setUsername]   = useState(displayName || 'AGENT')
   const [showHello, setShowHello] = useState(false)
   const [exiting, setExiting]     = useState(false)
+
+  // Fixed for the life of this boot, so a re-render can't reshuffle it
+  const [script] = useState(() => bootLines(displayName))
+
+  // onDone is a fresh closure on every parent render. Held in a ref so the timer
+  // effect below doesn't list it as a dependency — it used to, which restarted
+  // the whole chain on every re-render and printed each line two or three times.
+  const doneRef = useRef(onDone)
+  useEffect(() => { doneRef.current = onDone }, [onDone])
 
   useEffect(() => {
     if (!displayName) {
@@ -79,19 +78,25 @@ function IntroScreen({ onDone, displayName }: { onDone: () => void; displayName:
 
   useEffect(() => {
     let i = 0
+    const timers: number[] = []
+    const at = (fn: () => void, ms: number) => timers.push(window.setTimeout(fn, ms))
+
     const addLine = () => {
-      if (i < BOOT_LINES.length) {
-        setLines(prev => [...prev, BOOT_LINES[i]])
+      if (i < script.length) {
+        setLines(prev => [...prev, script[i]])
         i++
-        setTimeout(addLine, i === BOOT_LINES.length - 1 ? 180 : 110 + Math.random() * 80)
+        at(addLine, i === script.length - 1 ? 180 : 90 + Math.random() * 70)
       } else {
-        setTimeout(() => setShowHello(true), 300)
-        setTimeout(() => setExiting(true), 1800)
-        setTimeout(() => onDone(), 2300)
+        at(() => setShowHello(true), 300)
+        at(() => setExiting(true), 1800)
+        at(() => doneRef.current(), 2300)
       }
     }
-    setTimeout(addLine, 400)
-  }, [onDone])
+    at(addLine, 400)
+    // Cancelling matters twice over: StrictMode mounts effects twice in dev, and
+    // without this both chains survive and interleave.
+    return () => { timers.forEach(clearTimeout); setLines([]) }
+  }, [script])
 
   return (
     <div style={{
@@ -278,13 +283,13 @@ function TitleBar() {
 
 // ─── Sidebar button — cyberpunk icon ─────────────────────────────────────────
 
-function SidebarBtn({ iconId, neon, active, title, dim = false, onClick }: {
+function SidebarBtn({ iconId, neon, active, title, dim = false, locked = false, onClick }: {
   iconId: ModuleId | 'hub' | 'set' | 'pwr' | 'uplink'
   neon: string; active: boolean; title: string
-  dim?: boolean; onClick: () => void
+  dim?: boolean; locked?: boolean; onClick: () => void
 }) {
   const [hov, setHov] = useState(false)
-  const on = active || hov
+  const on = (active || hov) && !locked
 
   return (
     <button
@@ -301,7 +306,12 @@ function SidebarBtn({ iconId, neon, active, title, dim = false, onClick }: {
         opacity: dim ? 0.25 : 1,
       }}
     >
-      <CyberIcon id={iconId} size={18} color={on ? neon : 'rgba(148,163,184,0.4)'} glow={on} />
+      <CyberIcon id={iconId} size={18}
+        color={locked ? 'rgba(148,163,184,0.3)' : on ? neon : 'rgba(148,163,184,0.4)'} glow={on} />
+      {locked && (
+        <span style={{ position: 'absolute', right: 3, bottom: 2, fontSize: 7, lineHeight: 1,
+          color: 'rgba(148,163,184,0.55)' }}>🔒</span>
+      )}
       {active && (
         <div style={{
           position: 'absolute', right: -1, top: '22%', bottom: '22%',
@@ -530,6 +540,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [initiated, setInitiated] = useState(() => !!loadProgression().initiatedAt)
   const [levelUp, setLevelUp] = useState<number | null>(null)
+  const [level, setLevel] = useState(() => { const p = loadProgression(); return gatedLevel(p.xp, p.quests).level })
+  const [lockNote, setLockNote] = useState('')
   const entitlements: Entitlements = {}
 
   // Apply settings on mount and whenever they change
@@ -549,6 +561,7 @@ export default function App() {
     const check = () => {
       const p = loadProgression()
       const reached = gatedLevel(p.xp, p.quests).level
+      setLevel(reached)
       if (reached > (p.celebratedLevel ?? 1)) setLevelUp(reached)
     }
     check()
@@ -578,6 +591,13 @@ export default function App() {
   /** Navigate and drop the settings overlay — it covers wherever you're going. */
   const go = (path: string) => { setSettingsOpen(false); navigate(path) }
 
+  /** A locked module says what opens it rather than doing nothing at all. */
+  const flashLocked = (id: ModuleId) => {
+    const m = GUILD.find(g => g.id === id)
+    setLockNote(`${m?.name ?? ''} · ${t('LEVEL', 'УРОВЕНЬ')} ${moduleLevel(id)}`)
+    window.setTimeout(() => setLockNote(''), 2600)
+  }
+
   // ── What owns the screen ────────────────────────────────────────────────────
   // Strictly one at a time, in this order. Every one of these is full-screen, so
   // without an explicit chain they stack: the arrival used to land on top of an
@@ -588,6 +608,9 @@ export default function App() {
   const showOnboarding = !showIntro && !settings.onboardedAt
   const showInitiation = !showIntro && !showOnboarding && !initiated && onHub
   const showLevelUp    = levelUp !== null && !showIntro && !showOnboarding && !showInitiation
+  // Reached by URL, back button, or a level that dropped — never a dead render
+  const lockedRoute = GUILD.some(m =>
+    m.built && location.pathname.startsWith(m.path) && !moduleUnlocked(m.id, level))
   const tourEnabled    = !showIntro && !showOnboarding && !showInitiation && !showLevelUp && !settingsOpen
 
   const bgColor = `rgba(6, 11, 22, ${settings.opacity})`
@@ -675,6 +698,7 @@ export default function App() {
           <QuestHintBanner />
 
           <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+          {lockedRoute && <Navigate to="/" replace />}
           <Routes>
             <Route path="/" element={<Dashboard displayName={settings.displayName} />} />
             <Route path="/scrap7/*"    element={<Scrap7 />} />
@@ -709,32 +733,42 @@ export default function App() {
 
           {/* INSTRUMENTS, then a divider, then UTILITIES. The split is the whole
               point: instruments build the character, utilities serve the day. */}
-          {NAV_ORDER.map(member => (
-            <SidebarBtn
-              key={member.id}
-              iconId={member.id}
-              neon={member.neon}
-              active={location.pathname.startsWith(member.path)}
-              title={`${member.name} · ${member.role}`}
-              dim={!hasAccess(entitlements, member.id, member.free)}
-              onClick={() => go(member.path)}
-            />
-          ))}
+          {NAV_ORDER.map(member => {
+            const open = moduleUnlocked(member.id, level)
+            return (
+              <SidebarBtn
+                key={member.id}
+                iconId={member.id}
+                neon={member.neon}
+                active={location.pathname.startsWith(member.path)}
+                title={open ? `${member.name} · ${member.role}`
+                            : `${member.name} · ${t('opens at level', 'открывается на уровне')} ${moduleLevel(member.id)}`}
+                dim={!open || !hasAccess(entitlements, member.id, member.free)}
+                locked={!open}
+                onClick={() => open ? go(member.path) : flashLocked(member.id)}
+              />
+            )
+          })}
           {NAV_UTILITIES.length > 0 && (
             <div title={t('Utilities — they serve the day, not the character', 'Утилиты — служат дню, а не персонажу')}
               style={{ width: 20, height: 1, background: 'rgba(255,255,255,0.14)', margin: '5px 0' }} />
           )}
-          {NAV_UTILITIES.map(member => (
-            <SidebarBtn
-              key={member.id}
-              iconId={member.id}
-              neon={member.neon}
-              active={location.pathname.startsWith(member.path)}
-              title={`${member.name} · ${member.role} · ${t('utility', 'утилита')}`}
-              dim={!hasAccess(entitlements, member.id, member.free)}
-              onClick={() => go(member.path)}
-            />
-          ))}
+          {NAV_UTILITIES.map(member => {
+            const open = moduleUnlocked(member.id, level)
+            return (
+              <SidebarBtn
+                key={member.id}
+                iconId={member.id}
+                neon={member.neon}
+                active={location.pathname.startsWith(member.path)}
+                title={open ? `${member.name} · ${member.role} · ${t('utility', 'утилита')}`
+                            : `${member.name} · ${t('opens at level', 'открывается на уровне')} ${moduleLevel(member.id)}`}
+                dim={!open || !hasAccess(entitlements, member.id, member.free)}
+                locked={!open}
+                onClick={() => open ? go(member.path) : flashLocked(member.id)}
+              />
+            )
+          })}
 
           <div style={{ flex: 1 }} />
           <SidebarBtn iconId="set" neon="var(--accent)" active={settingsOpen} title="Settings" onClick={() => setSettingsOpen(o => !o)} />
@@ -744,6 +778,16 @@ export default function App() {
           </>}
         </aside>
       </div>
+
+      {/* A locked module says what opens it */}
+      {lockNote && (
+        <div style={{ position: 'fixed', bottom: 26, right: 60, zIndex: 60,
+          padding: '7px 13px', borderRadius: 8, background: 'rgba(4,10,18,0.96)',
+          border: '1px solid rgba(148,163,184,0.3)', animation: 'fadeInPlace 0.18s ease' }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700, letterSpacing: '0.12em',
+            color: 'rgba(200,220,240,0.75)' }}>🔒 {t('OPENS AT', 'ОТКРОЕТСЯ НА')} {lockNote}</p>
+        </div>
+      )}
 
       {/* Status bar */}
       <div style={{

@@ -10,6 +10,8 @@ import type { GoalSlot, NodeTier } from './types'
 import { xpRateForSlot } from './types'
 import { LAST_GATED_STAGE, stageComplete, stageQuests, stageXp, type Quest } from './quests'
 import { SLOT_GATES } from './lifeSupport'
+import { modulesOpenedAt } from '../../moduleAccess'
+import type { ModuleId } from '../../guild'
 
 export type XpEvent =
   | { kind: 'routine.run';       tier: NodeTier }   // a routine performed today
@@ -169,22 +171,24 @@ export function nextGate(level: number): Gate | null {
 // a wider floor, and the quests that just became reachable.
 
 export interface LevelReward {
-  level:  number
-  gates:  Gate[]          // capacity this level unlocks
-  slots:  number | null   // new LIFE SUPPORT slot count, when it widened
-  quests: Quest[]         // the stage that just became current
+  level:   number
+  gates:   Gate[]          // capacity this level unlocks
+  slots:   number | null   // new LIFE SUPPORT slot count, when it widened
+  modules: ModuleId[]      // instruments the world just widened to include
+  quests:  Quest[]         // the stage that just became current
 }
 
 export function levelReward(level: number): LevelReward {
   const slotGate = SLOT_GATES.find(g => g.level === level)
   return {
     level,
-    gates:  GATES.filter(g => g.level === level && g.level > 1),
-    slots:  slotGate ? slotGate.slots : null,
-    quests: stageQuests(level),
+    gates:   GATES.filter(g => g.level === level && g.level > 1),
+    slots:   slotGate ? slotGate.slots : null,
+    modules: modulesOpenedAt(level),
+    quests:  stageQuests(level),
   }
 }
 
 /** True when the level opened nothing but the number — the copy adapts. */
 export const rewardIsBare = (r: LevelReward): boolean =>
-  r.gates.length === 0 && r.slots === null && r.quests.length === 0
+  r.gates.length === 0 && r.slots === null && r.modules.length === 0 && r.quests.length === 0
