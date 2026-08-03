@@ -1,6 +1,15 @@
 /**
- * Cyberpunk animal icons + system icons for the Warren sidebar.
- * Each icon is a 24×24 SVG — bold silhouettes with one cyber accent.
+ * Sidebar icons — 24×24 SVGs, bold shapes with one accent.
+ *
+ * These were animal mascots from the guild era: a beaver for the goal module, a
+ * raccoon for tasks, a panda for the kitchen. The names moved on (PATHFINDER,
+ * ORBIT) and a mascot tells you nothing about what a screen does, so each icon
+ * now draws the module's actual job — a compass and a route, a body on a ring,
+ * a solar disc opening as a drop, a page mid-sentence, a card that comes back,
+ * a frame with something playing in it.
+ *
+ * `guild.ts` still carries an `animal` for each member. That's flavour text used
+ * in descriptions, not a promise about the icon.
  */
 
 interface IconProps {
@@ -85,64 +94,48 @@ export function IconLog(p: IconProps) {
   )
 }
 
-/* ── A.R.D.O: Turtle — ninja bandana + cyber eye + memory nodes ── */
+/* ── A.R.D.O: a card that comes back round ── */
 export function IconArdo(p: IconProps) {
   const c = p.color ?? 'currentColor'
   return (
     <Svg {...p}>
-      {/* Memory node constellation (top) */}
-      <circle cx="8"  cy="3.5" r="0.9" fill={c}/>
-      <circle cx="12" cy="2"   r="0.9" fill={c}/>
-      <circle cx="16" cy="3.5" r="0.9" fill={c}/>
-      <line x1="8" y1="3.5" x2="12" y2="2"   stroke={c} strokeWidth="0.6" opacity="0.5"/>
-      <line x1="12" y1="2"  x2="16" y2="3.5" stroke={c} strokeWidth="0.6" opacity="0.5"/>
-      <line x1="8" y1="3.5" x2="16" y2="3.5" stroke={c} strokeWidth="0.45" opacity="0.3"/>
-      {/* Head shape (rounded turtle) */}
-      <ellipse cx="12" cy="13.5" rx="7" ry="6" fill={c} opacity="0.82"/>
-      {/* Ninja bandana (across eyes) */}
-      <rect x="5" y="10" width="14" height="4.5" rx="1.2" fill="#000" opacity="0.65"/>
-      <rect x="5" y="10" width="14" height="4.5" rx="1.2" stroke={c} strokeWidth="0.5" fill="none"/>
-      {/* Bandana knot (right side) */}
-      <path d="M19 11.5 Q21.5 10.5 22 12.2 Q21.5 14 19 13z" fill={c} opacity="0.7"/>
-      {/* Left eye — normal */}
-      <circle cx="9"  cy="12.2" r="1.6" fill={c} opacity="0.9"/>
-      <circle cx="9"  cy="12.2" r="0.7" fill="#000"/>
-      {/* Right eye — cyber implant */}
-      <circle cx="15" cy="12.2" r="1.9" stroke={c} strokeWidth="0.9" fill="#000" opacity="0.65"/>
-      <circle cx="15" cy="12.2" r="1.1" stroke={c} strokeWidth="0.5" fill="none" opacity="0.5"/>
-      <circle cx="15" cy="12.2" r="0.45" fill={c}/>
-      <line x1="13.1" y1="12.2" x2="16.9" y2="12.2" stroke={c} strokeWidth="0.4" opacity="0.5"/>
-      <line x1="15"   y1="10.3" x2="15"   y2="14.1" stroke={c} strokeWidth="0.4" opacity="0.5"/>
-      {/* Shell hint (bottom arc) */}
-      <path d="M7 18 Q12 21.5 17 18" stroke={c} strokeWidth="1" fill="none"
-        strokeLinecap="round" opacity="0.5"/>
-      <path d="M9 18.5 Q12 20 15 18.5" stroke={c} strokeWidth="0.6" fill="none"
-        strokeLinecap="round" opacity="0.3"/>
+      {/* The stack behind — lines already learned */}
+      <rect x="7.4" y="3.2" width="12.4" height="8.4" rx="1.6" fill="none"
+        stroke={c} strokeWidth="1" opacity="0.3"/>
+      <rect x="5.7" y="5" width="12.4" height="8.4" rx="1.6" fill="none"
+        stroke={c} strokeWidth="1.1" opacity="0.55"/>
+      {/* The one due now */}
+      <rect x="4" y="6.8" width="12.4" height="8.4" rx="1.6" fill={c} opacity="0.15"/>
+      <rect x="4" y="6.8" width="12.4" height="8.4" rx="1.6" fill="none"
+        stroke={c} strokeWidth="1.35"/>
+      <line x1="6.6" y1="10" x2="13.8" y2="10" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.85"/>
+      <line x1="6.6" y1="12.4" x2="11.4" y2="12.4" stroke={c} strokeWidth="1.1" strokeLinecap="round" opacity="0.6"/>
+      {/* Spaced repetition: it returns */}
+      <path d="M8 19.4 A5.4 5.4 0 0 0 18.4 17.8" fill="none" stroke={c}
+        strokeWidth="1.35" strokeLinecap="round"/>
+      <path d="M6.4 17.2 L8.2 19.6 L5.5 20.4 Z" fill={c}/>
     </Svg>
   )
 }
 
-/* ── WISE HOOT: Owl — big visor eyes + ear tufts ── */
+/* ── JOURNAL: a page being written, cursor still blinking ── */
 export function IconHoot(p: IconProps) {
   const c = p.color ?? 'currentColor'
   return (
     <Svg {...p}>
-      {/* Ear tufts */}
-      <path d="M8 4L7 1l2.5 3.5M16 4L17 1l-2.5 3.5" stroke={c} strokeWidth="1.2" strokeLinecap="round"/>
-      {/* Head */}
-      <circle cx="12" cy="12" r="8" fill={c} opacity="0.8"/>
-      {/* Visor / big eyes */}
-      <rect x="5.5" y="8.5" width="13" height="6" rx="3" fill="#000" opacity="0.7"/>
-      <rect x="5.5" y="8.5" width="13" height="6" rx="3" stroke={c} strokeWidth="0.8"/>
-      {/* Eye glow circles */}
-      <circle cx="9" cy="11.5" r="2" fill={c} opacity="0.2"/>
-      <circle cx="9" cy="11.5" r="1" fill={c}/>
-      <circle cx="15" cy="11.5" r="2" fill={c} opacity="0.2"/>
-      <circle cx="15" cy="11.5" r="1" fill={c}/>
-      {/* Beak */}
-      <path d="M11 15l1 2 1-2" fill={c} opacity="0.7"/>
-      {/* Scan line */}
-      <line x1="6" y1="11.5" x2="18" y2="11.5" stroke={c} strokeWidth="0.4" opacity="0.4"/>
+      {/* The page, one corner turned */}
+      <path d="M5 2.6 h9.2 L19 7.4 V21.4 H5 Z" fill="none" stroke={c} strokeWidth="1.3"
+        strokeLinejoin="round" opacity="0.85"/>
+      <path d="M14.2 2.6 V7.4 H19" fill="none" stroke={c} strokeWidth="1.1"
+        strokeLinejoin="round" opacity="0.55"/>
+      {/* What's already written */}
+      <g stroke={c} strokeLinecap="round" opacity="0.7">
+        <line x1="7.6" y1="11.2" x2="16.2" y2="11.2" strokeWidth="1.1"/>
+        <line x1="7.6" y1="14.2" x2="16.2" y2="14.2" strokeWidth="1.1"/>
+        <line x1="7.6" y1="17.2" x2="12.4" y2="17.2" strokeWidth="1.1"/>
+      </g>
+      {/* Still going */}
+      <rect x="13.5" y="16.1" width="1.5" height="2.4" fill={c}/>
     </Svg>
   )
 }
@@ -172,28 +165,29 @@ export function IconOtty(p: IconProps) {
   )
 }
 
-/* ── SOLARIS (id: pomu): Panda — station chef, eye patches + calorie scanner ── */
+/* ── SOLARIS: a solar disc, and the drop that opens it ── */
 export function IconPomu(p: IconProps) {
   const c = p.color ?? 'currentColor'
   return (
     <Svg {...p}>
-      {/* Head */}
-      <circle cx="12" cy="12" r="8" fill={c} opacity="0.7"/>
-      {/* Ears */}
-      <circle cx="6.5" cy="5.5" r="2.5" fill={c}/>
-      <circle cx="17.5" cy="5.5" r="2.5" fill={c}/>
-      {/* Eye patches */}
-      <ellipse cx="9" cy="11" rx="3" ry="2.5" fill="#000" opacity="0.8"/>
-      <ellipse cx="15" cy="11" rx="3" ry="2.5" fill="#000" opacity="0.8"/>
-      {/* Eyes */}
-      <circle cx="9" cy="11" r="1" fill={c}/>
-      <circle cx="15" cy="11" r="1" fill={c}/>
-      {/* Nose */}
-      <ellipse cx="12" cy="14" rx="1.2" ry="0.8" fill="#000" opacity="0.6"/>
-      {/* Scan grid on one eye (scanner) */}
-      <line x1="13" y1="9" x2="17" y2="9" stroke={c} strokeWidth="0.5" opacity="0.5"/>
-      <line x1="13" y1="11" x2="17" y2="11" stroke={c} strokeWidth="0.5" opacity="0.5"/>
-      <line x1="15" y1="9" x2="15" y2="13" stroke={c} strokeWidth="0.5" opacity="0.5"/>
+      {/* Rays — four cardinal, four short diagonals */}
+      <g stroke={c} strokeWidth="1.2" strokeLinecap="round" opacity="0.8">
+        <line x1="12" y1="1.6" x2="12" y2="3.9"/>
+        <line x1="12" y1="20.1" x2="12" y2="22.4"/>
+        <line x1="1.6" y1="12" x2="3.9" y2="12"/>
+        <line x1="20.1" y1="12" x2="22.4" y2="12"/>
+      </g>
+      <g stroke={c} strokeWidth="1" strokeLinecap="round" opacity="0.45">
+        <line x1="4.9" y1="4.9" x2="6.4" y2="6.4"/>
+        <line x1="17.6" y1="17.6" x2="19.1" y2="19.1"/>
+        <line x1="19.1" y1="4.9" x2="17.6" y2="6.4"/>
+        <line x1="6.4" y1="17.6" x2="4.9" y2="19.1"/>
+      </g>
+      {/* The disc */}
+      <circle cx="12" cy="12" r="7" fill="none" stroke={c} strokeWidth="1.3" opacity="0.85"/>
+      {/* Hydration is tier 0 — the kitchen opens as a drop */}
+      <path d="M12 7.6 C14.6 10.6 15.6 12.1 15.6 13.6 A3.6 3.6 0 0 1 8.4 13.6 C8.4 12.1 9.4 10.6 12 7.6 Z"
+        fill={c} opacity="0.9"/>
     </Svg>
   )
 }
@@ -361,32 +355,28 @@ export function IconPwr(p: IconProps) {
   )
 }
 
-/* ── GALACTIC PICTURES (id: foxy): Fox — pointed ears, mask stripe + film-reel eye ── */
+/* ── GALACTIC PICTURES: a frame with something playing in it ── */
 export function IconFoxy(p: IconProps) {
   const c = p.color ?? 'currentColor'
   return (
     <Svg {...p}>
-      {/* Head — wide cheeks tapering to muzzle */}
-      <path d="M12 5C8 5 5 7.5 5 11c0 3 2.5 5.5 4.5 7l2.5 3 2.5-3c2-1.5 4.5-4 4.5-7 0-3.5-3-6-7-6z" fill={c} opacity="0.9"/>
-      {/* Pointed ears */}
-      <path d="M6.5 7.5L4 1.5l5 3.5M17.5 7.5L20 1.5l-5 3.5" fill={c} opacity="0.85"/>
-      {/* Inner ear */}
-      <path d="M6.6 6.2L5.4 3.2l2.6 1.9M17.4 6.2l1.2-3-2.6 1.9" fill="#000" opacity="0.35"/>
-      {/* Mask stripe across eyes */}
-      <path d="M6 10h12" stroke="#000" strokeWidth="2.6" opacity="0.5" strokeLinecap="round"/>
-      {/* Left eye */}
-      <circle cx="9" cy="10" r="1" fill={c}/>
-      {/* Right eye — film-reel implant */}
-      <circle cx="15" cy="10" r="1.7" stroke={c} strokeWidth="0.9" fill="none"/>
-      <circle cx="15" cy="10" r="0.5" fill={c}/>
-      <circle cx="15" cy="8.7" r="0.3" fill={c}/>
-      <circle cx="16.3" cy="10" r="0.3" fill={c}/>
-      <circle cx="15" cy="11.3" r="0.3" fill={c}/>
-      <circle cx="13.7" cy="10" r="0.3" fill={c}/>
-      {/* Nose */}
-      <circle cx="12" cy="14.5" r="1" fill="#000" opacity="0.7"/>
-      {/* Tail swish */}
-      <path d="M19 18c2 .5 3-1 3-2.5" stroke={c} strokeWidth="1.2" strokeLinecap="round" opacity="0.5"/>
+      {/* The frame */}
+      <rect x="2.4" y="5" width="19.2" height="14" rx="2.2" fill="none"
+        stroke={c} strokeWidth="1.35" opacity="0.9"/>
+      {/* Sprocket holes, film-strip style */}
+      <g fill={c} opacity="0.4">
+        <rect x="4.2" y="7.1" width="1.6" height="1.6" rx="0.4"/>
+        <rect x="4.2" y="11.2" width="1.6" height="1.6" rx="0.4"/>
+        <rect x="4.2" y="15.3" width="1.6" height="1.6" rx="0.4"/>
+        <rect x="18.2" y="7.1" width="1.6" height="1.6" rx="0.4"/>
+        <rect x="18.2" y="11.2" width="1.6" height="1.6" rx="0.4"/>
+        <rect x="18.2" y="15.3" width="1.6" height="1.6" rx="0.4"/>
+      </g>
+      {/* Playing */}
+      <path d="M10.4 8.9 L16.2 12 L10.4 15.1 Z" fill={c}/>
+      {/* Galactic: one star outside the frame */}
+      <path d="M20.6 2.2 L21.2 3.7 L22.7 4.3 L21.2 4.9 L20.6 6.4 L20 4.9 L18.5 4.3 L20 3.7 Z"
+        fill={c} opacity="0.75"/>
     </Svg>
   )
 }
