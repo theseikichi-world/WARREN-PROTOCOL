@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `5af4e75` · 343 tests · tsc/build/lint clean.
+**State as of the last commit:** `6d5718a` · 347 tests · tsc/build/lint clean.
 
 ---
 
@@ -18,7 +18,7 @@ every number is read off real behaviour.
 
 | Key | Owner |
 |---|---|
-| `scrap7_v4` | tasks/habits (**v3 kept untouched as a rollback point**) |
+| `scrap7_v4` | ORBIT tasks + every habit (**v3 kept as a rollback point**) |
 | `warren_progression_v1` | goals, chains, XP, quest ledger |
 | `log_v1` `ardo_v1` `solaris_v1` `journal_v1` `pictures_v1` `infinity8_v1` | modules |
 | `warren_settings` `warren_locale` | app + operator profile |
@@ -37,7 +37,7 @@ DREAMS (unlimited, in PATHFINDER — the inbox)
    └─ PROMOTE TO UPLINK → the guide proposes → you edit every node
        └─ UPLINK  (2 slots: primary 1.0× / secondary 0.6×, 2nd at level 5)
            └─ PROTOCOL — a tech tree of ROUTINES
-               └─ ROUTINE = a SCRAP-7 habit carrying AUTOMATISM (score 0–1)
+               └─ ROUTINE = a habit carrying AUTOMATISM (score 0–1)
                    └─ automatism ≥ 0.60 unlocks the next routine
                        └─ routines grant INSTRUMENTS (modules)
                            └─ instruments deepen by use (FIRMWARE v0–v3)
@@ -93,7 +93,11 @@ Flavour belongs on what you read once. (Internal identifiers still say
 ### Touched elsewhere
 - `scrap7/types.ts` — `TaskOrigin`, `Task.origin`, `Task.frozen`, `taskOrigin()`,
   `feedsProgression()`, `isUnbound()`
-- `scrap7/store.ts` — v4 key + origin migration, half-rate decay for frozen
+- `scrap7/` — **ORBIT** (module id + route + storage stay `scrap7`). One task
+  list; `'daily'` is the stored spelling of "repeats". INFINITY-8 is its
+  TIMELINE view, not a module.
+- `scrap7/store.ts` — v4 key + origin migration, half-rate decay for frozen,
+  `orbitTasks()`, `pickableCategories()`
 - `log/Log.tsx` — **PATHFINDER** (module id + route stay `log`); PROMOTE TO UPLINK
 - `solaris/Solaris.tsx` — UI gated by firmware tier
 - `pictures/radar.ts` + `ReleaseRadar.tsx` — hub release radar
@@ -213,14 +217,22 @@ These were each decided deliberately; breaking one silently breaks the product.
     cap is fine: the cap governs ADDING, not keeping. SCRAP-7's chat cannot make
     one, and `track_habit` there is deliberately unhandled (tracking from outside
     UPLINKS would move a score without awarding its XP).
-32. **SCRAP-7 is the day: dailies and to-dos.** A daily is an obligation on a
-    schedule, not a behaviour you're building — that distinction only became
-    clean once habits left, and it's what the timeline needs to lay out a day.
-33. **INFINITY-8 is a view, not a module.** It owns no tasks; it reads SCRAP-7's.
-    It lives behind the ∞ toggle inside SCRAP-7 and stays out of the sidebar, and
-    its anchors default from the operator profile — the wake/sleep hours from
-    FIRST CONTACT are what make the timeline someone's actual day.
-34. **An effect that schedules timers must cancel them, and must not depend on
+32. **The line is BUILDS YOU vs JUST HAS TO HAPPEN**, not repeats vs doesn't.
+    UPLINKS owns what builds you — scored, streaked, capped, because attention is
+    finite. ORBIT owns everything else, uncapped and unscored: capping your
+    obligations would be absurd, you don't choose them. Two capped systems for
+    recurring things is what made dailies feel like a slot-cap escape hatch.
+33. **ORBIT has ONE kind of thing: a task, which may repeat.** No tabs — the
+    repeat mark is a property of a task, not a category. `taskType: 'daily'` is
+    only the stored spelling of "repeats", kept so nothing migrates.
+34. **INFINITY-8 is a view, not a module.** It owns no tasks; it reads ORBIT's,
+    as LIST | TIMELINE on the same screen. Its anchors default from the operator
+    profile — the wake/sleep hours from FIRST CONTACT are what make it a day
+    someone actually lives.
+35. **A task's category is a label and attaches nothing.** Offering "Life
+    support" or an uplink's title implied a link the data never had, so
+    `pickableCategories` hides anything another system owns.
+36. **An effect that schedules timers must cancel them, and must not depend on
     a callback prop.** A parent's inline `onDone` is a new identity every
     render; the boot log listed it as a dependency and restarted its own chain
     on every re-render, printing each line two to four times.
