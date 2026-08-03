@@ -30,6 +30,8 @@ import { ReleaseRadar } from './modules/pictures/ReleaseRadar'
 import Uplinks from './modules/progression/Uplinks'
 import { BandwidthStrip } from './modules/progression/BandwidthStrip'
 import { QuestPanel } from './modules/progression/QuestPanel'
+import { WeekStrip } from './modules/progression/WeekStrip'
+import { loadState as loadScrap7 } from './modules/scrap7/store'
 import { useLocale, t } from './i18n'
 import { CyberIcon } from './components/CyberIcon'
 
@@ -37,10 +39,10 @@ import { CyberIcon } from './components/CyberIcon'
 // Warren OS (fullscreen launcher, file browser, quest log) is parked while the
 // progression system lands — it doesn't serve the goal loop. Code and data stay
 // untouched; only navigation drops it. INFINITY-8 is parked the same way via its
-// `built: false` in guild.ts, and may return later as a scheduling layer once
-// routines carry fixed time-of-day anchors.
+// `built: false` in guild.ts — but its code is very much alive: it is ORBIT's
+// TIMELINE view and the hub's NOW card. The flag only keeps it out of the
+// sidebar, because it was never a module in its own right.
 const WARREN_OS_ENABLED = false
-const INF8_ENABLED = GUILD.some(m => m.id === 'ravi' && m.built)
 
 // ─── Sidebar order ────────────────────────────────────────────────────────────
 // Hand-ordered rather than array-ordered: the kitchen comes first because the
@@ -455,6 +457,8 @@ function Dashboard({ displayName }: { displayName: string }) {
   // Icons come from the app's own set, keyed by module, so a tile and its
   // sidebar button are visibly the same thing. The animal emoji these replaced
   // were left over from the guild-of-mascots era and no longer matched anything.
+  const orbitOpen = moduleUnlocked('scrap7', gatedLevel(loadProgression().xp, loadProgression().quests).level)
+
   const tiles = [
     { label: t('Tasks due', 'Задачи на сегодня'),   value: String(stats.tasksDue),
       neon: '#00b4ff', icon: 'scrap7' as const, path: '/scrap7' },
@@ -479,8 +483,11 @@ function Dashboard({ displayName }: { displayName: string }) {
         </p>
       </div>
 
-      {/* Live now card — only while INFINITY-8 is in service */}
-      {INF8_ENABLED && <NowCard />}
+      {/* Where you stand, and where the day is: the two things the hub is for.
+          The NOW card used to be gated on INFINITY-8 being its own module — it
+          isn't one any more, it's ORBIT's other half, so it follows ORBIT. */}
+      <WeekStrip tasks={loadScrap7().tasks} />
+      {orbitOpen && <NowCard />}
 
       {/* The quest log lives where navigation lives */}
       <div data-tour="quest-panel"><QuestPanel /></div>

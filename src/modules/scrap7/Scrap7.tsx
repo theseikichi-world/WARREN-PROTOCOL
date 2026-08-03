@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   HABIT_MILESTONES, MILESTONE_LABELS, WEEKDAYS,
-  thisWeekDates, weeklyDoneSet, calcStreak,
   type Task, type TaskType, type Priority, type Direction,
 } from './types'
 import {
@@ -66,57 +65,6 @@ function normalizeScrap7(obj: Record<string, unknown>): Scrap7AiResult {
       ? (obj.delete as unknown[]).map(n => Number(n)).filter(n => Number.isInteger(n) && n > 0)
       : [],
   }
-}
-
-// ─── Weekly streak header ─────────────────────────────────────────────────────
-const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-
-function WeekStreak({ tasks }: { tasks: Task[] }) {
-  const weekDates = thisWeekDates()
-  const doneSet   = weeklyDoneSet(tasks)
-  const streak    = calcStreak(tasks)
-  const todayStr  = new Date().toISOString().slice(0, 10)
-  const doneCnt   = weekDates.filter(d => doneSet.has(d)).length
-
-  return (
-    <div style={{ padding: '8px 14px 7px', borderBottom: '1px solid rgba(0,180,255,0.08)',
-      display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, flexShrink: 0 }}>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 20, fontWeight: 900,
-          color: streak > 0 ? '#ff6b00' : 'rgba(148,163,184,0.3)',
-          textShadow: streak > 0 ? '0 0 12px #ff6b0070' : 'none', lineHeight: 1 }}>{streak}</span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
-          color: 'rgba(148,163,184,0.35)', letterSpacing: '0.06em' }}>day streak</span>
-        {streak > 0 && <span style={{ fontSize: 14 }}>🔥</span>}
-      </div>
-      <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
-        {weekDates.map((date, i) => {
-          const done    = doneSet.has(date)
-          const isToday = date === todayStr
-          const isPast  = date < todayStr
-          return (
-            <div key={date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-              <div style={{
-                width: 24, height: 24, borderRadius: 6,
-                background: done ? `${NEON}25` : isToday ? 'rgba(255,255,255,0.06)' : 'transparent',
-                border: `1px solid ${done ? NEON : isToday ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)'}`,
-                boxShadow: done ? `0 0 6px ${NEON}40` : 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
-              }}>
-                {done && <div style={{ width: 8, height: 8, borderRadius: 3, background: NEON, boxShadow: `0 0 4px ${NEON}` }} />}
-                {!done && isPast && <div style={{ width: 4, height: 4, borderRadius: 2, background: 'rgba(255,0,51,0.35)' }} />}
-              </div>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7, letterSpacing: '0.04em',
-                color: isToday ? NEON : done ? `${NEON}70` : 'rgba(148,163,184,0.22)',
-                fontWeight: isToday ? 700 : 400 }}>{DAY_LABELS[i]}</span>
-            </div>
-          )
-        })}
-      </div>
-      <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
-        color: doneCnt === 7 ? '#39ff14' : `${NEON}55`, flexShrink: 0 }}>{doneCnt}/7</span>
-    </div>
-  )
 }
 
 // ─── 14-day streak calendar (Dailies tab) ─────────────────────────────────────
@@ -739,7 +687,9 @@ export default function Scrap7() {
   return (
     <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
 
-      <WeekStreak tasks={state.tasks} />
+      {/* The week strip moved to the hub. Showing "on track" above the list of
+          things you have not done yet was the wrong room for it — this screen is
+          for working, the hub is for seeing where you stand. */}
 
       {/* Pomodoro bar */}
       {pomo && (
@@ -911,7 +861,7 @@ export default function Scrap7() {
         background: 'rgba(0,0,0,0.2)', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
         <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleSend() }}
-          placeholder={thinking ? tr('Processing...', 'Обработка...') : tr('Talk to SCRAP-7...', 'Напишите SCRAP-7...')}
+          placeholder={thinking ? tr('Processing...', 'Обработка...') : tr('Talk to ORBIT...', 'Напишите ORBIT...')}
           disabled={thinking}
           style={{
             flex: 1, padding: '8px 12px', borderRadius: 6,

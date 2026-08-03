@@ -21,28 +21,20 @@ function Svg({ size = 24, color = 'currentColor', glow, children }: IconProps & 
   )
 }
 
-/* ── SCRAP-7: Raccoon — face mask + cyber eye implant ── */
+/* ── ORBIT: a body on a ring, and where it will be ── */
 export function IconScrap7(p: IconProps) {
   const c = p.color ?? 'currentColor'
   return (
     <Svg {...p}>
-      {/* Head */}
-      <path d="M12 3C7.58 3 4 6.58 4 11c0 2.8 1.38 5.27 3.5 6.8V21h1.5v-2h6V21h1.5v-3.2C18.62 16.27 20 13.8 20 11c0-4.42-3.58-8-8-8z" fill={c} opacity="0.9"/>
-      {/* Ears */}
-      <path d="M7 3.5L5 1l2.5 2.5M17 3.5L19 1l-2.5 2.5" stroke={c} strokeWidth="1.5" strokeLinecap="round"/>
-      {/* Eye mask */}
-      <ellipse cx="9" cy="11" rx="2" ry="1.5" fill="#000" opacity="0.7"/>
-      <ellipse cx="15" cy="11" rx="2" ry="1.5" fill="#000" opacity="0.7"/>
-      {/* Normal left eye */}
-      <circle cx="9" cy="11" r="0.8" fill={c}/>
-      {/* Cyber right eye — implant ring */}
-      <circle cx="15" cy="11" r="1.2" stroke={c} strokeWidth="1" fill="none"/>
-      <circle cx="15" cy="11" r="0.4" fill={c}/>
-      <line x1="16.2" y1="11" x2="18" y2="11" stroke={c} strokeWidth="0.8"/>
-      {/* Snout stripe */}
-      <path d="M10 13.5h4" stroke={c} strokeWidth="0.8" strokeLinecap="round" opacity="0.5"/>
-      {/* Tail ring hint */}
-      <path d="M6 19c-1 0-2-.5-2-1.5" stroke={c} strokeWidth="1" strokeLinecap="round" opacity="0.4"/>
+      {/* The orbit itself, tilted */}
+      <ellipse cx="12" cy="12" rx="10" ry="5.2" fill="none" stroke={c}
+        strokeWidth="1.3" opacity="0.75" transform="rotate(-24 12 12)"/>
+      {/* What it goes round */}
+      <circle cx="12" cy="12" r="3.2" fill={c} opacity="0.9"/>
+      {/* Now */}
+      <circle cx="20.1" cy="8.4" r="2" fill={c}/>
+      {/* And where it comes back to */}
+      <circle cx="3.9" cy="15.6" r="1.2" fill={c} opacity="0.45"/>
     </Svg>
   )
 }

@@ -1,0 +1,64 @@
+import { thisWeekDates, weeklyDoneSet, calcStreak, type Task } from '../scrap7/types'
+
+// ─── ON TRACK — the week behind you, on the hub ───────────────────────────────
+// This used to sit above ORBIT's task list, which was the wrong room: that
+// screen is for working through what's left, and a streak there reads as
+// pressure. The hub is where you look to see where you stand, so it lives here
+// now, next to everything else that answers "how am I doing".
+//
+// It counts a day where you did ANYTHING the app tracks — a routine, a basic, a
+// task. Deliberately the most forgiving number in the app: it is the one that
+// says you showed up, not the one that says you did enough.
+
+const NEON = '#00b4ff'
+
+const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+
+export function WeekStrip({ tasks }: { tasks: Task[] }) {
+  const weekDates = thisWeekDates()
+  const doneSet   = weeklyDoneSet(tasks)
+  const streak    = calcStreak(tasks)
+  const todayStr  = new Date().toISOString().slice(0, 10)
+  const doneCnt   = weekDates.filter(d => doneSet.has(d)).length
+
+  return (
+    <div style={{ padding: '10px 13px', borderRadius: 10, marginBottom: 16,
+      background: 'rgba(13,24,48,0.5)', border: '1px solid rgba(255,255,255,0.05)',
+      display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, flexShrink: 0 }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 20, fontWeight: 900,
+          color: streak > 0 ? '#ff6b00' : 'rgba(148,163,184,0.3)',
+          textShadow: streak > 0 ? '0 0 12px #ff6b0070' : 'none', lineHeight: 1 }}>{streak}</span>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
+          color: 'rgba(148,163,184,0.35)', letterSpacing: '0.06em' }}>day streak</span>
+        {streak > 0 && <span style={{ fontSize: 14 }}>🔥</span>}
+      </div>
+      <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
+        {weekDates.map((date, i) => {
+          const done    = doneSet.has(date)
+          const isToday = date === todayStr
+          const isPast  = date < todayStr
+          return (
+            <div key={date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <div style={{
+                width: 24, height: 24, borderRadius: 6,
+                background: done ? `${NEON}25` : isToday ? 'rgba(255,255,255,0.06)' : 'transparent',
+                border: `1px solid ${done ? NEON : isToday ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)'}`,
+                boxShadow: done ? `0 0 6px ${NEON}40` : 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+              }}>
+                {done && <div style={{ width: 8, height: 8, borderRadius: 3, background: NEON, boxShadow: `0 0 4px ${NEON}` }} />}
+                {!done && isPast && <div style={{ width: 4, height: 4, borderRadius: 2, background: 'rgba(255,0,51,0.35)' }} />}
+              </div>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 7, letterSpacing: '0.04em',
+                color: isToday ? NEON : done ? `${NEON}70` : 'rgba(148,163,184,0.22)',
+                fontWeight: isToday ? 700 : 400 }}>{DAY_LABELS[i]}</span>
+            </div>
+          )
+        })}
+      </div>
+      <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
+        color: doneCnt === 7 ? '#39ff14' : `${NEON}55`, flexShrink: 0 }}>{doneCnt}/7</span>
+    </div>
+  )
+}
