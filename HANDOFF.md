@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `ede7c66` · 339 tests · tsc/build/lint clean.
+**State as of the last commit:** `5af4e75` · 343 tests · tsc/build/lint clean.
 
 ---
 
@@ -207,7 +207,20 @@ These were each decided deliberately; breaking one silently breaks the product.
 30. **A locked thing is visible, dimmed, and says what opens it.** Hiding it
     would erase the shape of what's coming; doing nothing on click is worse than
     saying "OPENS AT LEVEL 4". Same principle as rule 5.
-31. **An effect that schedules timers must cancel them, and must not depend on
+31. **No habit lives outside a system.** A goal routine is `'chain'`, a basic is
+    `'baseline'`, and nothing else may be a habit — `adoptOrphanHabits()` runs at
+    startup and moves any stray into LIFE SUPPORT with its history. Over the slot
+    cap is fine: the cap governs ADDING, not keeping. SCRAP-7's chat cannot make
+    one, and `track_habit` there is deliberately unhandled (tracking from outside
+    UPLINKS would move a score without awarding its XP).
+32. **SCRAP-7 is the day: dailies and to-dos.** A daily is an obligation on a
+    schedule, not a behaviour you're building — that distinction only became
+    clean once habits left, and it's what the timeline needs to lay out a day.
+33. **INFINITY-8 is a view, not a module.** It owns no tasks; it reads SCRAP-7's.
+    It lives behind the ∞ toggle inside SCRAP-7 and stays out of the sidebar, and
+    its anchors default from the operator profile — the wake/sleep hours from
+    FIRST CONTACT are what make the timeline someone's actual day.
+34. **An effect that schedules timers must cancel them, and must not depend on
     a callback prop.** A parent's inline `onDone` is a new identity every
     render; the boot log listed it as a dependency and restarted its own chain
     on every re-render, printing each line two to four times.
@@ -241,24 +254,19 @@ Decided with the user; do these in roughly this order.
    route is still `/log`, and `log_v1` is still the storage key. Renaming those
    buys nothing and would break saved data — but a grep for "L.O.G" now only
    hits comments and internal names, which is the intended end state.
-1. **Retire SCRAP-7's Habits tab.** Half-done: the Character tab is now the
-   home for LIFE SUPPORT + YOUR OWN HABITS, so habits *have* somewhere to live.
-   What remains is removing the Habits tab from SCRAP-7 (leaving todos +
-   dailies) so habits stop appearing in two places.
-2. **Gamified L.O.G.** The user finds it messy — dream cards, star-map framing
+1. **Gamified PATHFINDER.** The user finds it messy — dream cards, star-map framing
    and the mission/task hierarchy need a readable, game-like pass.
-3. **SOLARIS levels.** Surface the firmware tier as a visible level with the
+2. **SOLARIS levels.** Surface the firmware tier as a visible level with the
    next unlock and its condition stated ("v1 Calories — 5 hydration days, you
    have 2"). The tier logic in `tools.ts` already exists; this is legibility.
-4. **The rest of the tree work.** Scarcity landed (rule 16) and the guide is
+3. **The rest of the tree work.** Scarcity landed (rule 16) and the guide is
    asked for 12-18 branching nodes with capstones, but **no real proposal has
    been read back** — see the caveat below. Optional/side nodes and a visual
    treatment for capstones are still open.
-5. **Use the profile beyond the guide prompt.** Wake/sleep hours are collected
-   and sent to the guide, but nothing else reads them yet — life-support cues
-   are still fixed strings, and an owl gets "with breakfast" the same as a lark.
-   `dayShape()` is there when a module wants it.
-6. **Anchor the remaining tours.** Hub and UPLINKS have `data-tour` anchors on
+4. **Life-support cues still ignore the profile.** The timeline and the guide
+   read wake/sleep now, but template cues are fixed strings — an owl still gets
+   "with breakfast". `dayShape()` is there when that's worth doing.
+5. **Anchor the remaining tours.** Hub and UPLINKS have `data-tour` anchors on
    real controls; L.O.G, SCRAP-7, SOLARIS, JOURNAL, A.R.D.O and PICTURES have
    written copy but no anchors, so their steps just centre. Adding an anchor is
    one attribute — the tour needs no code of its own.
