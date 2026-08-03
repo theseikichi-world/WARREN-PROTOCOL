@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `6d5718a` · 347 tests · tsc/build/lint clean.
+**State as of the last commit:** `cd39288` · 347 tests · tsc/build/lint clean.
 
 ---
 
@@ -89,6 +89,7 @@ Flavour belongs on what you read once. (Internal identifiers still say
 | `CharacterSheet.tsx` | level, XP, standing, main quest, attributes, milestones |
 | `Uplinks.tsx` | the screen — tabs CHARACTER \| PRIMARY \| SECONDARY |
 | `BandwidthStrip.tsx` | hub widget; when empty it is the door to PATHFINDER |
+| `WeekStrip.tsx` | hub widget — the week's dots and the day streak |
 
 ### Touched elsewhere
 - `scrap7/types.ts` — `TaskOrigin`, `Task.origin`, `Task.frozen`, `taskOrigin()`,
@@ -228,11 +229,17 @@ These were each decided deliberately; breaking one silently breaks the product.
 34. **INFINITY-8 is a view, not a module.** It owns no tasks; it reads ORBIT's,
     as LIST | TIMELINE on the same screen. Its anchors default from the operator
     profile — the wake/sleep hours from FIRST CONTACT are what make it a day
-    someone actually lives.
-35. **A task's category is a label and attaches nothing.** Offering "Life
+    someone actually lives. Its `built: false` only keeps it out of the sidebar;
+    the code is live in two places (ORBIT's timeline, the hub's NOW card).
+35. **The hub is glance and navigation; a module is where you work.** Every hub
+    card shows a number and taps through — quests, bandwidth, the week strip,
+    NOW. Anything with controls on it (durations, rescheduling, optimise) belongs
+    next to the thing it edits. That's why the timeline signal is on the hub and
+    the timeline itself is not.
+36. **A task's category is a label and attaches nothing.** Offering "Life
     support" or an uplink's title implied a link the data never had, so
     `pickableCategories` hides anything another system owns.
-36. **An effect that schedules timers must cancel them, and must not depend on
+37. **An effect that schedules timers must cancel them, and must not depend on
     a callback prop.** A parent's inline `onDone` is a new identity every
     render; the boot log listed it as a dependency and restarted its own chain
     on every re-render, printing each line two to four times.
