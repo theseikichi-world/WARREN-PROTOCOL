@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `cd39288` · 347 tests · tsc/build/lint clean.
+**State as of the last commit:** `0be9abd` · 347 tests · tsc/build/lint clean.
 
 ---
 
@@ -243,6 +243,12 @@ These were each decided deliberately; breaking one silently breaks the product.
     a callback prop.** A parent's inline `onDone` is a new identity every
     render; the boot log listed it as a dependency and restarted its own chain
     on every re-render, printing each line two to four times.
+38. **Nothing renders below ~10.5px.** The app spent months at 6–8px, which is
+    squinting distance. Sizes are inline numbers, not tokens, so a rescale is a
+    scripted pass over `fontSize:` plus the `--fs-*` variables — and bigger type
+    breaks fixed columns, so widths holding text have to move with it.
+39. **An icon draws the module's job, not a mascot.** The animals are guild-era
+    flavour that survives only in `guild.ts` descriptions. See `CyberIcon.tsx`.
 
 ---
 
@@ -266,64 +272,90 @@ From the original spec (`§10`):
 | 7 | Level gates — *partly done in `xp.ts`* | 🟡 |
 | 8 | Tool tiers for A.R.D.O + JOURNAL | ⬜ |
 
-### Requested but not yet built (from rounds of use, 2026-08-02)
-Decided with the user; do these in roughly this order.
+### The queue, in the order I'd take it
 
-0. **PATHFINDER rename is user-facing only.** `ModuleId` is still `'log'`, the
-   route is still `/log`, and `log_v1` is still the storage key. Renaming those
-   buys nothing and would break saved data — but a grep for "L.O.G" now only
-   hits comments and internal names, which is the intended end state.
-1. **Gamified PATHFINDER.** The user finds it messy — dream cards, star-map framing
-   and the mission/task hierarchy need a readable, game-like pass.
-2. **SOLARIS levels.** Surface the firmware tier as a visible level with the
-   next unlock and its condition stated ("v1 Calories — 5 hydration days, you
-   have 2"). The tier logic in `tools.ts` already exists; this is legibility.
-3. **The rest of the tree work.** Scarcity landed (rule 16) and the guide is
-   asked for 12-18 branching nodes with capstones, but **no real proposal has
-   been read back** — see the caveat below. Optional/side nodes and a visual
-   treatment for capstones are still open.
-4. **Life-support cues still ignore the profile.** The timeline and the guide
-   read wake/sleep now, but template cues are fixed strings — an owl still gets
-   "with breakfast". `dayShape()` is there when that's worth doing.
-5. **Anchor the remaining tours.** Hub and UPLINKS have `data-tour` anchors on
-   real controls; L.O.G, SCRAP-7, SOLARIS, JOURNAL, A.R.D.O and PICTURES have
-   written copy but no anchors, so their steps just centre. Adding an anchor is
-   one attribute — the tour needs no code of its own.
+**1. The three streak defects** (asked about, not yet decided — see §6).
+Small fixes, but each changes what a number *means*, so pick before building.
 
----
+**2. Gamified PATHFINDER.** The user finds it messy — dream cards, the star-map
+framing and the mission/task hierarchy need a readable, game-like pass. It is
+the one module that has not had one.
+
+**3. SOLARIS levels.** Surface the firmware tier as a visible level with the
+next unlock and its condition stated ("v1 Calories — 5 hydration days, you have
+2"). The logic in `tools.ts` exists; this is legibility only.
+
+**4. The rest of the tree work.** Scarcity landed (rule 16) and the guide is
+asked for 12-18 branching nodes with capstones, but **no real proposal has ever
+been read back** — see §6. Optional/side nodes and a visual treatment for
+capstones are still open.
+
+**5. Life-support cues ignore the profile.** The timeline and the guide read
+wake/sleep now; template cues are still fixed strings, so an owl gets "with
+breakfast". `dayShape()` is there when that's worth doing.
+
+**6. Anchor the remaining tours.** Hub and UPLINKS have `data-tour` anchors on
+real controls; PATHFINDER, ORBIT, SOLARIS, JOURNAL, A.R.D.O and PICTURES have
+written copy but no anchors, so their steps just centre. One attribute each.
+
+**7. The hub is filling up.** Week strip, NOW card, quest panel, bandwidth,
+release radar, four tiles. The quest panel earns its size during the starting
+zone and collapses to one line afterwards — worth a layout pass once that
+steady state is visible, not before.
 
 ## 6. Known gaps and honest caveats
 
-- **The guide's proposal quality is still untested against a real key**, and it
-  now matters more: the prompt asks for 12-18 nodes with parallel branches and
-  a capstone per chapter, and nothing has verified the model actually produces
-  that shape. The normaliser guarantees it *opens*, not that it's a good tree.
-  Worth one real run on the desktop app.
-- **Stage 1 assumes the dream pipeline works.** CHOOSE ONE DREAM cannot be
-  cleared without promoting a dream, which needs either an API key or the BY
-  HAND path. With neither a key nor a dream written, a new user is stuck at
-  level 1 — by design, but it makes L.O.G load-bearing on first run.
-- **A blank routine's key is `routine`/`routine-2`** — keys are permanent and
-  derived at creation, so one added before it's named keeps the placeholder.
-  Internal only; ids are never shown. Deliberate: re-deriving keys would break
-  rule 13.
-- **Habits still appear twice** — in the tree / character sheet and in SCRAP-7's
-  Habits tab. Next step 1 above closes this.
+### Undecided — the user asked, I answered, no choice made yet
+**Three streak defects.** There are three separate streaks and they disagree:
+
+1. `Task.streak` — per habit/task. Habits: `trackHabit` bumps it, `applyDailyReset`
+   zeroes it on a miss (frozen routines exempt). Repeating ORBIT tasks:
+   `completeTask` bumps it — **and nothing ever breaks it**, because the reset's
+   miss-detection lives only in the `habit` branch.
+2. `calcStreak()` — the hub week strip. Union of `trackingHistory` +
+   `completionHistory`, counted back from today. **A completed to-do does not
+   count**: `completeTask` only writes `completionHistory` for `'daily'`. Under
+   the one-list model that's arbitrary — clearing *Standup* keeps the streak,
+   clearing *Fix the bike* doesn't.
+3. The STREAK attribute (`stats.ts`) — `max(streak)` over chain routines only,
+   scaled /66. **Life support is invisible to it**: someone whose only habits are
+   basics reads `—` forever despite a 40-day run.
+
+My read: (1) and (3) are plainly bugs; (2) is a judgement call about whether
+"showing up" includes one-off tasks (I'd say yes). Each changes what a number
+means, so decide before building.
+
+### Real caveats
+- **The guide's proposal has never been read back against a real key.** The
+  prompt asks for 12-18 nodes with parallel branches and a capstone per chapter;
+  nothing has verified the model produces that shape. The normaliser guarantees
+  a proposal *opens*, not that it's a good tree. One real run on the desktop app
+  would settle it.
+- **The boot-log fix is verified by inspection, not by eye.** The duplicate-line
+  bug (a timer chain restarting on every re-render) is fixed by a ref + stable
+  deps + cleanup, and `boot.test.ts` pins the script's uniqueness — but the intro
+  runs ~4s, shorter than a tool round-trip, so it was never caught mid-render.
+  Worth one look on next launch: eleven distinct lines.
+- **Stage 1 assumes the dream pipeline works.** CHOOSE ONE DREAM cannot clear
+  without promoting a dream, which needs an API key or the BY HAND path. With
+  neither a key nor a dream written, a new user is stuck at level 1 — by design,
+  but it makes PATHFINDER load-bearing on first run.
 - **A released life-support template can't be re-added from the picker.**
-  `availableTemplates` filters on habit id, and releasing keeps the `life:` id.
-  It shows under YOUR OWN HABITS with ADOPT instead, which is arguably the
-  better route — but the picker count reads 2/8 while only 7 are offered.
+  `availableTemplates` filters on habit id and a deleted basic frees its id, so
+  this only bites for the `life:own-*` custom ones. Low impact.
+- **A blank routine's key is `routine`/`routine-2`.** Keys are permanent and
+  derived at creation, so one added before it's named keeps the placeholder.
+  Internal only. Deliberate: re-deriving keys would break rule 13.
 - **Miss penalties and threshold upgrades are specced but not built** — spec
-  step 4. `THRESHOLD_UNLOCK_AT` / `THRESHOLD_COST` constants exist unused.
-- **FUEL multiplier** — `awardXp` takes a `fuelMultiplier` argument that is
-  always 1 today.
+  step 4. `THRESHOLD_UNLOCK_AT` / `THRESHOLD_COST` exist unused.
+- **FUEL multiplier** — `awardXp` takes a `fuelMultiplier` that is always 1.
 - **XP_TABLE / xpProgress / levelThreshold in `scrap7/types.ts` are dead code** —
   never imported. `progression/xp.ts` is the live economy. Worth deleting.
 - **Data durability is the standing risk.** localStorage in a WebView2 profile;
-  one Windows reset loses months of integration. Export/import exists in
+  one Windows reset loses months of automatism. Export/import exists in
   Settings → Backup (API keys stripped). A disk-backed store is the real fix.
-- **Warren OS + INFINITY-8 are dormant**, not deleted. `WARREN_OS_ENABLED` in
-  `App.tsx`; INFINITY-8 via `built: false` in `guild.ts`.
+- **Warren OS is dormant** (`WARREN_OS_ENABLED` in `App.tsx`). INFINITY-8's
+  `built: false` is NOT dormancy — see rule 34, its code runs in two places.
 - **Windows Store roadmap** exists but nothing is done: identifier is still
   `com.warren.app` (change *before* release — it names the data folder), no
   privacy policy, MSIX vs EXE undecided.
@@ -362,5 +394,11 @@ npm test                                    # 210 green
 - `v0.1.0-dashboard` tag — the full dashboard era, restorable with
   `git checkout v0.1.0-dashboard`.
 
-**Ask before assuming** on: whether spec step 4 (miss penalties + threshold
-upgrades) should jump the queue ahead of the four requested items in §5.
+**Ask before assuming** on: the three streak defects in §6 — each one changes
+what a number means, and the user has been shown the analysis but hasn't chosen.
+
+**Session note (2026-08-03).** This handoff was written at the end of a long
+session and is current as of `0be9abd`. Everything in §4 was decided *with* the
+user, usually after being shown a trade-off — if a rule looks arbitrary, it
+isn't, and the commit that introduced it explains why. `git log --oneline` reads
+as a design diary; the messages carry the reasoning, not just the diff.
