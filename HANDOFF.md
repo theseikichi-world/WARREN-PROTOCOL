@@ -3,7 +3,7 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `0be9abd` · 347 tests · tsc/build/lint clean.
+**State as of the last commit:** `e80358e` · 366 tests · tsc/build/lint clean.
 
 ---
 
