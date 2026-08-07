@@ -91,6 +91,20 @@ Flavour belongs on what you read once. (Internal identifiers still say
 | `BandwidthStrip.tsx` | hub widget; when empty it is the door to PATHFINDER |
 | `WeekStrip.tsx` | hub widget — the week's dots and the day streak |
 
+### `src/sync.ts` + `api/sync.ts` — the desktop/web bridge
+
+One encrypted blob per "room", pushed and pulled whole through the existing
+`backup.ts` export/import. `syncOnce` is the only round — the SYNC NOW button
+and the automatic runs (launch, and window hidden) both go through it, so a
+manual sync can never be safer than an automatic one. Settings owns the
+conflict dialog because only the user knows which device did the real work.
+
+Setup is two things the code cannot do for itself: a Vercel Blob store (which
+provides `BLOB_READ_WRITE_TOKEN`) and, while Deployment Protection is on, a
+Protection Bypass token — the desktop app carries no Vercel SSO cookie, and
+`describe()` in `sync.ts` special-cases that failure because it is the one
+everybody hits first.
+
 ### Touched elsewhere
 - `scrap7/types.ts` — `TaskOrigin`, `Task.origin`, `Task.frozen`, `taskOrigin()`,
   `feedsProgression()`, `isUnbound()`
@@ -249,6 +263,23 @@ These were each decided deliberately; breaking one silently breaks the product.
     breaks fixed columns, so widths holding text have to move with it.
 39. **An icon draws the module's job, not a mascot.** The animals are guild-era
     flavour that survives only in `guild.ts` descriptions. See `CyberIcon.tsx`.
+40. **Sync never guesses.** `decideSync` compares what changed on *each* side
+    since the last agreed state; if both moved it returns `conflict` and stops.
+    Warren's data is a score accruing over months, and last-write-wins loses a
+    forty-day streak in a way nobody notices for a week. Every pull snapshots
+    first (`warren_sync_snapshot_v1`), and RESTORE SNAPSHOT in Settings is the
+    way back.
+41. **A pull must reload the page.** It replaces localStorage under a running
+    app whose stores hold state in memory; without the reload the next write
+    stamps the old data back over everything that just arrived.
+42. **The server holds ciphertext and cannot name you.** The room id is
+    `SHA-256("warren-sync-v1:" + passphrase)` and the payload is AES-GCM sealed
+    on the device. `api/sync.ts` is deliberately incapable of reading a journal
+    entry. The passphrase and bypass token are in `SECRET_FIELDS`, so an export
+    never carries the key to its own room.
+43. **Vercel Blob caches for a year by default and the room's URL never
+    changes.** `cacheControlMaxAge: 0` on the `put` is load-bearing — without it
+    the other device reads a months-old record and the whole feature lies.
 
 ---
 
@@ -273,6 +304,12 @@ From the original spec (`§10`):
 | 8 | Tool tiers for A.R.D.O + JOURNAL | ⬜ |
 
 ### The queue, in the order I'd take it
+
+**0. End-to-end the sync.** Everything below the network is tested (19 tests:
+the decision table, the AES round trip, the room hash), but `api/sync.ts` has
+never spoken to a real Blob store — none existed when it was written. First run
+with two devices is the real test: push from desktop, pull on web, then change
+both and confirm it asks instead of picking.
 
 **1. The three streak defects** (asked about, not yet decided — see §6).
 Small fixes, but each changes what a number *means*, so pick before building.

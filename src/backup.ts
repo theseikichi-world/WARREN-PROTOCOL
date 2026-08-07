@@ -16,7 +16,12 @@ const SKIP = [/^pictures_discover_/, /^pictures_games_/]
 
 /** Secret fields inside warren_settings — stripped from every export so a shared
  *  backup file can never leak the user's Anthropic / TMDB / RAWG keys. */
-const SECRET_FIELDS = ['aiApiKey', 'tmdbApiKey', 'rawgApiKey'] as const
+/**
+ * Never leaves the device. The sync passphrase and bypass token are stripped
+ * alongside the API keys — a blob that carried the key to its own room would
+ * hand the whole account to anyone who opened one export.
+ */
+const SECRET_FIELDS = ['aiApiKey', 'tmdbApiKey', 'rawgApiKey', 'syncPassphrase', 'syncBypass'] as const
 const SETTINGS_KEY = 'warren_settings'
 
 function stripSecrets(settingsJson: string): string {
@@ -73,7 +78,13 @@ export const RESET_KEEP = [SETTINGS_KEY, 'warren_locale'] as const
  * to mean starting over: the name, the gender and the hours go, `onboardedAt`
  * goes with them, and FIRST CONTACT asks again on the next load.
  */
-export const RESET_PROFILE_FIELDS = ['displayName', 'gender', 'wakeTime', 'sleepTime', 'onboardedAt'] as const
+/**
+ * `syncEnabled` is in here for a reason that isn't obvious: without it, RESET
+ * EVERYTHING would wipe the device and then immediately pull the whole record
+ * back down from the room on the next sync. Starting over has to mean the cloud
+ * copy stops following you home.
+ */
+export const RESET_PROFILE_FIELDS = ['displayName', 'gender', 'wakeTime', 'sleepTime', 'onboardedAt', 'syncEnabled'] as const
 
 /** Settings with every trace of the person stripped out. */
 export function stripProfile(settingsJson: string): string {
@@ -88,6 +99,9 @@ export function stripProfile(settingsJson: string): string {
 
 /**
  * Everything a reset removes.
+ *
+ * `warren_sync_mark_v1` and the snapshot go with everything else — after a
+ * reset this device has never synced, which is the truth.
  *
  * Deliberately a denylist of survivors rather than a list of known module keys:
  * a module added later would otherwise quietly survive the reset. `scrap7_v3`

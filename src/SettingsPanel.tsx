@@ -3,9 +3,20 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { enable, disable, isEnabled } from '@tauri-apps/plugin-autostart'
 import { type Settings, ACCENT_PRESETS, CLAUDE_MODELS, DEFAULT_MODEL, AI_TASKS, modelForTask, saveSettings, applySettings, isTauri } from './settings'
 import { downloadBackup, exportAllJson, importBackup, resetProgress, resetKeys } from './backup'
+import {
+  syncOnce, deviceLabel, localFingerprint, saveMark, snapshotLocal, lastStatus,
+  lastSnapshot, restoreSnapshot,
+  pushRemote, applyRemote, type SyncSettings, type RemoteRecord,
+} from './sync'
 import { useLocale, setLocale, t } from './i18n'
 import { forgetTours } from './tour'
 import { chronotype, CHRONOTYPE_LABEL, type Gender } from './profile'
+
+const conflictBtn = (color: string): React.CSSProperties => ({
+  flex: 1, padding: '7px 4px', borderRadius: 6, cursor: 'pointer',
+  fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em',
+  color, background: 'transparent', border: `1px solid ${color}55`,
+})
 
 const GENDER_OPTIONS: { value: Gender; en: string; ru: string }[] = [
   { value: 'male',   en: 'MALE',   ru: 'МУЖСКОЙ' },
@@ -78,6 +89,76 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
   const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState('')
   const [resetArmed, setResetArmed] = useState(false)
+  const [syncBusy, setSyncBusy] = useState(false)
+  const [syncMsg, setSyncMsg]   = useState('')
+  const [conflict, setConflict] = useState<RemoteRecord | null>(null)
+
+  const syncCfg = (): SyncSettings =>
+    ({ url: settings.syncUrl, passphrase: settings.syncPassphrase, bypass: settings.syncBypass })
+
+  const snapshot = lastSnapshot()
+
+  /** Put back whatever the last pull replaced. Confirmed, because it cuts both ways. */
+  const undoPull = () => {
+    if (!snapshot) return
+    if (!window.confirm(t(
+      'Restore the snapshot taken before the last sync? Anything done since will be replaced.',
+      'Восстановить снимок, сделанный перед последней синхронизацией? Всё, что сделано после, будет заменено.'))) return
+    try {
+      restoreSnapshot()
+      window.location.reload()
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  /** The same round the automatic runs take — only the reporting differs. */
+  const runSync = async () => {
+    setSyncBusy(true); setSyncMsg(''); setConflict(null)
+    try {
+      const out = await syncOnce(syncCfg(), deviceLabel())
+      if (out.action === 'in-sync') setSyncMsg(`✓ ${t('Already in sync', 'Уже синхронизировано')}`)
+      else if (out.action === 'push') setSyncMsg(`✓ ${t('Pushed from this device', 'Отправлено с этого устройства')}`)
+      else if (out.action === 'pull') afterPull(out.pulled ?? 0)
+      else if (out.remote) setConflict(out.remote)
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : String(e))
+    }
+    setSyncBusy(false)
+  }
+
+  /** A pull replaced localStorage under a running app — reload before it writes back. */
+  const afterPull = (n: number) => {
+    setSyncMsg(`✓ ${t('Pulled ' + n + ' records — reloading…', 'Получено: ' + n + ' — перезагрузка…')}`)
+    setTimeout(() => window.location.reload(), 900)
+  }
+
+  /**
+   * Resolving a conflict is the one place that overrides the decision, so it is
+   * also the one place that always snapshots first — whichever side loses here
+   * is still on this device, recoverable from RESTORE SNAPSHOT.
+   */
+  const resolve = async (choice: 'push' | 'pull') => {
+    if (!conflict) return
+    setSyncBusy(true)
+    try {
+      snapshotLocal()
+      const cfg = syncCfg()
+      if (choice === 'push') {
+        const meta = await pushRemote(cfg, deviceLabel(), conflict.updatedAt)
+        saveMark({ updatedAt: meta.updatedAt, fingerprint: await localFingerprint() })
+        setSyncMsg(`✓ ${t('This device won — the other will pull it next', 'Это устройство победило')}`)
+      } else {
+        const n = await applyRemote(cfg, conflict)
+        saveMark({ updatedAt: conflict.updatedAt, fingerprint: await localFingerprint() })
+        afterPull(n)
+      }
+      setConflict(null)
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : String(e))
+    }
+    setSyncBusy(false)
+  }
 
   /** How many stored records the reset is about to take, counted at arm time. */
   const resetCount = () =>
@@ -607,6 +688,100 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
                   background: importText.trim() ? 'rgba(255,107,0,0.1)' : 'transparent' }}>
                 RESTORE & RELOAD</button>
             </div>
+          )}
+
+          {/* ── Sync ── */}
+          {/* One blob, encrypted here, stored somewhere that cannot read it.
+              The conflict case is a question on purpose - see sync.ts. */}
+          <Section label={t('Sync across devices', 'Синхронизация')} />
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.45)',
+            lineHeight: 1.6, marginBottom: 10 }}>
+            {t('Same passphrase on two devices = same data. It is encrypted before it leaves, so the server stores something it cannot read — and your API key is never included, so enter that once per device.',
+               'Одинаковая фраза на двух устройствах = одни данные. Шифруется перед отправкой. API-ключ не передаётся.')}
+          </p>
+
+          <Row label={t('Enable sync', 'Включить')}
+            sub={t('Pulls on launch, pushes when you leave', 'Тянет при запуске')}>
+            <Toggle on={settings.syncEnabled} onChange={v => update({ syncEnabled: v })} accent={acc} />
+          </Row>
+
+          {([
+            { key: 'syncUrl' as const, label: t('Endpoint', 'Адрес'), ph: 'https://warren-black.vercel.app' },
+            { key: 'syncPassphrase' as const, label: t('Passphrase', 'Секретная фраза'), ph: t('the same on every device', 'одинаковая везде') },
+            { key: 'syncBypass' as const, label: t('Protection bypass token', 'Токен обхода'), ph: t('only if deployment protection is on', 'если включена защита') },
+          ]).map(f => (
+            <div key={f.key} style={{ marginBottom: 9 }}>
+              <p style={{ fontSize: 11.5, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)',
+                marginBottom: 5, letterSpacing: '0.06em' }}>{f.label}</p>
+              <input
+                type={f.key === 'syncUrl' ? 'text' : 'password'}
+                value={settings[f.key]}
+                onChange={e => update({ [f.key]: e.target.value } as Partial<Settings>)}
+                placeholder={f.ph}
+                style={{ width: '100%', padding: '8px 10px', boxSizing: 'border-box',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 6, outline: 'none', fontFamily: 'var(--font)', fontSize: 12.5,
+                  color: 'rgba(220,240,255,0.8)', letterSpacing: '0.06em',
+                  userSelect: 'text', WebkitUserSelect: 'text' }} />
+            </div>
+          ))}
+
+          <button onClick={runSync} disabled={syncBusy || !settings.syncUrl || !settings.syncPassphrase}
+            style={{ width: '100%', padding: '9px', borderRadius: 6, marginTop: 2,
+              cursor: syncBusy ? 'default' : 'pointer',
+              fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 700, letterSpacing: '0.1em',
+              color: acc, border: `1px solid ${acc}40`, background: `${acc}0c` }}>
+            {syncBusy ? t('SYNCING…', 'СИНХРОНИЗАЦИЯ…') : `⇅ ${t('SYNC NOW', 'СИНХРОНИЗИРОВАТЬ')}`}
+          </button>
+
+          {!syncMsg && !conflict && lastStatus() && (
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, marginTop: 8, lineHeight: 1.6,
+              color: lastStatus()!.action === 'error' || lastStatus()!.action === 'conflict'
+                ? '#ff6b00' : 'rgba(148,163,184,0.55)' }}>
+              {new Date(lastStatus()!.at).toLocaleString()} — {lastStatus()!.message}
+            </p>
+          )}
+
+          {syncMsg && (
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, marginTop: 8, lineHeight: 1.6,
+              color: syncMsg.startsWith('✓') ? '#39ff14' : '#ff6b00' }}>{syncMsg}</p>
+          )}
+
+          {conflict && (
+            <div style={{ marginTop: 10, padding: '11px 12px', borderRadius: 8,
+              background: 'rgba(255,107,0,0.07)', border: '1px solid rgba(255,107,0,0.4)' }}>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 12, fontWeight: 800, color: '#ff9d4d' }}>
+                {t('BOTH SIDES CHANGED', 'ИЗМЕНИЛИСЬ ОБЕ')}
+              </p>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, lineHeight: 1.6, marginTop: 6,
+                color: 'rgba(215,232,248,0.8)' }}>
+                {t('The room was last written by ' + conflict.device + '. This device has changes too, so one of them wins — whichever you do not pick is kept as a local snapshot you can restore.',
+                   'В комнату последним писал ' + conflict.device + '. Здесь тоже есть изменения — второе останется локальным снимком.')}
+              </p>
+              <div style={{ display: 'flex', gap: 6, marginTop: 9 }}>
+                <button onClick={() => resolve('push')} style={conflictBtn(acc)}>
+                  {t('KEEP THIS DEVICE', 'ОСТАВИТЬ ЭТО')}
+                </button>
+                <button onClick={() => resolve('pull')} style={conflictBtn('#ff6b00')}>
+                  {t('TAKE THE OTHER', 'ВЗЯТЬ ДРУГОЕ')}
+                </button>
+                <button onClick={() => { setConflict(null); setSyncMsg('') }} style={conflictBtn('rgba(148,163,184,0.6)')}>
+                  {t('CANCEL', 'ОТМЕНА')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* The way back. Every pull snapshots first, so a sync that took the
+              wrong side is never the end of the story — this is what makes the
+              conflict dialog safe to answer quickly. */}
+          {snapshot && (
+            <button onClick={undoPull} style={{ width: '100%', padding: '8px', borderRadius: 6,
+              marginTop: 9, cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 11.5,
+              fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(148,163,184,0.75)',
+              border: '1px solid rgba(148,163,184,0.25)', background: 'transparent' }}>
+              ↩ {t('RESTORE SNAPSHOT', 'ВОССТАНОВИТЬ СНИМОК')} · {new Date(snapshot.at).toLocaleString()}
+            </button>
           )}
 
           {/* ── Start over ── */}

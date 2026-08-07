@@ -70,6 +70,11 @@ export interface Settings {
   aiApiKey:       string
   aiModel:        string                    // global default / fallback model
   taskModels:     Record<string, string>    // per-task overrides, keyed by AiTask.id
+  // Sync (see sync.ts) — the passphrase never leaves the device
+  syncUrl:        string
+  syncPassphrase: string
+  syncBypass:     string
+  syncEnabled:    boolean
   // Data sources (Galactic Pictures)
   tmdbApiKey:     string                    // themoviedb.org — movies/TV/posters
   rawgApiKey:     string                    // rawg.io — games with Metacritic
@@ -103,6 +108,10 @@ export const DEFAULT_SETTINGS: Settings = {
   taskModels:     {},
   tmdbApiKey:     '',
   rawgApiKey:     '',
+  syncUrl:        '',
+  syncPassphrase: '',
+  syncBypass:     '',
+  syncEnabled:    false,
 }
 
 const KEY = 'warren_settings'

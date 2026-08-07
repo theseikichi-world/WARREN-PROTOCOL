@@ -12,6 +12,7 @@ import { Initiation } from './modules/progression/Initiation'
 import { LevelUp } from './modules/progression/LevelUp'
 import { gatedLevel } from './modules/progression/xp'
 import { loadProgression, saveProgression, adoptOrphanHabits } from './modules/progression/store'
+import { autoSync } from './sync'
 import { moduleLevel, moduleUnlocked } from './moduleAccess'
 import { bootLines } from './boot'
 import { QuestHintBanner } from './modules/progression/QuestHint'
@@ -557,6 +558,21 @@ export default function App() {
   // A habit belonging to no system has nowhere to be seen now that SCRAP-7
   // keeps only the day. Adopt them into life support before anything renders.
   useEffect(() => { adoptOrphanHabits() }, [])
+
+  // Sync on launch and whenever the window goes away — the two moments where the
+  // other device could plausibly have moved. It never resolves a conflict on its
+  // own; that waits in Settings. See sync.ts.
+  useEffect(() => {
+    if (!settings.syncEnabled) return
+    const cfg = {
+      url: settings.syncUrl, passphrase: settings.syncPassphrase,
+      bypass: settings.syncBypass, enabled: true,
+    }
+    void autoSync(cfg)
+    const onHide = () => { if (document.visibilityState === 'hidden') void autoSync(cfg) }
+    document.addEventListener('visibilitychange', onHide)
+    return () => document.removeEventListener('visibilitychange', onHide)
+  }, [settings.syncEnabled, settings.syncUrl, settings.syncPassphrase, settings.syncBypass])
 
   // The IDENTIFY YOURSELF quest points at Settings, which is an overlay owned
   // here rather than a route — so it asks for it by event.
