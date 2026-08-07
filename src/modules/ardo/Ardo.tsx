@@ -169,7 +169,7 @@ function MemoryCurve({ text, cards }: { text: ArdoText; cards: ReviewCard[] }) {
           <p style={{ fontFamily: 'var(--font)', fontSize: 22, fontWeight: 900,
             color: mainColor, lineHeight: 1,
             textShadow: `0 0 12px ${mainColor}70` }}>{retPct}%</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${mainColor}60`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${mainColor}60`,
             letterSpacing: '0.12em', marginTop: 2 }}>{tr('RETENTION', 'УДЕРЖАНИЕ')}</p>
         </div>
 
@@ -232,7 +232,7 @@ function MemoryCurve({ text, cards }: { text: ArdoText; cards: ReviewCard[] }) {
 
       {/* Chunk heatmap */}
       <div>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: 'rgba(148,163,184,0.3)',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(148,163,184,0.3)',
           letterSpacing: '0.14em', marginBottom: 5 }}>
           {tr('CHUNKS —', 'ФРАГМЕНТЫ —')} {textCards.length} {tr('total', 'всего')}
         </p>
@@ -266,7 +266,7 @@ function MemoryCurve({ text, cards }: { text: ArdoText; cards: ReviewCard[] }) {
           ].map(({ color, label }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <div style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }}/>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 6.5,
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11,
                 color: 'rgba(148,163,184,0.35)', letterSpacing: '0.06em' }}>{label}</span>
             </div>
           ))}
@@ -275,19 +275,19 @@ function MemoryCurve({ text, cards }: { text: ArdoText; cards: ReviewCard[] }) {
         {/* Status message */}
         <div style={{ marginTop: 7 }}>
           {weakCount > 0 && (
-            <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#ff6b00',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: '#ff6b00',
               letterSpacing: '0.08em' }}>
               ⚠ {weakCount} {tr('chunks below 50% — drill soon', 'фрагм. ниже 50% — скоро повторить')}
             </p>
           )}
           {weakCount === 0 && avgRet >= 0.75 && (
-            <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#22c55e',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: '#22c55e',
               letterSpacing: '0.08em' }}>
               ✦ {tr('Strong memory — next review in', 'Крепкая память — повтор через')} {Math.max(0, Math.round(nextReviewInDays))}{tr('d', 'д')}
             </p>
           )}
           {weakCount === 0 && avgRet >= 0.5 && avgRet < 0.75 && (
-            <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#eab308',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: '#eab308',
               letterSpacing: '0.08em' }}>
               ◈ {tr('Holding — schedule a recall to strengthen', 'Держится — назначьте повтор для закрепления')}
             </p>
@@ -372,7 +372,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
 
   const chipStyle = (on: boolean): React.CSSProperties => ({
     flex: 1, padding: '4px 0', borderRadius: 4, cursor: 'pointer',
-    fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700,
+    fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
     color: on ? KA : 'rgba(148,163,184,0.35)',
     border: `1px solid ${on ? `${KA}40` : 'rgba(255,255,255,0.06)'}`,
     background: on ? KA_DIM : 'transparent', transition: 'all 0.12s',
@@ -388,7 +388,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
         background: 'rgba(20,10,2,0.97)', position: 'relative' }}>
 
         <button onClick={onDone} style={{ position: 'absolute', top: 12, left: 12,
-          fontFamily: 'var(--font)', fontSize: 9, color: `${KA}45`, letterSpacing: '0.1em',
+          fontFamily: 'var(--font)', fontSize: 11.5, color: `${KA}45`, letterSpacing: '0.1em',
           transition: 'color 0.12s' }}
           onMouseEnter={e => e.currentTarget.style.color = KA}
           onMouseLeave={e => e.currentTarget.style.color = `${KA}45`}
@@ -397,17 +397,17 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
         <span style={{ fontSize: 28, filter: `drop-shadow(0 0 14px ${KA})` }}>🎵</span>
 
         <div style={{ textAlign: 'center' }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 900,
             color: KA, letterSpacing: '0.2em', textShadow: `0 0 10px ${KA}` }}>KARAOKE</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${KA}60`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${KA}60`,
             letterSpacing: '0.1em', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis',
             whiteSpace: 'nowrap', maxWidth: 220 }}>{text.title}</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${KA}35`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${KA}35`,
             letterSpacing: '0.08em', marginTop: 2 }}>{lines.length} {tr('lines', 'строк')}</p>
         </div>
 
         <div style={{ width: '100%', maxWidth: 260, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${KA}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${KA}50`,
             letterSpacing: '0.15em', textAlign: 'center' }}>{tr('ADVANCE MODE', 'РЕЖИМ ПЕРЕХОДА')}</p>
 
           <div style={{ display: 'flex', gap: 8 }}>
@@ -420,7 +420,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
             }}>
               <span>👆 {tr('TAP', 'КАСАНИЕ')}</span>
-              <span style={{ fontSize: 7, opacity: 0.6 }}>{tr('manual', 'вручную')}</span>
+              <span style={{ fontSize: 11.5, opacity: 0.6 }}>{tr('manual', 'вручную')}</span>
             </button>
             <button onClick={() => {
               const ms = bpmToMs(parseFloat(bpmInput) || 120, bars)
@@ -434,7 +434,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
             }}>
               <span>♩ BPM</span>
-              <span style={{ fontSize: 7, opacity: 0.6 }}>{tr('auto-scroll', 'авто-прокрутка')}</span>
+              <span style={{ fontSize: 11.5, opacity: 0.6 }}>{tr('auto-scroll', 'авто-прокрутка')}</span>
             </button>
           </div>
 
@@ -442,7 +442,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
           <div style={{ padding: '10px 12px', borderRadius: 7,
             background: 'rgba(245,158,11,0.05)', border: `1px solid ${KA}18` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${KA}55`,
+              <span style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${KA}55`,
                 letterSpacing: '0.12em', flexShrink: 0 }}>BPM</span>
               <input type="number" value={bpmInput}
                 onChange={e => {
@@ -455,7 +455,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
                   fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: KA }}
               />
             </div>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${KA}45`,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${KA}45`,
               letterSpacing: '0.1em', marginBottom: 5 }}>{tr('BARS PER LINE', 'ТАКТОВ НА СТРОКУ')}</p>
             <div style={{ display: 'flex', gap: 5 }}>
               {([1, 2, 4] as const).map(b => (
@@ -466,7 +466,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
               ))}
             </div>
             {estMs && (
-              <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${KA}50`,
+              <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${KA}50`,
                 marginTop: 6, letterSpacing: '0.06em' }}>
                 ≈ {(estMs / 1000).toFixed(1)}{tr('s per line', 'с на строку')}
               </p>
@@ -493,7 +493,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
         alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16,
         background: 'rgba(20,10,2,0.97)' }}>
         <span style={{ fontSize: 32, filter: `drop-shadow(0 0 14px ${KA})` }}>🌟</span>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 900,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 16.5, fontWeight: 900,
           color: KA, textShadow: `0 0 10px ${KA}`, letterSpacing: '0.1em' }}>{tr('END OF SONG', 'КОНЕЦ ПЕСНИ')}</p>
         <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: `${KA}60`,
           textAlign: 'center', lineHeight: 1.7 }}>
@@ -543,18 +543,18 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
       <div style={{ padding: '8px 14px', flexShrink: 0, display: 'flex',
         alignItems: 'center', gap: 10, borderBottom: `1px solid ${KA}12` }}
         onClick={e => e.stopPropagation()}>
-        <button onClick={onDone} style={{ fontFamily: 'var(--font)', fontSize: 9,
+        <button onClick={onDone} style={{ fontFamily: 'var(--font)', fontSize: 11.5,
           color: `${KA}45`, letterSpacing: '0.1em', transition: 'color 0.12s', flexShrink: 0 }}
           onMouseEnter={e => e.currentTarget.style.color = KA}
           onMouseLeave={e => e.currentTarget.style.color = `${KA}45`}
         >✕</button>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${KA}60`,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${KA}60`,
           letterSpacing: '0.1em', flex: 1, overflow: 'hidden',
           textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text.title}</p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${KA}45`,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${KA}45`,
           letterSpacing: '0.1em', flexShrink: 0 }}>{lineIdx + 1} / {lines.length}</p>
         {autoMs && (
-          <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${KA}55`,
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${KA}55`,
             letterSpacing: '0.08em' }}>♩ {tr('AUTO', 'АВТО')}</span>
         )}
       </div>
@@ -565,7 +565,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
         pointerEvents: 'none', userSelect: 'none' }}>
 
         {/* prev -2 */}
-        <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${KA}12`,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, color: `${KA}12`,
           letterSpacing: '0.02em', lineHeight: 1.7, textAlign: 'center',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           minHeight: 18, transition: 'all 0.25s ease', marginBottom: 3 }}>
@@ -573,7 +573,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
         </p>
 
         {/* prev -1 */}
-        <p style={{ fontFamily: 'var(--font)', fontSize: 12, color: `${KA}25`,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 14.5, color: `${KA}25`,
           letterSpacing: '0.02em', lineHeight: 1.7, textAlign: 'center',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           minHeight: 22, transition: 'all 0.25s ease', marginBottom: 8 }}>
@@ -584,7 +584,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
         <div style={{ padding: '12px 14px', borderRadius: 10, textAlign: 'center',
           background: 'rgba(245,158,11,0.07)', border: `1px solid ${KA}28`,
           boxShadow: `0 0 24px ${KA}12`, marginBottom: 10, transition: 'all 0.2s ease' }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 18, fontWeight: 800,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 20, fontWeight: 800,
             color: KA, letterSpacing: '0.04em', lineHeight: 1.5,
             textShadow: `0 0 14px ${KA}80`, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {lines[lineIdx] ?? ''}
@@ -592,7 +592,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
         </div>
 
         {/* next +1 */}
-        <p style={{ fontFamily: 'var(--font)', fontSize: 12, color: `${KA}28`,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 14.5, color: `${KA}28`,
           letterSpacing: '0.02em', lineHeight: 1.7, textAlign: 'center',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           minHeight: 22, transition: 'all 0.25s ease', marginBottom: 3 }}>
@@ -600,7 +600,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
         </p>
 
         {/* next +2 */}
-        <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${KA}16`,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, color: `${KA}16`,
           letterSpacing: '0.02em', lineHeight: 1.7, textAlign: 'center',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           minHeight: 18, transition: 'all 0.25s ease', marginBottom: 3 }}>
@@ -608,7 +608,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
         </p>
 
         {/* next +3 */}
-        <p style={{ fontFamily: 'var(--font)', fontSize: 9, color: `${KA}09`,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${KA}09`,
           letterSpacing: '0.02em', lineHeight: 1.7, textAlign: 'center',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           minHeight: 16, transition: 'all 0.25s ease' }}>
@@ -639,7 +639,7 @@ function KaraokeView({ text, onDone }: { text: ArdoText; onDone: () => void }) {
 
         <button onClick={() => setLineIdx(0)} title={tr('Restart from beginning', 'Начать сначала')} style={{
           padding: '8px 10px', borderRadius: 6, cursor: 'pointer',
-          fontFamily: 'var(--font)', fontSize: 11, color: `${KA}45`,
+          fontFamily: 'var(--font)', fontSize: 13.5, color: `${KA}45`,
           border: `1px solid ${KA}15`, background: 'transparent', transition: 'all 0.15s',
         }}
           onMouseEnter={e => e.currentTarget.style.color = KA}
@@ -687,7 +687,7 @@ function FullRunView({ text, onDone }: {
     return (
       <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900,
           color: NEON, letterSpacing: '0.2em', textShadow: `0 0 8px ${NEON}` }}>{tr('FULL RUN', 'ПОЛНЫЙ ПРОГОН')}</p>
         <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
           color: `${NEON}60`, textAlign: 'center', lineHeight: 1.7, maxWidth: 220 }}>
@@ -695,7 +695,7 @@ function FullRunView({ text, onDone }: {
           <br/>{tr('Click chunk numbers for first-word hints (like a stage prompter).', 'Жмите номера фрагментов для подсказок первым словом (как суфлёр).')}
         </p>
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}50`,
             letterSpacing: '0.18em', textAlign: 'center', marginBottom: 8 }}>{tr('TIME LIMIT (OPTIONAL)', 'ЛИМИТ ВРЕМЕНИ (НЕОБЯЗ.)')}</p>
           <div style={{ display: 'flex', gap: 6 }}>
             {[null, 60, 120, 300].map(s => (
@@ -739,17 +739,17 @@ function FullRunView({ text, onDone }: {
         )}
         <div style={{ padding: '10px 14px', flexShrink: 0, display: 'flex', justifyContent: 'space-between',
           borderBottom: `1px solid ${NEON}10` }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`, letterSpacing: '0.15em' }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}50`, letterSpacing: '0.15em' }}>
             {text.title} — {tr('FULL RUN', 'ПОЛНЫЙ ПРОГОН')}
           </p>
           {timer && (
-            <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 800,
               color: timerPct > 80 ? '#ff4444' : NEON, letterSpacing: '0.08em' }}>
               {fmt(timer - elapsed)}
             </p>
           )}
           {!timer && (
-            <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}40`, letterSpacing: '0.1em' }}>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}40`, letterSpacing: '0.1em' }}>
               {fmt(elapsed)}
             </p>
           )}
@@ -764,7 +764,7 @@ function FullRunView({ text, onDone }: {
               <button key={ch.id} onClick={() => toggleHint(ch.order)} title={tr('Show first word', 'Показать первое слово')}
                 style={{
                   width: '100%', padding: '4px 0', cursor: 'pointer', flexShrink: 0,
-                  fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700,
+                  fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 700,
                   color: hints.has(ch.order) ? NEON : `${NEON}25`,
                   background: hints.has(ch.order) ? NEON_DIM : 'transparent',
                   borderBottom: `1px solid ${NEON}06`,
@@ -785,9 +785,9 @@ function FullRunView({ text, onDone }: {
             )}
             {chunks.filter(ch => hints.has(ch.order)).map(ch => (
               <div key={ch.id} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'baseline' }}>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}40`,
+                <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}40`,
                   flexShrink: 0, minWidth: 16 }}>{ch.order + 1}</span>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 700,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 15.5, fontWeight: 700,
                   color: NEON, textShadow: `0 0 8px ${NEON}80`, letterSpacing: '0.04em' }}>
                   {ch.content.split(/\s+/)[0]}…
                 </p>
@@ -815,11 +815,11 @@ function FullRunView({ text, onDone }: {
     <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ padding: '10px 14px', flexShrink: 0, borderBottom: `1px solid ${NEON}10`,
         display: 'flex', alignItems: 'center', gap: 8 }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`, letterSpacing: '0.15em', flex: 1 }}>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}50`, letterSpacing: '0.15em', flex: 1 }}>
           {text.title} — {tr('ORIGINAL', 'ОРИГИНАЛ')}
         </p>
         {hintsUsed > 0 && (
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: '#eab308' }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: '#eab308' }}>
             {hintsUsed} {tr('hints used', 'подсказок')}
           </p>
         )}
@@ -829,16 +829,16 @@ function FullRunView({ text, onDone }: {
         {chunks.map(ch => (
           <div key={ch.id} style={{ marginBottom: 14, padding: '10px 12px', borderRadius: 8,
             background: `${NEON}04`, borderLeft: `2px solid ${NEON}20` }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}40`,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${NEON}40`,
               letterSpacing: '0.12em', marginBottom: 6 }}>CHUNK {ch.order + 1}</p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 13, color: 'rgba(200,255,230,0.85)',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 15.5, color: 'rgba(200,255,230,0.85)',
               lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{ch.content}</p>
           </div>
         ))}
       </div>
 
       <div style={{ padding: '10px 12px', borderTop: `1px solid ${NEON}10`, flexShrink: 0 }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}50`,
           letterSpacing: '0.18em', textAlign: 'center', marginBottom: 10 }}>{tr('HOW WAS YOUR PERFORMANCE?', 'КАК ПРОШЁЛ ПРОГОН?')}</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
           {[
@@ -856,9 +856,9 @@ function FullRunView({ text, onDone }: {
               onMouseEnter={e => e.currentTarget.style.background = `${color}15`}
               onMouseLeave={e => e.currentTarget.style.background = `${color}08`}
             >
-              <span style={{ fontSize: 18 }}>{emoji}</span>
+              <span style={{ fontSize: 20 }}>{emoji}</span>
               <span style={{ fontSize: 'var(--fs-xs)' }}>{label}</span>
-              <span style={{ fontSize: 7, opacity: 0.6 }}>{sub}</span>
+              <span style={{ fontSize: 11.5, opacity: 0.6 }}>{sub}</span>
             </button>
           ))}
         </div>
@@ -884,7 +884,7 @@ function SprintBadge({ sprint, onStart }: {
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
       transition: 'all 0.15s', animation: isDue ? 'pulse 1.8s ease-in-out infinite' : 'none',
     }}>
-      <span style={{ fontSize: 7, opacity: 0.7 }}>{tr('SPRINT', 'СПРИНТ')} {sprint.stage}/{SPRINT_STAGE_LABELS.length - 1}</span>
+      <span style={{ fontSize: 11.5, opacity: 0.7 }}>{tr('SPRINT', 'СПРИНТ')} {sprint.stage}/{SPRINT_STAGE_LABELS.length - 1}</span>
       <span>{isDue ? `${stageLabel} — ${tr('NOW', 'СЕЙЧАС')}` : `${stageLabel} ${tr('in', 'через')} ${label}`}</span>
     </button>
   )
@@ -924,31 +924,31 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 6 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 800,
               color: 'rgba(210,255,240,0.9)', letterSpacing: '0.04em',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {text.title}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
               {text.author && (
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7.5,
+                <span style={{ fontFamily: 'var(--font)', fontSize: 10,
                   color: 'rgba(148,163,184,0.45)', letterSpacing: '0.06em' }}>{text.author}</span>
               )}
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700,
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
                 color: tc, letterSpacing: '0.1em', padding: '1px 5px', borderRadius: 3,
                 border: `1px solid ${tc}30`, background: `${tc}08` }}>
                 {typeLabel(text.type)}
               </span>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7,
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5,
                 color: `${NEON}50`, letterSpacing: '0.08em' }}>{LANG_LABEL[text.language]}</span>
             </div>
           </div>
 
           {/* Stats + progress */}
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 900,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 16.5, fontWeight: 900,
               color: stats.progress === 100 ? '#f59e0b' : NEON, lineHeight: 1 }}>{stats.progress}%</p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5,
               color: `${NEON}45`, letterSpacing: '0.08em' }}>{stats.mastered}/{stats.total}</p>
           </div>
         </div>
@@ -956,7 +956,7 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
         {/* Status row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           {stats.due > 0 && (
-            <span style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700,
+            <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 700,
               color: '#ff4444', letterSpacing: '0.1em',
               padding: '2px 7px', borderRadius: 4,
               border: '1px solid rgba(255,68,68,0.3)', background: 'rgba(255,68,68,0.08)',
@@ -964,15 +964,15 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
             }}>🔴 {stats.due} {tr('DUE', 'К ПОВТОРУ')}</span>
           )}
           {stats.reviewing > 0 && (
-            <span style={{ fontFamily: 'var(--font)', fontSize: 7.5,
+            <span style={{ fontFamily: 'var(--font)', fontSize: 10,
               color: '#eab308', letterSpacing: '0.06em' }}>{stats.reviewing} {tr('reviewing', 'на повторе')}</span>
           )}
           {stats.new > 0 && (
-            <span style={{ fontFamily: 'var(--font)', fontSize: 7.5,
+            <span style={{ fontFamily: 'var(--font)', fontSize: 10,
               color: 'rgba(148,163,184,0.4)', letterSpacing: '0.06em' }}>{stats.new} {tr('new', 'новых')}</span>
           )}
           {text.deadline && (
-            <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, marginLeft: 'auto',
+            <span style={{ fontFamily: 'var(--font)', fontSize: 10, marginLeft: 'auto',
               color: 'rgba(148,163,184,0.35)', letterSpacing: '0.06em' }}>
               {tr('deadline', 'срок')} {new Date(text.deadline).toLocaleDateString('en', { day: 'numeric', month: 'short' })}
             </span>
@@ -1056,7 +1056,7 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
           <button onClick={() => setShowCurve(v => !v)} title={tr('Memory curve', 'Кривая памяти')}
             style={{
               width: 28, padding: '6px 0', borderRadius: 5, cursor: 'pointer',
-              fontFamily: 'var(--font)', fontSize: 11,
+              fontFamily: 'var(--font)', fontSize: 13.5,
               color: showCurve ? NEON : `${NEON}40`,
               border: `1px solid ${showCurve ? `${NEON}35` : 'rgba(255,255,255,0.06)'}`,
               background: showCurve ? NEON_DIM : 'transparent',
@@ -1068,7 +1068,7 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
 
           <button onClick={() => setExpanded(v => !v)} style={{
             width: 28, padding: '6px 0', borderRadius: 5, cursor: 'pointer',
-            fontFamily: 'var(--font)', fontSize: 10, color: `${NEON}50`,
+            fontFamily: 'var(--font)', fontSize: 12.5, color: `${NEON}50`,
             border: `1px solid rgba(255,255,255,0.06)`, background: 'transparent', transition: 'all 0.15s',
           }}
             onMouseEnter={e => e.currentTarget.style.color = NEON}
@@ -1122,7 +1122,7 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0 }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: isToday ? '#ff4444' : color,
                     boxShadow: `0 0 5px ${isToday ? '#ff4444' : color}60` }} />
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 6, color: 'rgba(148,163,184,0.25)',
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(148,163,184,0.25)',
                     letterSpacing: '0.04em' }}>{chunk.order + 1}</span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1132,17 +1132,17 @@ function TextCard({ text, state, onStudy, onMarkLearned, onSprintStart, onFullRu
                     WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                   }}>{chunk.content}</p>
                   {chunk.anchor && (
-                    <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`, marginTop: 2 }}>
+                    <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}50`, marginTop: 2 }}>
                       {chunk.anchor}
                     </p>
                   )}
                 </div>
                 <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 7, color, letterSpacing: '0.1em', fontWeight: 700 }}>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color, letterSpacing: '0.1em', fontWeight: 700 }}>
                     {statusLabel(status).toUpperCase()}
                   </p>
                   {card && card.reviewCount > 0 && (
-                    <p style={{ fontFamily: 'var(--font)', fontSize: 6, color: 'rgba(148,163,184,0.3)', marginTop: 1 }}>
+                    <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(148,163,184,0.3)', marginTop: 1 }}>
                       {card.intervalDays}d
                     </p>
                   )}
@@ -1193,13 +1193,13 @@ function GloryCard({ text, state, onRevive, onFullRun, onKaraoke }: {
           {/* Gold star icon */}
           <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0,
             background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
             boxShadow: '0 0 10px rgba(245,158,11,0.2)' }}>
             ✦
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 800,
               color: 'rgba(253,230,138,0.7)', letterSpacing: '0.04em',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               textDecoration: 'none' }}>
@@ -1207,10 +1207,10 @@ function GloryCard({ text, state, onRevive, onFullRun, onKaraoke }: {
             </p>
             <div style={{ display: 'flex', gap: 8, marginTop: 3, alignItems: 'center' }}>
               {text.author && (
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7.5,
+                <span style={{ fontFamily: 'var(--font)', fontSize: 10,
                   color: 'rgba(245,158,11,0.4)' }}>{text.author}</span>
               )}
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700,
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
                 color: typeColor[text.type], letterSpacing: '0.1em', padding: '1px 5px',
                 borderRadius: 3, border: `1px solid ${typeColor[text.type]}25`,
                 background: `${typeColor[text.type]}08` }}>
@@ -1221,18 +1221,18 @@ function GloryCard({ text, state, onRevive, onFullRun, onKaraoke }: {
 
           {/* Stats */}
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 900,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 16.5, fontWeight: 900,
               color: '#f59e0b', lineHeight: 1, textShadow: '0 0 8px rgba(245,158,11,0.5)' }}>
               {stats.total}
             </p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 6.5,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11,
               color: 'rgba(245,158,11,0.4)', letterSpacing: '0.1em' }}>{tr('CHUNKS', 'ФРАГМ.')}</p>
           </div>
         </div>
 
         {/* Learned date */}
         {learnedDate && (
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10,
             color: 'rgba(245,158,11,0.45)', letterSpacing: '0.08em', marginTop: 8 }}>
             {tr('LEARNED ·', 'ОСВОЕНО ·')} {learnedDate}
           </p>
@@ -1318,12 +1318,12 @@ function AddTextForm({ onSave, onCancel }: {
     <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${NEON}15`,
         display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onCancel} style={{ fontSize: 11, color: `${NEON}50`, letterSpacing: '0.1em',
+        <button onClick={onCancel} style={{ fontSize: 13.5, color: `${NEON}50`, letterSpacing: '0.1em',
           transition: 'color 0.12s' }}
           onMouseEnter={e => e.currentTarget.style.color = NEON}
           onMouseLeave={e => e.currentTarget.style.color = `${NEON}50`}
         >← {tr('BACK', 'НАЗАД')}</button>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
           color: NEON, letterSpacing: '0.2em', textShadow: `0 0 8px ${NEON}` }}>{tr('IMPORT TEXT', 'ИМПОРТ ТЕКСТА')}</p>
       </div>
 
@@ -1342,7 +1342,7 @@ function AddTextForm({ onSave, onCancel }: {
 
         {/* Type */}
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${NEON}50`,
             letterSpacing: '0.15em', marginBottom: 6 }}>{tr('TEXT TYPE', 'ТИП ТЕКСТА')}</p>
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {(['poem','monologue','role','song','prose'] as TextType[]).map(t => (
@@ -1355,7 +1355,7 @@ function AddTextForm({ onSave, onCancel }: {
 
         {/* Language */}
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${NEON}50`,
             letterSpacing: '0.15em', marginBottom: 6 }}>{tr('LANGUAGE', 'ЯЗЫК')}</p>
           <div style={{ display: 'flex', gap: 5 }}>
             {(['RU','EN','CN','other'] as Language[]).map(l => (
@@ -1368,7 +1368,7 @@ function AddTextForm({ onSave, onCancel }: {
 
         {/* Deadline */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}50`,
+          <span style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${NEON}50`,
             letterSpacing: '0.15em', flexShrink: 0 }}>{tr('DEADLINE', 'СРОК')}</span>
           <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
             style={{ ...inp, flex: 1 }}
@@ -1378,7 +1378,7 @@ function AddTextForm({ onSave, onCancel }: {
 
         {/* Raw text */}
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${NEON}50`,
             letterSpacing: '0.15em', marginBottom: 6 }}>{tr('PASTE TEXT *', 'ВСТАВЬТЕ ТЕКСТ *')}</p>
           <textarea value={rawText} onChange={e => setRawText(e.target.value)}
             placeholder={tr('Paste your text here...\n\nFor poems: separate stanzas with empty lines.\nFor roles: format as CHARACTER: dialogue\nFor prose: natural paragraphs.', 'Вставьте текст сюда...\n\nДля стихов: разделяйте строфы пустыми строками.\nДля ролей: формат ПЕРСОНАЖ: реплика\nДля прозы: обычные абзацы.')}
@@ -1393,7 +1393,7 @@ function AddTextForm({ onSave, onCancel }: {
         {preview.length > 0 && (
           <div style={{ padding: '10px 12px', borderRadius: 8,
             background: `${NEON}05`, border: `1px solid ${NEON}18` }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 700,
               color: NEON, letterSpacing: '0.18em', marginBottom: 8 }}>
               {tr('PREVIEW —', 'ПРЕДПРОСМОТР —')} {preview.length} {tr('CHUNKS', 'ФРАГМ.')}
             </p>
@@ -1401,7 +1401,7 @@ function AddTextForm({ onSave, onCancel }: {
               <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6,
                 padding: '6px 8px', borderRadius: 6,
                 background: 'rgba(0,228,160,0.03)', borderLeft: `2px solid ${NEON}30` }}>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}50`,
+                <span style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${NEON}50`,
                   flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
                   color: 'rgba(200,255,230,0.55)', lineHeight: 1.6 }}>{c}</p>
@@ -1466,7 +1466,7 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
       <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 }}>
         <span style={{ fontSize: 32, filter: `drop-shadow(0 0 12px ${NEON})` }}>🐢</span>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 900,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 16.5, fontWeight: 900,
           color: NEON, textShadow: `0 0 10px ${NEON}`, letterSpacing: '0.1em' }}>
           {tr('SESSION COMPLETE', 'СЕССИЯ ЗАВЕРШЕНА')}
         </p>
@@ -1479,7 +1479,7 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
             <div key={l} style={{ textAlign: 'center' }}>
               <p style={{ fontFamily: 'var(--font)', fontSize: 20, fontWeight: 900,
                 color: NEON, lineHeight: 1 }}>{v}</p>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}50`,
+              <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}50`,
                 letterSpacing: '0.1em', marginTop: 2 }}>{l}</p>
             </div>
           ))}
@@ -1508,13 +1508,13 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
       <div style={{ padding: '8px 14px', flexShrink: 0,
         borderBottom: `1px solid ${NEON}10`,
         display: 'flex', alignItems: 'center', gap: 10 }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`, letterSpacing: '0.15em' }}>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}50`, letterSpacing: '0.15em' }}>
           {mode === 'learn' ? tr('LEARN', 'УЧИТЬ') : tr('RECALL', 'ПОВТОР')} · {idx + 1}/{total}
         </p>
         <div style={{ flex: 1 }}>
           <ProgressBar pct={pct} />
         </div>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}40`, letterSpacing: '0.08em', flexShrink: 0 }}>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}40`, letterSpacing: '0.08em', flexShrink: 0 }}>
           {current.textTitle}
         </p>
       </div>
@@ -1524,7 +1524,7 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
         padding: '20px 18px', overflowY: 'auto' }}>
 
         {/* Chunk number */}
-        <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}40`,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${NEON}40`,
           letterSpacing: '0.18em', marginBottom: 12, textAlign: 'center' }}>
           {tr('CHUNK', 'ФРАГМЕНТ')} {current.chunk.order + 1}
         </p>
@@ -1535,13 +1535,13 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
             <div style={{ flex: 1, padding: '16px', borderRadius: 10,
               background: `${NEON}06`, border: `1px solid ${NEON}18`,
               display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 700,
+              <p style={{ fontFamily: 'var(--font)', fontSize: 16.5, fontWeight: 700,
                 color: 'rgba(200,255,230,0.9)', lineHeight: 1.8,
                 whiteSpace: 'pre-wrap', letterSpacing: '0.02em' }}>
                 {current.chunk.content}
               </p>
               {current.chunk.anchor && (
-                <p style={{ fontFamily: 'var(--font)', fontSize: 10,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 12.5,
                   color: `${NEON}60`, borderTop: `1px solid ${NEON}15`, paddingTop: 8 }}>
                   💡 {current.chunk.anchor}
                 </p>
@@ -1572,13 +1572,13 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
             {/* CUE: show first line */}
             {(phase === 'cue' || phase === 'hint') && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 8,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 10.5,
                   color: `${NEON}50`, letterSpacing: '0.18em', textAlign: 'center' }}>
                   {phase === 'cue' ? tr('RECALL THE FULL TEXT ↓', 'ВСПОМНИТЕ ВЕСЬ ТЕКСТ ↓') : tr('30% HINT ↓', 'ПОДСКАЗКА 30% ↓')}
                 </p>
                 <div style={{ padding: '16px', borderRadius: 10,
                   background: `${NEON}06`, border: `1px solid ${NEON}18` }}>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 15, fontWeight: 700,
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 17.5, fontWeight: 700,
                     color: 'rgba(200,255,230,0.85)', lineHeight: 1.8,
                     whiteSpace: 'pre-wrap', letterSpacing: '0.02em' }}>
                     {phase === 'cue' ? getFirstLine(current.chunk.content) : getHint(current.chunk.content)}
@@ -1613,14 +1613,14 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ padding: '14px 16px', borderRadius: 10,
                   background: `${NEON}06`, border: `1px solid ${NEON}20` }}>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 600,
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 16.5, fontWeight: 600,
                     color: 'rgba(200,255,230,0.88)', lineHeight: 1.8,
                     whiteSpace: 'pre-wrap', letterSpacing: '0.02em' }}>
                     {current.chunk.content}
                   </p>
                 </div>
                 <div style={{ flex: 1 }} />
-                <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}50`,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}50`,
                   letterSpacing: '0.18em', textAlign: 'center', flexShrink: 0 }}>
                   {tr('HOW WELL DID YOU RECALL?', 'НАСКОЛЬКО ХОРОШО ВСПОМНИЛИ?')}
                 </p>
@@ -1637,7 +1637,7 @@ function SessionView({ items, mode, language, onFinish, onUpdateState }: {
                       onMouseEnter={e => e.currentTarget.style.background = `${color}15`}
                       onMouseLeave={e => e.currentTarget.style.background = `${color}08`}
                     >
-                      <span style={{ fontSize: 16 }}>{emoji}</span>
+                      <span style={{ fontSize: 18 }}>{emoji}</span>
                       {scoreLabel(score, label)}
                     </button>
                   ))}
@@ -1792,9 +1792,9 @@ export default function Ardo() {
         borderBottom: `1px solid ${NEON}12`, background: 'rgba(0,8,5,0.6)',
         display: 'flex', alignItems: 'center', gap: 14 }}>
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900,
             color: NEON, letterSpacing: '0.2em', textShadow: `0 0 10px ${NEON}` }}>A.R.D.O</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}40`, letterSpacing: '0.1em' }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}40`, letterSpacing: '0.1em' }}>
             {tr('ADAPTIVE RECALL & DRILLING OPERATOR', 'АДАПТИВНЫЙ ОПЕРАТОР ПОВТОРА И ОТРАБОТКИ')}
           </p>
         </div>
@@ -1805,15 +1805,15 @@ export default function Ardo() {
           { v: String(learnedTexts.length),  l: tr('REPERTOIRE', 'РЕПЕРТУАР'), c: learnedTexts.length > 0 ? '#f59e0b' : `${NEON}50`, suffix: '' },
         ].map(({ v, l, c, suffix }) => (
           <div key={l} style={{ textAlign: 'right' }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 900, color: c, lineHeight: 1 }}>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 16.5, fontWeight: 900, color: c, lineHeight: 1 }}>
               {v}{suffix}
             </p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(0,228,160,0.3)',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(0,228,160,0.3)',
               letterSpacing: '0.1em' }}>{l}</p>
           </div>
         ))}
         <button onClick={() => setScreen({ type: 'add-text' })} style={{
-          width: 28, height: 28, borderRadius: 7, fontSize: 16, fontWeight: 700,
+          width: 28, height: 28, borderRadius: 7, fontSize: 18, fontWeight: 700,
           color: `${NEON}80`, border: `1px solid ${NEON}30`,
           background: NEON_DIM, cursor: 'pointer', transition: 'all 0.15s',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1834,16 +1834,16 @@ export default function Ardo() {
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,68,68,0.12)'}
           onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,68,68,0.07)'}
         >
-          <span style={{ fontSize: 16 }}>🔴</span>
+          <span style={{ fontSize: 18 }}>🔴</span>
           <div style={{ flex: 1, textAlign: 'left' }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
               color: '#ff4444', letterSpacing: '0.15em' }}>{tr('START TODAY\'S REVIEW', 'НАЧАТЬ СЕГОДНЯШНИЙ ПОВТОР')}</p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(255,68,68,0.5)',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(255,68,68,0.5)',
               letterSpacing: '0.06em', marginTop: 1 }}>
               {totalDue} {tr('chunks need drilling across all texts', 'фрагментов ждут отработки во всех текстах')}
             </p>
           </div>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 9, color: 'rgba(255,68,68,0.5)' }}>→</span>
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(255,68,68,0.5)' }}>→</span>
         </button>
       )}
 
@@ -1856,14 +1856,14 @@ export default function Ardo() {
         onMouseEnter={e => e.currentTarget.style.borderColor = `${NEON}60`}
         onMouseLeave={e => e.currentTarget.style.borderColor = `${NEON}30`}
       >
-        <span style={{ fontSize: 16 }}>🗣</span>
+        <span style={{ fontSize: 18 }}>🗣</span>
         <div style={{ flex: 1, textAlign: 'left' }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
             color: NEON, letterSpacing: '0.15em' }}>{tr('ARTICULATION WARM-UP', 'РАЗМИНКА АРТИКУЛЯЦИИ')}</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}55`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${NEON}55`,
             letterSpacing: '0.06em', marginTop: 1 }}>{tr('Tongue twisters & drills — loosen up before you learn', 'Скороговорки и упражнения — разомнитесь перед учёбой')}</p>
         </div>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 9, color: `${NEON}55` }}>→</span>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}55` }}>→</span>
       </button>
 
       {/* Tab bar */}
@@ -1940,8 +1940,8 @@ export default function Ardo() {
 
             {learnedTexts.length > 0 && (
               <div style={{ padding: '10px 14px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 16, filter: 'drop-shadow(0 0 6px rgba(245,158,11,0.6))' }}>✦</span>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700,
+                <span style={{ fontSize: 18, filter: 'drop-shadow(0 0 6px rgba(245,158,11,0.6))' }}>✦</span>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 700,
                   color: 'rgba(245,158,11,0.5)', letterSpacing: '0.2em' }}>
                   {learnedTexts.length} {tr('texts in your repertoire', 'текстов в репертуаре')}
                 </p>

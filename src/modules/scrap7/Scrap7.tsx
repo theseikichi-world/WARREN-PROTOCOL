@@ -101,7 +101,7 @@ function StreakCalendar({ tasks }: { tasks: Task[] }) {
               }} />
             </div>
             {(i === 0 || d.getDate() === 1) && (
-              <span style={{ fontFamily: 'var(--font)', fontSize: 6,
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11,
                 color: 'rgba(148,163,184,0.3)' }}>
                 {d.toLocaleDateString('en', { month: 'short' })}
               </span>
@@ -143,7 +143,7 @@ function PomodoroBar({ pomo, onPause, onStop }: {
         background: `conic-gradient(${col} ${pct}%, rgba(255,255,255,0.06) ${pct}%)` }}>
         <div style={{ position: 'absolute', inset: 3, borderRadius: '50%', background: 'var(--bg-void)',
           display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 900, color: col }}>
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900, color: col }}>
             {pomo.phase === 'work' ? '🍅' : '☕'}
           </span>
         </div>
@@ -171,12 +171,12 @@ function PomodoroBar({ pomo, onPause, onStop }: {
         ))}
       </div>
 
-      <button onClick={onPause} style={{ fontFamily: 'var(--font)', fontSize: 12, color: col,
+      <button onClick={onPause} style={{ fontFamily: 'var(--font)', fontSize: 14.5, color: col,
         padding: '3px 7px', border: `1px solid ${col}30`, borderRadius: 4,
         background: `${col}10`, cursor: 'pointer', flexShrink: 0 }}>
         {pomo.running ? '⏸' : '▶'}
       </button>
-      <button onClick={onStop} style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(148,163,184,0.35)',
+      <button onClick={onStop} style={{ fontFamily: 'var(--font)', fontSize: 13.5, color: 'rgba(148,163,184,0.35)',
         padding: '3px 7px', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 4, cursor: 'pointer', flexShrink: 0 }}>
         ✕
       </button>
@@ -274,16 +274,16 @@ function TaskRow({ task, onCheck, onDelete, onEdit, onPomo }: {
       {hov && !editing && (
         <div style={{ display: 'flex', gap: 3, flexShrink: 0, alignItems: 'center' }}>
           <button onClick={onPomo} title={tr('Start Pomodoro', 'Запустить Помодоро')} style={{
-            fontSize: 14, padding: '2px 4px', color: 'rgba(239,68,68,0.35)',
+            fontSize: 16.5, padding: '2px 4px', color: 'rgba(239,68,68,0.35)',
             transition: 'color 0.12s' }}
             onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
             onMouseLeave={e => e.currentTarget.style.color = 'rgba(239,68,68,0.35)'}
           >🍅</button>
-          <button onClick={onEdit} style={{ fontSize: 12, color: `${NEON}40`, padding: '2px 4px', transition: 'color 0.12s' }}
+          <button onClick={onEdit} style={{ fontSize: 14.5, color: `${NEON}40`, padding: '2px 4px', transition: 'color 0.12s' }}
             onMouseEnter={e => e.currentTarget.style.color = NEON}
             onMouseLeave={e => e.currentTarget.style.color = `${NEON}40`}
           >✎</button>
-          <button onClick={onDelete} style={{ fontSize: 14, color: 'rgba(255,0,51,0.25)', padding: '2px 4px', transition: 'color 0.12s', lineHeight: 1 }}
+          <button onClick={onDelete} style={{ fontSize: 16.5, color: 'rgba(255,0,51,0.25)', padding: '2px 4px', transition: 'color 0.12s', lineHeight: 1 }}
             onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
             onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,0,51,0.25)'}
           >×</button>
@@ -488,7 +488,7 @@ function ChatMsg({ text, sender }: { text: string; sender: 'user' | 'scrap7' }) 
       <div style={{ width: 26, height: 26, borderRadius: 6, flexShrink: 0,
         background: isUser ? 'rgba(255,255,255,0.08)' : `${NEON}18`,
         border: `1px solid ${isUser ? 'rgba(255,255,255,0.1)' : `${NEON}30`}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14.5 }}>
         {isUser ? '👤' : '🦝'}
       </div>
       <div style={{ maxWidth: '75%', padding: '8px 12px',
@@ -749,7 +749,7 @@ export default function Scrap7() {
 
 
         <button onClick={() => setModal({})} style={{
-          padding: '9px 12px', fontFamily: 'var(--font)', fontSize: 18, fontWeight: 700,
+          padding: '9px 12px', fontFamily: 'var(--font)', fontSize: 20, fontWeight: 700,
           color: `${NEON}70`, cursor: 'pointer',
           borderLeft: '1px solid rgba(255,255,255,0.06)', transition: 'color 0.15s',
         }}
@@ -823,7 +823,7 @@ export default function Scrap7() {
           {thinking && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
               <div style={{ width: 26, height: 26, borderRadius: 6, background: `${NEON}18`,
-                border: `1px solid ${NEON}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>🦝</div>
+                border: `1px solid ${NEON}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14.5 }}>🦝</div>
               <div style={{ padding: '10px 14px', borderRadius: '2px 10px 10px 10px',
                 background: `rgba(0,180,255,0.08)`, border: `1px solid ${NEON}20`,
                 display: 'flex', gap: 4, alignItems: 'center' }}>
@@ -851,7 +851,7 @@ export default function Scrap7() {
           <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
             color: 'rgba(245,158,11,0.65)' }}>{milestone.msg}</p>
           <button onClick={() => setMilestone(null)}
-            style={{ position: 'absolute', top: 6, right: 8, fontSize: 12,
+            style={{ position: 'absolute', top: 6, right: 8, fontSize: 14.5,
               color: 'rgba(245,158,11,0.4)', cursor: 'pointer' }}>×</button>
         </div>
       )}
@@ -879,7 +879,7 @@ export default function Scrap7() {
           background: input.trim() ? `${NEON}18` : 'rgba(255,255,255,0.03)',
           border: `1px solid ${input.trim() ? `${NEON}40` : 'rgba(255,255,255,0.06)'}`,
           color: input.trim() ? NEON : 'rgba(148,163,184,0.2)',
-          fontSize: 13, cursor: input.trim() ? 'pointer' : 'default',
+          fontSize: 15.5, cursor: input.trim() ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
         }}>▶</button>
       </div>

@@ -49,21 +49,21 @@ export function DayRibbon({ blocks, wakeMin, sleepMin, nowMin, freeMinutes, curr
     <div style={{ marginTop: 16 }}>
       {/* Header — what's happening + what's left */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
-        <span style={{ fontSize: 15, filter: 'drop-shadow(0 0 8px #22d3ee)',
+        <span style={{ fontSize: 17.5, filter: 'drop-shadow(0 0 8px #22d3ee)',
           animation: 'pulse 2.4s ease-in-out infinite' }}>∞</span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
           color: 'rgba(34,211,238,0.75)', letterSpacing: '0.2em' }}>
           {tr("TODAY'S FLOW", 'ПОТОК ДНЯ')}</span>
 
         {current && (
           <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <span style={{ color: 'rgba(148,163,184,0.3)' }}>·</span>
-            <span style={{ fontSize: 10 }}>{KIND_ICON[current.kind]}</span>
-            <span style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700,
+            <span style={{ fontSize: 12.5 }}>{KIND_ICON[current.kind]}</span>
+            <span style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 700,
               color: KIND_COLOR[current.kind], textShadow: `0 0 8px ${KIND_COLOR[current.kind]}50`,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 260 }}>
               {current.label}</span>
-            <span style={{ fontFamily: 'var(--font)', fontSize: 8, color: 'rgba(148,163,184,0.5)' }}>
+            <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: 'rgba(148,163,184,0.5)' }}>
               {tr('until', 'до')} {fmtClock(current.end)}</span>
           </span>
         )}
@@ -71,18 +71,18 @@ export function DayRibbon({ blocks, wakeMin, sleepMin, nowMin, freeMinutes, curr
         <div style={{ flex: 1 }} />
 
         {pendingCount > 0 && (
-          <span style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800,
+          <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800,
             color: 'rgba(255,215,0,0.8)', letterSpacing: '0.08em', padding: '3px 8px',
             borderRadius: 6, border: '1px solid rgba(255,215,0,0.28)', background: 'rgba(255,215,0,0.06)' }}>
             {pendingCount} {tr('OPEN', 'ОТКРЫТО')}</span>
         )}
-        <span style={{ fontFamily: 'var(--font)', fontSize: 12, fontWeight: 900, color: '#39ff14',
+        <span style={{ fontFamily: 'var(--font)', fontSize: 14.5, fontWeight: 900, color: '#39ff14',
           textShadow: '0 0 10px rgba(57,255,20,0.45)' }}>{fmtDur(freeMinutes)}</span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(57,255,20,0.5)',
+        <span style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(57,255,20,0.5)',
           letterSpacing: '0.12em' }}>{tr('FREE LEFT', 'СВОБОДНО')}</span>
         <button onClick={onOpenConfig} title={tr('Day anchors & weekly optimize', 'Опоры дня и оптимизация недели')}
           style={{
-            width: 24, height: 24, borderRadius: 7, fontSize: 11, cursor: 'pointer', marginLeft: 4,
+            width: 24, height: 24, borderRadius: 7, fontSize: 13.5, cursor: 'pointer', marginLeft: 4,
             color: 'rgba(34,211,238,0.6)', border: '1px solid rgba(34,211,238,0.25)',
             background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>⚙</button>
@@ -124,11 +124,11 @@ export function DayRibbon({ blocks, wakeMin, sleepMin, nowMin, freeMinutes, curr
                 boxShadow: isNow ? `inset 0 0 20px ${color}30` : 'none',
                 transition: 'background 0.15s, opacity 0.15s',
               }}>
-              <span style={{ fontSize: 9, flexShrink: 0, opacity: 0.85 }}>
+              <span style={{ fontSize: 11.5, flexShrink: 0, opacity: 0.85 }}>
                 {b.done ? '✓' : KIND_ICON[b.kind]}</span>
               {wide && (
                 <span style={{
-                  fontFamily: 'var(--font)', fontSize: 8.5, fontWeight: 700, minWidth: 0,
+                  fontFamily: 'var(--font)', fontSize: 11, fontWeight: 700, minWidth: 0,
                   color: isFree ? 'rgba(57,255,20,0.75)' : 'rgba(230,248,255,0.92)',
                   textDecoration: b.done ? 'line-through' : 'none',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -161,12 +161,12 @@ export function DayRibbon({ blocks, wakeMin, sleepMin, nowMin, freeMinutes, curr
         {ticks.map(t => (
           <span key={t} style={{
             position: 'absolute', left: `${pct(t)}%`, transform: 'translateX(-50%)',
-            fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(34,211,238,0.35)',
+            fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(34,211,238,0.35)',
             letterSpacing: '0.04em', whiteSpace: 'nowrap',
           }}>{fmtClock(t)}</span>
         ))}
         {overdue && (
-          <span style={{ position: 'absolute', right: 0, fontFamily: 'var(--font)', fontSize: 7,
+          <span style={{ position: 'absolute', right: 0, fontFamily: 'var(--font)', fontSize: 11.5,
             color: 'rgba(255,84,112,0.6)', letterSpacing: '0.08em' }}>
             {tr('past bedtime', 'после отбоя')}</span>
         )}

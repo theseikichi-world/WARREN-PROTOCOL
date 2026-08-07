@@ -25,9 +25,9 @@ function WeekDots({ dots, neon }: { dots: boolean[]; neon: string }) {
             border: `1px solid ${on ? `${neon}70` : 'rgba(255,255,255,0.07)'}`,
             boxShadow: on ? `0 0 7px ${neon}45` : 'none',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 8, color: neon, lineHeight: 1,
+            fontSize: 10.5, color: neon, lineHeight: 1,
           }}>{on ? '✓' : ''}</div>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 6,
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11,
             color: i === todayIdx ? `${neon}b0` : 'rgba(148,163,184,0.35)',
             fontWeight: i === todayIdx ? 800 : 400 }}>{LETTERS[i]}</span>
         </div>
@@ -41,9 +41,9 @@ function Bar({ pct, color, label, value }: { pct: number; color: string; label?:
     <div style={{ flex: 1, minWidth: 0 }}>
       {(label || value) && (
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-          {label && <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 700,
+          {label && <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 700,
             color: `${color}c0`, letterSpacing: '0.1em' }}>{label}</span>}
-          {value && <span style={{ fontFamily: 'var(--font)', fontSize: 6.5,
+          {value && <span style={{ fontFamily: 'var(--font)', fontSize: 11,
             color: 'rgba(148,163,184,0.5)' }}>{value}</span>}
         </div>
       )}
@@ -68,7 +68,7 @@ function Ring({ pct, color, label }: { pct: number; color: string; label: string
           style={{ filter: `drop-shadow(0 0 4px ${c})`, transition: 'stroke-dasharray 0.6s ease' }} />
       </svg>
       <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+        justifyContent: 'center', fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
         color: c, textShadow: `0 0 8px ${c}70` }}>{label}</span>
     </div>
   )
@@ -80,19 +80,19 @@ function Metric({ value, caption, color }: { value: string; caption: string; col
     <div style={{ textAlign: 'right', flexShrink: 0 }}>
       <p style={{ fontFamily: 'var(--font)', fontSize: 20, fontWeight: 900, color, lineHeight: 1,
         textShadow: `0 0 12px ${color}55` }}>{value}</p>
-      <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: 'rgba(148,163,184,0.5)',
+      <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(148,163,184,0.5)',
         letterSpacing: '0.12em', marginTop: 4, whiteSpace: 'nowrap' }}>{caption}</p>
     </div>
   )
 }
 
 const footerStyle = (color: string): React.CSSProperties => ({
-  fontFamily: 'var(--font)', fontSize: 8, color: `${color}95`,
+  fontFamily: 'var(--font)', fontSize: 10.5, color: `${color}95`,
   letterSpacing: '0.03em', marginTop: 'auto', paddingTop: 8,
   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
 })
 const emptyStyle: React.CSSProperties = {
-  fontFamily: 'var(--font)', fontSize: 8, color: 'rgba(148,163,184,0.4)',
+  fontFamily: 'var(--font)', fontSize: 10.5, color: 'rgba(148,163,184,0.4)',
   letterSpacing: '0.03em', marginTop: 'auto', paddingTop: 8,
 }
 
@@ -117,7 +117,7 @@ export function ModuleCard({ member, sums, onOpen }: {
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
         <WeekDots dots={s.weekDots} neon={neon} />
         {s.streak > 0 && (
-          <span style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900,
+          <span style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900,
             color: '#ff6b00', textShadow: '0 0 8px rgba(255,107,0,0.5)', marginBottom: 9 }}>
             {s.streak}🔥</span>
         )}
@@ -134,7 +134,7 @@ export function ModuleCard({ member, sums, onOpen }: {
     metric = <Metric value={String(s.active)} caption={tr('MISSIONS', 'МИССИЙ')} color={neon} />
     body = s.dream ? (
       <div>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 700, color: 'rgba(230,240,255,0.85)',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: 'rgba(230,240,255,0.85)',
           marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           ✦ {s.dream}</p>
         <Bar pct={pct} color={neon} value={`${s.done}/${s.total}`} />
@@ -150,13 +150,13 @@ export function ModuleCard({ member, sums, onOpen }: {
     body = s.texts > 0 ? (
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${neon}a0`,
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${neon}a0`,
             letterSpacing: '0.1em' }}>{tr('MASTERY', 'ОСВОЕНО')}</span>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, color: neon }}>
+          <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, color: neon }}>
             {s.mastery}%</span>
         </div>
         <Bar pct={s.mastery} color={neon} />
-        <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.45)', marginTop: 5 }}>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.45)', marginTop: 5 }}>
           {s.texts} {tr('texts in training', 'текстов в работе')}</p>
       </div>
     ) : <p style={emptyStyle}>{tr('No texts loaded', 'Нет текстов')}</p>
@@ -187,10 +187,10 @@ export function ModuleCard({ member, sums, onOpen }: {
       caption={s.catchUp > 0 ? tr('TO WATCH', 'К ПРОСМОТРУ') : tr('WATCHING', 'СМОТРЮ')} color={neon} />
     body = s.title ? (
       <div>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 700, color: 'rgba(255,240,225,0.9)',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 12, fontWeight: 700, color: 'rgba(255,240,225,0.9)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           🎬 {s.title}</p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, marginTop: 5,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, marginTop: 5,
           color: s.detail ? '#4ade80' : s.days === 0 ? '#4ade80' : `${neon}b0` }}>
           {s.detail
             ? `🍿 ${s.detail}`
@@ -213,11 +213,11 @@ export function ModuleCard({ member, sums, onOpen }: {
           background: s.writtenToday ? 'rgba(57,255,20,0.08)' : `${neon}0c`,
           border: `1px solid ${s.writtenToday ? 'rgba(57,255,20,0.3)' : `${neon}30`}`,
         }}>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800,
+          <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800,
             color: s.writtenToday ? '#39ff14' : neon, letterSpacing: '0.06em' }}>
             {s.writtenToday ? tr("✓ TODAY'S PAGE SEALED", '✓ СТРАНИЦА ЗАПИСАНА') : tr("○ TODAY IS BLANK", '○ СЕГОДНЯ ПУСТО')}</span>
         </div>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 9, color: `${neon}90` }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${neon}90` }}>
           🎟 {s.stickers}</span>
       </div>
     )
@@ -256,10 +256,10 @@ export function ModuleCard({ member, sums, onOpen }: {
           <CyberIcon id={member.id} size={17} color={neon} glow />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 900, color: neon,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 12, fontWeight: 900, color: neon,
             letterSpacing: '0.1em', textShadow: `0 0 8px ${neon}50`,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.name}</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.5)',
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.5)',
             letterSpacing: '0.05em', marginTop: 3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {hov ? tr('OPEN →', 'ОТКРЫТЬ →') : member.role}</p>

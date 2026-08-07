@@ -26,11 +26,11 @@ const TIERS: NodeTier[] = [1, 2, 3, 4]
 const field: React.CSSProperties = {
   width: '100%', padding: '6px 8px', borderRadius: 6,
   background: 'rgba(2,8,16,0.7)', border: '1px solid rgba(255,255,255,0.09)',
-  fontFamily: 'var(--font)', fontSize: 9, color: 'rgba(230,242,255,0.92)',
+  fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(230,242,255,0.92)',
 }
 
 const label: React.CSSProperties = {
-  fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 800,
+  fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
   letterSpacing: '0.16em', color: 'rgba(148,163,184,0.45)', marginBottom: 4,
 }
 
@@ -139,20 +139,20 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
       {/* Header */}
       <div style={{ flexShrink: 0, padding: '11px 14px', borderBottom: `1px solid ${accent}20` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900, color: accent,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900, color: accent,
             letterSpacing: '0.2em', textShadow: `0 0 10px ${accent}80` }}>
             {editing ? tr('EDIT PROTOCOL', 'ПРАВКА ПРОТОКОЛА') : tr('FORGE PROTOCOL', 'КОВКА ПРОТОКОЛА')}
           </p>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: DIM, marginLeft: 'auto' }}>
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11, color: DIM, marginLeft: 'auto' }}>
             {draft.nodes.length} {tr('ROUTINES', 'РУТИН')} · {draft.chapters.length} {tr('CHAPTERS', 'ГЛАВ')}
           </span>
         </div>
         <input value={draft.title} onChange={e => setDraft(d => ({ ...d, title: e.target.value }))}
           placeholder={tr('UPLINK NAME', 'ИМЯ КАНАЛА')}
-          style={{ ...field, marginTop: 8, fontSize: 12, fontWeight: 900, letterSpacing: '0.1em',
+          style={{ ...field, marginTop: 8, fontSize: 14.5, fontWeight: 900, letterSpacing: '0.1em',
             color: accent, borderColor: `${accent}35` }} />
         {draft.note && (
-          <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: 'rgba(200,220,240,0.6)',
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: 'rgba(200,220,240,0.6)',
             marginTop: 7, lineHeight: 1.6, fontStyle: 'italic' }}>▸ {draft.note}</p>
         )}
       </div>
@@ -187,17 +187,17 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
                       border: `1px solid ${on ? (bad ? WARN : accent) : `${bad ? WARN : accent}45`}`,
                       boxShadow: on ? `0 0 14px ${(bad ? WARN : accent)}55` : 'none',
                     }}>
-                    <span style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700, lineHeight: 1.25,
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 700, lineHeight: 1.25,
                       color: 'rgba(230,242,255,0.9)', display: '-webkit-box', WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {p.node.title}
                     </span>
-                    <span style={{ fontFamily: 'var(--font)', fontSize: 6, fontWeight: 800,
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
                       letterSpacing: '0.12em', color: bad ? WARN : `${accent}90` }}>
                       {bad ? tr('NEEDS WORK', 'НЕ ГОТОВО') : TIER_META[p.node.tier].name}
                     </span>
                     {installedKeys.has(key) && (
-                      <span style={{ fontFamily: 'var(--font)', fontSize: 5.5, letterSpacing: '0.1em', color: GOLD }}>
+                      <span style={{ fontFamily: 'var(--font)', fontSize: 11, letterSpacing: '0.1em', color: GOLD }}>
                         ◆ {tr('LIVE', 'АКТИВНА')}
                       </span>
                     )}
@@ -213,7 +213,7 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
           <div key={ci} style={{ marginBottom: 12, padding: '9px 10px', borderRadius: 9,
             background: 'rgba(8,16,28,0.5)', border: '1px solid rgba(255,255,255,0.07)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, color: `${accent}80`,
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, color: `${accent}80`,
                 letterSpacing: '0.16em', flexShrink: 0 }}>{String(ci + 1).padStart(2, '0')}</span>
               <input value={chapter.title} onChange={e => patchChapter(ci, { title: e.target.value })}
                 placeholder={tr('Chapter name', 'Имя главы')}
@@ -221,7 +221,7 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
               {draft.chapters.length > 1 && (
                 <button onClick={() => removeChapter(ci)} title={tr('remove chapter', 'убрать главу')}
                   style={{ background: 'transparent', border: 'none', cursor: 'pointer',
-                    color: DIM, fontSize: 11, flexShrink: 0, padding: '0 2px' }}>✕</button>
+                    color: DIM, fontSize: 13.5, flexShrink: 0, padding: '0 2px' }}>✕</button>
               )}
             </div>
 
@@ -255,7 +255,7 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
 
               <button onClick={() => addNode(ci)} style={{
                 padding: '6px', borderRadius: 6, cursor: 'pointer', background: 'transparent',
-                border: `1px dashed ${accent}35`, fontFamily: 'var(--font)', fontSize: 7.5,
+                border: `1px dashed ${accent}35`, fontFamily: 'var(--font)', fontSize: 10,
                 fontWeight: 700, letterSpacing: '0.12em', color: `${accent}90`,
               }}>+ {tr('ROUTINE', 'РУТИНА')}</button>
             </div>
@@ -264,7 +264,7 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
 
         <button onClick={addChapter} style={{
           width: '100%', padding: '7px', borderRadius: 7, cursor: 'pointer', background: 'transparent',
-          border: '1px dashed rgba(255,255,255,0.14)', fontFamily: 'var(--font)', fontSize: 7.5,
+          border: '1px dashed rgba(255,255,255,0.14)', fontFamily: 'var(--font)', fontSize: 10,
           fontWeight: 700, letterSpacing: '0.14em', color: DIM,
         }}>+ {tr('CHAPTER', 'ГЛАВА')}</button>
       </div>
@@ -278,13 +278,13 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
             {problems.slice(0, 8).map((p, i) => {
               const text = problemText(p, draft)
               return (
-                <p key={i} style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${WARN}c0` }}>
+                <p key={i} style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${WARN}c0` }}>
                   ⊘ {tr(text.en, text.ru)}
                 </p>
               )
             })}
             {problems.length > 8 && (
-              <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: DIM }}>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: DIM }}>
                 +{problems.length - 8} {tr('more', 'ещё')}
               </p>
             )}
@@ -294,13 +294,13 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onCancel} style={{
             padding: '9px 14px', borderRadius: 8, cursor: 'pointer', background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font)', fontSize: 8.5,
+            border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font)', fontSize: 11,
             fontWeight: 700, letterSpacing: '0.12em', color: DIM,
           }}>{tr('DISCARD', 'ОТМЕНА')}</button>
 
           <button onClick={() => ready && onCommit(draft)} disabled={!ready} style={{
             flex: 1, padding: '9px', borderRadius: 8, cursor: ready ? 'pointer' : 'default',
-            fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 900, letterSpacing: '0.16em',
+            fontFamily: 'var(--font)', fontSize: 12, fontWeight: 900, letterSpacing: '0.16em',
             color: ready ? '#02121a' : 'rgba(148,163,184,0.35)',
             background: ready ? `linear-gradient(135deg, ${accent}, ${accent}b0)` : 'transparent',
             border: `1px solid ${ready ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
@@ -343,7 +343,7 @@ function NodeEditor({
 
   const chip = (on: boolean): React.CSSProperties => ({
     padding: '3px 7px', borderRadius: 5, cursor: 'pointer', fontFamily: 'var(--font)',
-    fontSize: 7, fontWeight: 700, letterSpacing: '0.08em',
+    fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em',
     color: on ? '#02121a' : DIM,
     background: on ? accent : 'transparent',
     border: `1px solid ${on ? accent : 'rgba(255,255,255,0.12)'}`,
@@ -357,13 +357,13 @@ function NodeEditor({
         width: '100%', display: 'flex', alignItems: 'center', gap: 7, padding: '7px 9px',
         background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left',
       }}>
-        <span style={{ fontSize: 8, color: expanded ? accent : DIM, flexShrink: 0 }}>{expanded ? '▾' : '▸'}</span>
-        <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 9, fontWeight: 700,
+        <span style={{ fontSize: 10.5, color: expanded ? accent : DIM, flexShrink: 0 }}>{expanded ? '▾' : '▸'}</span>
+        <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
           color: 'rgba(230,242,255,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {node.title.trim() || tr('untitled routine', 'рутина без имени')}
         </span>
-        {live && <span style={{ fontFamily: 'var(--font)', fontSize: 6, color: GOLD, flexShrink: 0 }}>◆</span>}
-        <span style={{ fontFamily: 'var(--font)', fontSize: 6, fontWeight: 700, letterSpacing: '0.1em',
+        {live && <span style={{ fontFamily: 'var(--font)', fontSize: 11, color: GOLD, flexShrink: 0 }}>◆</span>}
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
           color: `${accent}80`, flexShrink: 0 }}>{tier.name}</span>
       </button>
 
@@ -390,7 +390,7 @@ function NodeEditor({
                   style={chip(node.tier === t)}>{TIER_META[t].name}</button>
               ))}
             </div>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, marginTop: 4 }}>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM, marginTop: 4 }}>
               {tier.profile} · ≈{tier.baselineDays}{tr('d to automatic', 'д до автоматизма')}
             </p>
           </div>
@@ -400,14 +400,14 @@ function NodeEditor({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {node.ladder.map((rung, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, width: 12, flexShrink: 0 }}>
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM, width: 12, flexShrink: 0 }}>
                     {i + 1}
                   </span>
                   <input value={rung} onChange={e => onRung(i, e.target.value)}
                     placeholder={tr('30 min', '30 мин')} style={field} />
                   {node.ladder.length > 1 && (
                     <button onClick={() => onRemoveRung(i)} style={{ background: 'transparent', border: 'none',
-                      cursor: 'pointer', color: DIM, fontSize: 10, flexShrink: 0 }}>✕</button>
+                      cursor: 'pointer', color: DIM, fontSize: 12.5, flexShrink: 0 }}>✕</button>
                   )}
                 </div>
               ))}
@@ -424,7 +424,7 @@ function NodeEditor({
                 </button>
               ))}
               {draft.nodes.length <= 1 && (
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM }}>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM }}>
                   {tr('nothing else to require yet', 'пока нечего требовать')}
                 </span>
               )}
@@ -460,12 +460,12 @@ function NodeEditor({
             <button onClick={() => setConfirmRemove(true)} style={{
               alignSelf: 'flex-start', padding: '4px 8px', borderRadius: 5, cursor: 'pointer',
               background: 'transparent', border: `1px solid ${WARN}30`, fontFamily: 'var(--font)',
-              fontSize: 7, fontWeight: 700, letterSpacing: '0.1em', color: `${WARN}b0`,
+              fontSize: 11.5, fontWeight: 700, letterSpacing: '0.1em', color: `${WARN}b0`,
             }}>✕ {tr('REMOVE', 'УДАЛИТЬ')}</button>
           ) : (
             <div style={{ padding: '7px 9px', borderRadius: 6, background: `${WARN}0e`,
               border: `1px solid ${WARN}35` }}>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${WARN}d0`, lineHeight: 1.6 }}>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${WARN}d0`, lineHeight: 1.6 }}>
                 {live
                   ? tr('This routine has a habit with real history. Removing it moves the habit to LIFE SUPPORT — score and streak intact. Nothing is deleted.',
                        'У этой рутины есть привычка с реальной историей. Удаление переместит её в ЖИЗНЕОБЕСПЕЧЕНИЕ — счёт и серия сохранятся. Ничего не удаляется.')

@@ -69,7 +69,7 @@ function BigClock() {
         textShadow: '0 0 18px rgba(0,245,255,0.5)' }}>
         {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
       </p>
-      <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, color: 'rgba(0,245,255,0.55)',
+      <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(0,245,255,0.55)',
         letterSpacing: '0.14em', marginTop: 4, textTransform: 'uppercase' }}>
         {now.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short' })}
       </p>
@@ -81,7 +81,7 @@ function BigClock() {
 function SectionLabel({ icon, text, color = NEON }: { icon: string; text: string; color?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '22px 0 12px' }}>
-      <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+      <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
         color: `${color}90`, letterSpacing: '0.22em' }}>{icon} {text}</span>
       <div style={{ flex: 1, height: 1, background: `${color}12` }} />
     </div>
@@ -109,11 +109,11 @@ function QuestLog({ commitments, suggestions, onOpenModule }: {
       {/* Header + day progress */}
       <div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 900, color: GOLD,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 15.5, fontWeight: 900, color: GOLD,
             letterSpacing: '0.2em', textShadow: `0 0 12px ${GOLD}60` }}>
             ⚔ {tr('QUEST LOG', 'ЖУРНАЛ ЗАДАНИЙ')}</p>
           {total > 0 && (
-            <span style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
+            <span style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 800,
               color: done === total ? '#39ff14' : `${GOLD}90`, marginLeft: 'auto' }}>{done}/{total}</span>
           )}
         </div>
@@ -132,10 +132,10 @@ function QuestLog({ commitments, suggestions, onOpenModule }: {
 
       {/* Main quests — today's commitments */}
       <div>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, color: `${GOLD}80`,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, color: `${GOLD}80`,
           letterSpacing: '0.22em', marginBottom: 8 }}>{tr('MAIN QUESTS', 'ОСНОВНЫЕ ЗАДАНИЯ')}</p>
         {total === 0 && (
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9.5, color: 'rgba(148,163,184,0.45)',
+          <p style={{ fontFamily: 'var(--font)', fontSize: 12, color: 'rgba(148,163,184,0.45)',
             lineHeight: 1.7 }}>
             {tr('Nothing scheduled today — the realm is quiet.', 'На сегодня ничего не назначено — в королевстве тихо.')}</p>
         )}
@@ -150,17 +150,17 @@ function QuestLog({ commitments, suggestions, onOpenModule }: {
             }}
               onMouseEnter={e => e.currentTarget.style.borderColor = c.done ? 'rgba(57,255,20,0.4)' : `${GOLD}60`}
               onMouseLeave={e => e.currentTarget.style.borderColor = c.done ? 'rgba(57,255,20,0.18)' : 'rgba(255,215,0,0.18)'}>
-              <span style={{ fontSize: 11, flexShrink: 0,
+              <span style={{ fontSize: 13.5, flexShrink: 0,
                 color: c.done ? '#39ff14' : GOLD,
                 textShadow: c.done ? '0 0 6px #39ff14' : `0 0 6px ${GOLD}80` }}>
                 {c.done ? '◆' : '◇'}</span>
-              <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 10.5,
+              <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 13,
                 fontWeight: 700, letterSpacing: '0.03em',
                 color: c.done ? 'rgba(180,220,190,0.55)' : 'rgba(255,245,215,0.92)',
                 textDecoration: c.done ? 'line-through' : 'none',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {c.label}</span>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, flexShrink: 0,
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, flexShrink: 0,
                 color: c.kind === 'habit' ? 'rgba(0,180,255,0.6)' : `${GOLD}60`,
                 letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 4,
                 border: `1px solid ${c.kind === 'habit' ? 'rgba(0,180,255,0.25)' : `${GOLD}25`}` }}>
@@ -169,7 +169,7 @@ function QuestLog({ commitments, suggestions, onOpenModule }: {
           ))}
         </div>
         {total > 0 && done === total && (
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, color: '#39ff14', marginTop: 8,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: '#39ff14', marginTop: 8,
             letterSpacing: '0.08em', textShadow: '0 0 8px rgba(57,255,20,0.5)' }}>
             ✦ {tr('ALL QUESTS CLEARED — free roam unlocked', 'ВСЕ ЗАДАНИЯ ВЫПОЛНЕНЫ — свободная игра открыта')}</p>
         )}
@@ -178,7 +178,7 @@ function QuestLog({ commitments, suggestions, onOpenModule }: {
       {/* Side quests — guild invitations */}
       {side.length > 0 && (
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800,
             color: 'rgba(139,155,255,0.7)', letterSpacing: '0.22em', marginBottom: 8 }}>
             {tr('SIDE QUESTS', 'ПОБОЧНЫЕ ЗАДАНИЯ')}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -190,18 +190,18 @@ function QuestLog({ commitments, suggestions, onOpenModule }: {
               }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = `${TONE[s.tone]}60`}
                 onMouseLeave={e => e.currentTarget.style.borderColor = `${TONE[s.tone]}28`}>
-                <span style={{ fontSize: 15, flexShrink: 0 }}>{s.icon}</span>
+                <span style={{ fontSize: 17.5, flexShrink: 0 }}>{s.icon}</span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontFamily: 'var(--font)', fontSize: 10,
+                  <span style={{ display: 'block', fontFamily: 'var(--font)', fontSize: 12.5,
                     fontWeight: 700, color: TONE[s.tone],
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.label}</span>
                   {s.detail && (
-                    <span style={{ display: 'block', fontFamily: 'var(--font)', fontSize: 8,
+                    <span style={{ display: 'block', fontFamily: 'var(--font)', fontSize: 10.5,
                       color: 'rgba(148,163,184,0.55)', marginTop: 1,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.detail}</span>
                   )}
                 </span>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, flexShrink: 0,
+                <span style={{ fontFamily: 'var(--font)', fontSize: 10, flexShrink: 0,
                   color: `${TONE[s.tone]}cc` }}>~{fmtDur(s.minutes)}</span>
               </button>
             ))}
@@ -229,13 +229,13 @@ function BigEntry({ icon, title, sub, color, onClick }: {
       }}>
       <span style={{ fontSize: 24, flexShrink: 0, filter: `drop-shadow(0 0 8px ${color}70)` }}>{icon}</span>
       <div style={{ minWidth: 0 }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 900, color,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 900, color,
           letterSpacing: '0.14em', textShadow: `0 0 10px ${color}50` }}>{title}</p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: 'rgba(148,163,184,0.55)',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: 'rgba(148,163,184,0.55)',
           letterSpacing: '0.04em', marginTop: 4,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</p>
       </div>
-      <span style={{ marginLeft: 'auto', fontFamily: 'var(--font)', fontSize: 12,
+      <span style={{ marginLeft: 'auto', fontFamily: 'var(--font)', fontSize: 14.5,
         color: `${color}${hov ? 'cc' : '55'}`, flexShrink: 0 }}>→</span>
     </button>
   )
@@ -276,7 +276,7 @@ function AppTile({ app, onLaunch, fav, onToggleFav, stat, running, icon }: {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: `linear-gradient(135deg, ${neon}22, ${neon}08)`,
           border: `1px solid ${neon}45`,
-          fontFamily: 'var(--font)', fontSize: 16, fontWeight: 900, color: neon,
+          fontFamily: 'var(--font)', fontSize: 18, fontWeight: 900, color: neon,
           textShadow: icon ? 'none' : `0 0 10px ${neon}`,
           boxShadow: hov ? `0 0 14px ${neon}40` : `inset 0 0 10px ${neon}10`,
           transition: 'box-shadow 0.15s',
@@ -294,12 +294,12 @@ function AppTile({ app, onLaunch, fav, onToggleFav, stat, running, icon }: {
           )}
         </div>
         <span style={{
-          fontFamily: 'var(--font)', fontSize: 8.5, fontWeight: 600, letterSpacing: '0.03em',
+          fontFamily: 'var(--font)', fontSize: 11, fontWeight: 600, letterSpacing: '0.03em',
           color: hov ? 'rgba(230,250,255,0.95)' : 'rgba(200,220,235,0.6)',
           maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{app.name}</span>
         <span style={{
-          fontFamily: 'var(--font)', fontSize: 6.5, letterSpacing: '0.06em', height: 8,
+          fontFamily: 'var(--font)', fontSize: 11, letterSpacing: '0.06em', height: 8,
           color: running ? 'rgba(57,255,20,0.8)' : 'rgba(148,163,184,0.4)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%',
         }}>{meta ?? ''}</span>
@@ -310,7 +310,7 @@ function AppTile({ app, onLaunch, fav, onToggleFav, stat, running, icon }: {
           title={fav ? tr('Unpin from home', 'Открепить с главной') : tr('Pin to home', 'Закрепить на главной')}
           style={{
             position: 'absolute', top: 5, right: 5, width: 20, height: 20,
-            borderRadius: 6, cursor: 'pointer', fontSize: 11, lineHeight: 1,
+            borderRadius: 6, cursor: 'pointer', fontSize: 13.5, lineHeight: 1,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: fav ? GOLD : 'rgba(148,163,184,0.5)',
             background: 'rgba(4,10,18,0.85)',
@@ -481,14 +481,14 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
           background: 'linear-gradient(135deg, rgba(0,245,255,0.18), rgba(0,245,255,0.04))',
           border: '1px solid rgba(0,245,255,0.35)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'var(--font)', fontSize: 18, fontWeight: 900, color: NEON,
+          fontFamily: 'var(--font)', fontSize: 20, fontWeight: 900, color: NEON,
           textShadow: `0 0 14px ${NEON}`, boxShadow: '0 0 18px rgba(0,245,255,0.18)',
         }}>W</div>
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 15, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 17.5, fontWeight: 900,
             letterSpacing: '0.26em', color: NEON, textShadow: `0 0 16px ${NEON}` }}>
             WARREN OS</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(0,245,255,0.4)',
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(0,245,255,0.4)',
             letterSpacing: '0.18em', marginTop: 2 }}>
             <span className="pulse" style={{ color: '#39ff14', marginRight: 5 }}>●</span>
             {tr('ALL SYSTEMS NOMINAL', 'ВСЕ СИСТЕМЫ В НОРМЕ')}</p>
@@ -497,13 +497,13 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
         {view !== 'home' && (
           <button onClick={() => setView('home')} style={{
             marginLeft: 22, padding: '10px 18px', borderRadius: 9, cursor: 'pointer',
-            fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800, letterSpacing: '0.14em',
+            fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 800, letterSpacing: '0.14em',
             color: NEON, border: '1px solid rgba(0,245,255,0.35)',
             background: 'rgba(0,245,255,0.07)', transition: 'all 0.15s',
           }}>← {tr('HOME', 'ГЛАВНАЯ')}</button>
         )}
         {hostedMember && (
-          <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 900,
+          <span style={{ fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 900,
             color: hostedMember.neon, letterSpacing: '0.14em',
             textShadow: `0 0 10px ${hostedMember.neon}` }}>
             {hostedMember.name}</span>
@@ -514,7 +514,7 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
         {/* Not an exit — Warren shrinks back to the compact widget */}
         <button onClick={onExit} title={tr('Back to the compact widget (Esc)', 'Вернуться к компактному виджету (Esc)')} style={{
           padding: '11px 18px', borderRadius: 9, cursor: 'pointer', marginLeft: 8,
-          fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 800, letterSpacing: '0.12em',
+          fontFamily: 'var(--font)', fontSize: 12, fontWeight: 800, letterSpacing: '0.12em',
           color: 'rgba(0,245,255,0.65)', border: '1px solid rgba(0,245,255,0.25)',
           background: 'rgba(0,245,255,0.05)', transition: 'all 0.15s',
         }}
@@ -533,7 +533,7 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
               color: 'rgba(235,250,255,0.95)', letterSpacing: '0.05em' }}>
               {greeting}{name ? `, ${name.toUpperCase()}` : ''}
               <span style={{ color: NEON, textShadow: `0 0 14px ${NEON}` }}> _</span></p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, color: 'rgba(148,163,184,0.5)',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(148,163,184,0.5)',
               letterSpacing: '0.16em', marginTop: 5, textTransform: 'uppercase' }}>
               {tr('The guild is assembled · your day awaits', 'Гильдия в сборе · день ждёт')}</p>
 
@@ -588,7 +588,7 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
               ))}
             </div>
             {favApps.length === 0 && (
-              <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, color: 'rgba(148,163,184,0.4)',
+              <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(148,163,184,0.4)',
                 marginTop: 10, letterSpacing: '0.04em' }}>
                 {suggestedApps.length > 0
                   ? tr('Your most-used programs — pin any with ★ to keep it here.',
@@ -638,7 +638,7 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
               style={{
                 width: '100%', maxWidth: 460, padding: '11px 16px', borderRadius: 10,
                 background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(0,245,255,0.2)',
-                outline: 'none', fontFamily: 'var(--font)', fontSize: 12,
+                outline: 'none', fontFamily: 'var(--font)', fontSize: 14.5,
                 color: 'rgba(225,250,255,0.92)', letterSpacing: '0.03em',
                 userSelect: 'text', WebkitUserSelect: 'text',
               }}
@@ -648,22 +648,22 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
 
           <div style={{ flex: 1, overflowY: 'auto', padding: '10px 34px 30px', ...STAGE_BG }}>
             {!isTauri() && (
-              <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(148,163,184,0.55)',
+              <p style={{ fontFamily: 'var(--font)', fontSize: 13.5, color: 'rgba(148,163,184,0.55)',
                 textAlign: 'center', padding: '60px 20px', lineHeight: 1.8 }}>
                 {tr('Big Screen launches your installed programs — that needs the Warren desktop app.',
                     'Большой экран запускает установленные программы — для этого нужна настольная версия Warren.')}</p>
             )}
             {appsLoading && isTauri() && (
-              <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(0,245,255,0.5)',
+              <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, color: 'rgba(0,245,255,0.5)',
                 letterSpacing: '0.14em', textAlign: 'center', padding: '50px 0' }}
                 className="pulse">{tr('SCANNING INSTALLED PROGRAMS…', 'СКАНИРОВАНИЕ УСТАНОВЛЕННЫХ ПРОГРАММ…')}</p>
             )}
             {appsError && (
-              <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: '#ff5470',
+              <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, color: '#ff5470',
                 textAlign: 'center', padding: '30px 0' }}>⚠ {appsError}</p>
             )}
             {!appsLoading && !appsError && isTauri() && filtered.length === 0 && (
-              <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(148,163,184,0.45)',
+              <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, color: 'rgba(148,163,184,0.45)',
                 textAlign: 'center', padding: '40px 0' }}>
                 {tr('Nothing found for', 'Ничего не найдено по')} “{query}”</p>
             )}
@@ -671,10 +671,10 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
             {groups.map(({ letter, apps: groupApps }) => (
               <div key={letter} style={{ marginBottom: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0 10px' }}>
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 12, fontWeight: 900,
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 14.5, fontWeight: 900,
                     color: 'rgba(0,245,255,0.55)', letterSpacing: '0.1em' }}>{letter}</span>
                   <div style={{ flex: 1, height: 1, background: 'rgba(0,245,255,0.08)' }} />
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 8,
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 10.5,
                     color: 'rgba(148,163,184,0.35)' }}>{groupApps.length}</span>
                 </div>
                 <div style={{ display: 'grid', gap: 10,
@@ -697,7 +697,7 @@ export default function BigScreen({ onExit }: { onExit: () => void }) {
           padding: '10px 22px', borderRadius: 10, zIndex: 50,
           background: 'rgba(4,10,18,0.95)', border: '1px solid rgba(0,245,255,0.35)',
           boxShadow: '0 4px 24px rgba(0,0,0,0.6), 0 0 16px rgba(0,245,255,0.15)' }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 700,
             color: toast.startsWith('⚠') ? '#ff5470' : NEON, letterSpacing: '0.08em' }}>{toast}</p>
         </div>
       )}

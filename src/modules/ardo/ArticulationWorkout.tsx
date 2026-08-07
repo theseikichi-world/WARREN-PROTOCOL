@@ -41,12 +41,12 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
       {/* Header */}
       <div style={{ padding: '8px 14px', flexShrink: 0, borderBottom: `1px solid ${NEON}14`,
         background: 'rgba(0,8,5,0.6)', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}60`,
+        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 13.5, color: `${NEON}60`,
           letterSpacing: '0.1em' }}>← {tr('BACK', 'НАЗАД')}</button>
         <div style={{ flex: 1 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900, color: NEON,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900, color: NEON,
             letterSpacing: '0.18em', textShadow: `0 0 10px ${NEON}` }}>🗣 {tr('ARTICULATION WARM-UP', 'РАЗМИНКА АРТИКУЛЯЦИИ')}</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`, letterSpacing: '0.1em' }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}45`, letterSpacing: '0.1em' }}>
             {tr('LOOSEN THE VOICE BEFORE YOU DRILL', 'РАЗОМНИТЕ ГОЛОС ПЕРЕД ОТРАБОТКОЙ')}
           </p>
         </div>
@@ -66,7 +66,7 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
       <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* ── Exercises ── */}
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, color: `${NEON}70`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, color: `${NEON}70`,
             letterSpacing: '0.14em', marginBottom: 7 }}>① {tr('LOOSEN UP', 'РАЗМИНКА')} · {done.size}/{EXERCISES.length}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             {EXERCISES.map((ex, i) => {
@@ -79,12 +79,12 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
                     border: `1px solid ${on ? `${NEON}40` : 'rgba(255,255,255,0.05)'}`, opacity: on ? 0.7 : 1 }}>
                   <span style={{ width: 15, height: 15, borderRadius: 4, flexShrink: 0, marginTop: 1,
                     border: `1.5px solid ${on ? NEON : `${NEON}45`}`, background: on ? `${NEON}22` : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: NEON }}>{on ? '✓' : ''}</span>
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: NEON }}>{on ? '✓' : ''}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                       color: 'rgba(225,255,245,0.9)' }}>{ex.name}
-                      <span style={{ fontSize: 7, color: `${NEON}60`, marginLeft: 6 }}>~{ex.seconds}{tr('s', 'с')}</span></span>
-                    <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: 'rgba(148,163,184,0.6)',
+                      <span style={{ fontSize: 11.5, color: `${NEON}60`, marginLeft: 6 }}>~{ex.seconds}{tr('s', 'с')}</span></span>
+                    <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: 'rgba(148,163,184,0.6)',
                       lineHeight: 1.5, marginTop: 2 }}>{ex.instruction}</p>
                   </div>
                 </button>
@@ -96,9 +96,9 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
         {/* ── Tongue twisters ── */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 7 }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, color: `${NEON}70`,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, color: `${NEON}70`,
               letterSpacing: '0.14em', flex: 1 }}>② {tr('TONGUE TWISTERS', 'СКОРОГОВОРКИ')}</p>
-            <button onClick={reshuffle} title={tr('New set', 'Новый набор')} style={{ fontFamily: 'var(--font)', fontSize: 7.5,
+            <button onClick={reshuffle} title={tr('New set', 'Новый набор')} style={{ fontFamily: 'var(--font)', fontSize: 10,
               fontWeight: 700, color: `${NEON}90`, letterSpacing: '0.08em', cursor: 'pointer' }}>🔀 {tr('SHUFFLE', 'ПЕРЕМЕШАТЬ')}</button>
           </div>
 
@@ -106,27 +106,27 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
             <div style={{ borderRadius: 10, padding: '14px', background: 'rgba(0,14,9,0.55)',
               border: `1px solid ${NEON}22` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.1em',
+                <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.1em',
                   color: `${NEON}80`, padding: '2px 6px', borderRadius: 4, border: `1px solid ${NEON}30` }}>
                   {cur.focus}</span>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}70` }}>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}70` }}>
                   {'●'.repeat(cur.level)}{'○'.repeat(3 - cur.level)}</span>
                 <span style={{ flex: 1 }} />
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.4)' }}>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.4)' }}>
                   {idx + 1}/{twisters.length}</span>
               </div>
 
               <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-lg)', fontWeight: 700, lineHeight: 1.5,
                 color: 'rgba(230,255,248,0.95)', textShadow: `0 0 16px ${NEON}30`, marginBottom: 6 }}>{cur.text}</p>
 
-              <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}65`, letterSpacing: '0.04em',
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}65`, letterSpacing: '0.04em',
                 marginBottom: cork ? 10 : 12 }}>{tr('Say it 3× — slow → medium → fast, every sound crisp.', 'Скажите 3× — медленно → средне → быстро, каждый звук чётко.')}</p>
 
               {cork && (
                 <div style={{ display: 'flex', gap: 8, padding: '8px 10px', borderRadius: 7, marginBottom: 12,
                   background: 'rgba(192,57,43,0.1)', border: `1px solid ${WINE}55` }}>
-                  <span style={{ fontSize: 13 }}>🍷</span>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(255,225,220,0.85)',
+                  <span style={{ fontSize: 15.5 }}>🍷</span>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(255,225,220,0.85)',
                     lineHeight: 1.5 }}>{CORK_DRILL}</p>
                 </div>
               )}
@@ -162,6 +162,6 @@ const pill: React.CSSProperties = {
   color: `${NEON}b0`, border: `1px solid ${NEON}30`, background: NEON_DIM,
 }
 const navBtn: React.CSSProperties = {
-  width: 34, borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 16, fontWeight: 700,
+  width: 34, borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 18, fontWeight: 700,
   color: `${NEON}90`, border: `1px solid ${NEON}22`, background: 'rgba(0,12,8,0.4)',
 }

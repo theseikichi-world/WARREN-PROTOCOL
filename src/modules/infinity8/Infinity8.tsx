@@ -99,7 +99,7 @@ function AnchorSheet({ anchors, onSave, onClose }: {
         <>
           <input type="time" value={a[key]!} onChange={e => set({ [key]: e.target.value } as Partial<Anchors>)} style={timeInp} />
           <button onClick={() => set({ [key]: null } as Partial<Anchors>)}
-            style={{ fontSize: 13, color: 'rgba(255,0,51,0.4)', cursor: 'pointer' }}>×</button>
+            style={{ fontSize: 15.5, color: 'rgba(255,0,51,0.4)', cursor: 'pointer' }}>×</button>
         </>
       )}
     </Row>
@@ -113,7 +113,7 @@ function AnchorSheet({ anchors, onSave, onClose }: {
         backdropFilter: 'blur(20px)', padding: '16px', maxHeight: '85%', overflowY: 'auto',
         borderTopLeftRadius: 14, borderTopRightRadius: 14,
       }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, color: NEON,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, color: NEON,
           letterSpacing: '0.2em', marginBottom: 12 }}>{tr('DAY ANCHORS', 'ОПОРЫ ДНЯ')}</p>
 
         <Row label={tr('☀ Wake up', '☀ Подъём')}><input type="time" value={a.wake} onChange={e => set({ wake: e.target.value })} style={timeInp} /></Row>
@@ -202,7 +202,7 @@ function EventSheet({ onSave, onClose }: {
         backdropFilter: 'blur(20px)', padding: '16px', display: 'flex', flexDirection: 'column', gap: 9,
         borderTopLeftRadius: 14, borderTopRightRadius: 14,
       }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, color: NEON,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, color: NEON,
           letterSpacing: '0.2em' }}>{tr('SOMETHING CAME UP', 'ЧТО-ТО ВОЗНИКЛО')}</p>
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder={tr('Event…', 'Событие…')} style={{ ...inp }} autoFocus />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -355,27 +355,27 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
       <div style={{ padding: '8px 14px', flexShrink: 0, borderBottom: `1px solid ${NEON}14`,
         background: 'rgba(2,10,14,0.6)', display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 900, color: NEON,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 900, color: NEON,
             letterSpacing: '0.22em', textShadow: `0 0 12px ${NEON}` }}>∞ INFINITY-8</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`, letterSpacing: '0.12em' }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}45`, letterSpacing: '0.12em' }}>
             {new Date().toLocaleDateString('en', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase()}
           </p>
         </div>
         {/* Free time headline */}
         <div style={{ textAlign: 'right' }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 17, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 19, fontWeight: 900,
             color: '#39ff14', lineHeight: 1, textShadow: '0 0 12px rgba(57,255,20,0.5)' }}>
             {fmtDur(plan.freeMinutes)}</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: 'rgba(57,255,20,0.5)',
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(57,255,20,0.5)',
             letterSpacing: '0.12em' }}>{tr('FREE TODAY', 'СВОБОДНО СЕГОДНЯ')}</p>
         </div>
         <button onClick={() => setSheet('event')} title={tr('Something came up (meeting, cinema…)', 'Что-то возникло (встреча, кино…)')} style={{
-          width: 28, height: 28, borderRadius: 7, fontSize: 15, color: `${NEON}80`,
+          width: 28, height: 28, borderRadius: 7, fontSize: 17.5, color: `${NEON}80`,
           border: `1px solid ${NEON}25`, background: NEON_D, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>+</button>
         <button onClick={() => setSheet('anchors')} title={tr('Day anchors (wake / sleep / breaks)', 'Опоры дня (подъём / сон / перерывы)')} style={{
-          width: 28, height: 28, borderRadius: 7, fontSize: 13, color: `${NEON}70`,
+          width: 28, height: 28, borderRadius: 7, fontSize: 15.5, color: `${NEON}70`,
           border: `1px solid ${NEON}25`, background: 'transparent', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>⚙</button>
@@ -388,19 +388,19 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
           persist(setOverride(state, today, { wake: wk }))
         }} title={tr('Reflow today from now', 'Перестроить день с этого момента')} style={{
           flex: 1, padding: '6px', borderRadius: 6, cursor: 'pointer',
-          fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
+          fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
           color: '#ffb13c', border: '1px solid rgba(255,177,60,0.3)', background: 'rgba(255,177,60,0.06)',
         }}>{tr('😴 OVERSLEPT — RESHUFFLE', '😴 ПРОСПАЛ — ПЕРЕСТРОИТЬ')}</button>
         {state.overrides[today] && (
           <button onClick={() => persist(clearOverride(state, today))} title={tr('Back to normal anchors', 'Вернуть обычные опоры')} style={{
             padding: '6px 9px', borderRadius: 6, cursor: 'pointer', fontFamily: 'var(--font)',
-            fontSize: 7.5, fontWeight: 700, color: 'rgba(148,163,184,0.5)',
+            fontSize: 10, fontWeight: 700, color: 'rgba(148,163,184,0.5)',
             border: '1px solid rgba(255,255,255,0.08)', background: 'transparent',
           }}>{tr('RESET', 'СБРОС')}</button>
         )}
         <button onClick={runOptimize} disabled={optimizing} title={tr('Rebalance the week with science', 'Перебалансировать неделю по науке')} style={{
           flex: 1, padding: '6px', borderRadius: 6, cursor: optimizing ? 'default' : 'pointer',
-          fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 800, letterSpacing: '0.08em',
+          fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800, letterSpacing: '0.08em',
           color: optimizing ? `${NEON}50` : NEON, border: `1px solid ${NEON}35`, background: NEON_D,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
         }}>
@@ -416,7 +416,7 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
         boxShadow: `inset 0 0 0 400px ${banner.color}10${allDone || noCommit ? `, 0 0 22px ${banner.color}20` : ''}`,
         display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900,
             color: banner.color, letterSpacing: '0.14em', textShadow: `0 0 8px ${banner.color}70` }}>
             {banner.title}</p>
           <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: `${banner.color}90`,
@@ -431,7 +431,7 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
                 style={{ filter: `drop-shadow(0 0 4px ${banner.color})`, transition: 'stroke-dasharray 0.5s' }} />
             </svg>
             <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+              justifyContent: 'center', fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
               color: banner.color }}>{pct}%</span>
           </div>
         )}
@@ -491,10 +491,10 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
         backdropFilter: 'blur(20px)', borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: '14px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <span style={{ fontSize: 13 }}>⚡</span>
-          <p style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900, color: NEON,
+          <span style={{ fontSize: 15.5 }}>⚡</span>
+          <p style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900, color: NEON,
             letterSpacing: '0.2em' }}>{tr('WEEK REBALANCED', 'НЕДЕЛЯ ПЕРЕБАЛАНСИРОВАНА')}</p>
-          <button onClick={onClose} style={{ fontSize: 15, color: 'rgba(148,163,184,0.4)', cursor: 'pointer' }}>×</button>
+          <button onClick={onClose} style={{ fontSize: 17.5, color: 'rgba(148,163,184,0.4)', cursor: 'pointer' }}>×</button>
         </div>
 
         {result.rationale && (
@@ -506,7 +506,7 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
 
         {result.changes.length > 0 && (
           <>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: `${NEON}45`,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: `${NEON}45`,
               letterSpacing: '0.18em', marginBottom: 6 }}>{tr('RESCHEDULE IN SCRAP-7', 'ПЕРЕНЕСТИ В SCRAP-7')}</p>
             {result.changes.map(c => (
               <div key={c.id} style={{ marginBottom: 7, padding: '8px 10px', borderRadius: 8,
@@ -514,15 +514,15 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <p style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                     color: 'rgba(220,250,255,0.9)' }}>{c.label}</p>
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800,
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
                     color: periodColor[c.bestTime], letterSpacing: '0.06em', textTransform: 'uppercase' }}>{periodLabel(c.bestTime)}</span>
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, color: NEON,
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, color: NEON,
                     letterSpacing: '0.1em' }}>{daysLabel(c.days)}</span>
                 </div>
-                {c.note && <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.5)', marginTop: 2 }}>{c.note}</p>}
+                {c.note && <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.5)', marginTop: 2 }}>{c.note}</p>}
                 <button onClick={() => onApplyChange(c)} style={{
                   marginTop: 6, width: '100%', padding: '5px', borderRadius: 5, cursor: 'pointer',
-                  fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.1em',
+                  fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.1em',
                   color: NEON, border: `1px solid ${NEON}35`, background: NEON_D,
                 }}>{tr('✓ APPLY', '✓ ПРИМЕНИТЬ')}</button>
               </div>
@@ -532,7 +532,7 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
 
         {result.additions.length > 0 && (
           <>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: '#39ff14',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: '#39ff14',
               letterSpacing: '0.18em', margin: '10px 0 6px' }}>{tr('SUGGESTED ADDITIONS', 'ПРЕДЛОЖЕННЫЕ ДОБАВЛЕНИЯ')}</p>
             {result.additions.map((a, i) => (
               <div key={i} style={{ marginBottom: 7, padding: '8px 10px', borderRadius: 8,
@@ -540,14 +540,14 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <p style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                     color: 'rgba(230,255,235,0.9)' }}>{a.text}</p>
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: 'rgba(57,255,20,0.7)',
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: 'rgba(57,255,20,0.7)',
                     letterSpacing: '0.06em' }}>{kindLabel(a.type)}</span>
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, color: '#39ff14' }}>{daysLabel(a.days)}</span>
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, color: '#39ff14' }}>{daysLabel(a.days)}</span>
                 </div>
-                {a.note && <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.5)', marginTop: 2 }}>{a.note}</p>}
+                {a.note && <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.5)', marginTop: 2 }}>{a.note}</p>}
                 <button onClick={() => onApplyAddition(a, i)} style={{
                   marginTop: 6, width: '100%', padding: '5px', borderRadius: 5, cursor: 'pointer',
-                  fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.1em',
+                  fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.1em',
                   color: '#39ff14', border: '1px solid rgba(57,255,20,0.35)', background: 'rgba(57,255,20,0.06)',
                 }}>{tr('+ ADD TO SCRAP-7', '+ ДОБАВИТЬ В SCRAP-7')}</button>
               </div>
@@ -598,7 +598,7 @@ export function Timeline({ blocks, wakeMin, sleepMin, nowMin, suggestions, onRem
         {hours.map(h => (
           <div key={h} style={{ position: 'absolute', top: y(h), left: 0, right: 0, height: 0 }}>
             <span style={{ position: 'absolute', left: 0, top: -6, width: GUTTER - 6,
-              textAlign: 'right', fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700,
+              textAlign: 'right', fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 700,
               color: `${NEON}45`, letterSpacing: '0.04em' }}>{fmtClock(h)}</span>
             <div style={{ position: 'absolute', left: GUTTER, right: 0, top: 0,
               borderTop: '1px solid rgba(34,211,238,0.08)' }} />
@@ -608,14 +608,14 @@ export function Timeline({ blocks, wakeMin, sleepMin, nowMin, suggestions, onRem
         {/* Wake / sleep caps */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex',
           alignItems: 'center', gap: 6, paddingLeft: GUTTER }}>
-          <span style={{ fontSize: 9 }}>☀</span>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: `${NEON}50`,
+          <span style={{ fontSize: 11.5 }}>☀</span>
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: `${NEON}50`,
             letterSpacing: '0.18em' }}>{tr('WAKE', 'ПОДЪЁМ')} {fmtClock(wakeMin)}</span>
         </div>
         <div style={{ position: 'absolute', top: y(sleepMin) + 4, left: 0, right: 0, display: 'flex',
           alignItems: 'center', gap: 6, paddingLeft: GUTTER }}>
-          <span style={{ fontSize: 9 }}>🌙</span>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: `${NEON}50`,
+          <span style={{ fontSize: 11.5 }}>🌙</span>
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: `${NEON}50`,
             letterSpacing: '0.18em' }}>{tr('SLEEP', 'СОН')} {fmtClock(sleepMin)}</span>
         </div>
 
@@ -662,11 +662,11 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
         padding: '4px 8px', backgroundColor: 'rgba(8,20,14,0.34)',
         border: '1px dashed rgba(57,255,20,0.28)', borderLeft: '3px dashed rgba(57,255,20,0.5)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <span style={{ fontSize: 11, opacity: 0.55 }}>✦</span>
+          <span style={{ fontSize: 13.5, opacity: 0.55 }}>✦</span>
           <span style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
             color: 'rgba(57,255,20,0.6)', letterSpacing: '0.02em',
             textShadow: '0 1px 4px rgba(0,0,0,0.55)' }}>{tr('Free', 'Свободно')} · {fmtDur(b.end - b.start)}</span>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 800, letterSpacing: '0.14em',
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800, letterSpacing: '0.14em',
             color: 'rgba(57,255,20,0.45)', flexShrink: 0 }}>{tr('GUILD SUGGESTS', 'ГИЛЬДИЯ СОВЕТУЕТ')}</span>
         </div>
         {suggestions.map(s => (
@@ -674,18 +674,18 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
             style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', textAlign: 'left',
               padding: '4px 7px', borderRadius: 5, cursor: 'pointer', flexShrink: 0,
               background: `${TONE[s.tone]}12`, border: `1px solid ${TONE[s.tone]}40` }}>
-            <span style={{ fontSize: 12, flexShrink: 0 }}>{s.icon}</span>
+            <span style={{ fontSize: 14.5, flexShrink: 0 }}>{s.icon}</span>
             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
               <span style={{ display: 'block', fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
                 fontWeight: 700, color: TONE[s.tone],
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</span>
               {s.detail && (
-                <span style={{ display: 'block', fontFamily: 'var(--font)', fontSize: 7,
+                <span style={{ display: 'block', fontFamily: 'var(--font)', fontSize: 11.5,
                   color: 'rgba(148,163,184,0.6)',
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.detail}</span>
               )}
             </span>
-            <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${TONE[s.tone]}cc`, flexShrink: 0 }}>
+            <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${TONE[s.tone]}cc`, flexShrink: 0 }}>
               ~{fmtDur(s.minutes)}
             </span>
           </button>
@@ -699,7 +699,7 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
     return (
       <div style={{ position: 'absolute', left: GUTTER, right: 0, top, height,
         display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 6, opacity: 0.5 }}>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.5)',
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.5)',
           letterSpacing: '0.12em', flexShrink: 0 }}>↔ {tr('break', 'перерыв')}</span>
         <div style={{ flex: 1, borderTop: '1px dashed rgba(148,163,184,0.18)' }} />
       </div>
@@ -733,7 +733,7 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
           boxShadow: b.done ? `0 0 6px ${color}` : 'none',
         }} />
       ) : (
-        <span style={{ fontSize: 12, flexShrink: 0, opacity: isFree ? 0.6 : 1 }}>{BLOCK_ICON[b.kind]}</span>
+        <span style={{ fontSize: 14.5, flexShrink: 0, opacity: isFree ? 0.6 : 1 }}>{BLOCK_ICON[b.kind]}</span>
       )}
 
       <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
@@ -746,23 +746,23 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
       </span>
 
       {isNow && (
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 900, color,
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900, color,
           letterSpacing: '0.1em', flexShrink: 0, padding: '1px 5px', borderRadius: 3,
           border: `1px solid ${color}`, animation: 'pulse 1.8s ease-in-out infinite' }}>● {tr('NOW', 'СЕЙЧАС')}</span>
       )}
       {isCommit && tall && !isNow && (
-        <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 700, color: `${color}90`,
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 700, color: `${color}90`,
           letterSpacing: '0.1em', flexShrink: 0, padding: '1px 5px', borderRadius: 3, border: `1px solid ${color}30` }}>
           {b.commitKind === 'habit' ? tr('HABIT', 'ПРИВЫЧКА') : tr('DAILY', 'ЕЖЕДН.')}
         </span>
       )}
       {!isFree && (
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(148,163,184,0.5)', flexShrink: 0 }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(148,163,184,0.5)', flexShrink: 0 }}>
           {fmtDur(b.end - b.start)}
         </span>
       )}
       {onRemoveEvent && hov && (
-        <button onClick={onRemoveEvent} style={{ fontSize: 13, color: 'rgba(255,0,51,0.4)',
+        <button onClick={onRemoveEvent} style={{ fontSize: 15.5, color: 'rgba(255,0,51,0.4)',
           flexShrink: 0, cursor: 'pointer' }}>×</button>
       )}
     </div>

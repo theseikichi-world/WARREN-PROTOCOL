@@ -103,7 +103,7 @@ export function TourOverlay({ tour, onDone }: { tour: Tour; onDone: () => void }
         transition: 'top 0.28s cubic-bezier(0.4,0,0.2,1)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 800,
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
             letterSpacing: '0.22em', color: `${CYAN}70` }}>
             {i + 1} / {steps.length}
           </span>
@@ -115,11 +115,11 @@ export function TourOverlay({ tour, onDone }: { tour: Tour; onDone: () => void }
           </div>
         </div>
 
-        <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 900, letterSpacing: '0.1em',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 900, letterSpacing: '0.1em',
           color: CYAN, textShadow: `0 0 10px ${CYAN}50` }}>
           {tr(step.title, step.titleRu)}
         </p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, lineHeight: 1.7, marginTop: 6,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11, lineHeight: 1.7, marginTop: 6,
           color: 'rgba(215,232,248,0.82)' }}>
           {tr(step.body, step.bodyRu)}
         </p>
@@ -127,21 +127,21 @@ export function TourOverlay({ tour, onDone }: { tour: Tour; onDone: () => void }
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 12 }}>
           <button onClick={onDone} style={{
             padding: '6px 11px', borderRadius: 6, cursor: 'pointer', background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font)', fontSize: 7.5,
+            border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font)', fontSize: 10,
             fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(148,163,184,0.6)',
           }}>{tr('SKIP', 'ПРОПУСТИТЬ')}</button>
 
           {i > 0 && (
             <button onClick={() => setI(v => v - 1)} style={{
               padding: '6px 11px', borderRadius: 6, cursor: 'pointer', background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font)', fontSize: 7.5,
+              border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font)', fontSize: 10,
               fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(148,163,184,0.6)',
             }}>{tr('BACK', 'НАЗАД')}</button>
           )}
 
           <button onClick={() => (last ? onDone() : setI(v => v + 1))} style={{
             flex: 1, padding: '8px', borderRadius: 7, cursor: 'pointer',
-            fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900, letterSpacing: '0.16em',
+            fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900, letterSpacing: '0.16em',
             color: '#02121a', background: `linear-gradient(135deg, ${CYAN}, ${CYAN}b0)`,
             border: 'none', boxShadow: `0 0 16px ${CYAN}45`,
           }}>{last ? tr('GOT IT', 'ПОНЯТНО') : tr('NEXT', 'ДАЛЬШЕ')}</button>

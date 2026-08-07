@@ -50,21 +50,21 @@ export function BandwidthStrip() {
         onMouseEnter={e => e.currentTarget.style.borderColor = `${CYAN}70`}
         onMouseLeave={e => e.currentTarget.style.borderColor = `${CYAN}35`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: '0.18em', color: `${CYAN}b0` }}>
+          <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.18em', color: `${CYAN}b0` }}>
             {t('BANDWIDTH', 'ПРОПУСКНАЯ СПОСОБНОСТЬ')}
           </span>
-          <span style={{ fontSize: 7.5, fontWeight: 800, color: `${CYAN}70`, marginLeft: 'auto' }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: `${CYAN}70`, marginLeft: 'auto' }}>
             0/{secondOpen ? 2 : 1} {t('ALLOCATED', 'ЗАНЯТО')}
           </span>
         </div>
-<p style={{ fontSize: 9, color: 'rgba(215,232,248,0.72)', lineHeight: 1.6, marginTop: 7 }}>
+<p style={{ fontSize: 11.5, color: 'rgba(215,232,248,0.72)', lineHeight: 1.6, marginTop: 7 }}>
           {secondOpen
             ? t('Both slots are open. A goal starts as a dream — write one in PATHFINDER and promote it.',
                 'Оба слота свободны. Цель начинается с мечты — запишите её в PATHFINDER и продвиньте.')
             : t(`One slot now, the second at level ${SECOND_SLOT_LEVEL}. A goal starts as a dream — write one in PATHFINDER and promote it.`,
                 `Сейчас один слот, второй — на уровне ${SECOND_SLOT_LEVEL}. Цель начинается с мечты — запишите её в PATHFINDER и продвиньте.`)}
         </p>
-        <p style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '0.14em', color: CYAN, marginTop: 8 }}>
+        <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: CYAN, marginTop: 8 }}>
           {t('OPEN PATHFINDER', 'ОТКРЫТЬ PATHFINDER')} →
         </p>
       </button>
@@ -81,10 +81,10 @@ export function BandwidthStrip() {
       onMouseEnter={e => e.currentTarget.style.borderColor = `${CYAN}55`}
       onMouseLeave={e => e.currentTarget.style.borderColor = `${CYAN}28`}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
-        <span style={{ fontSize: 7.5, fontWeight: 800, letterSpacing: '0.18em', color: `${CYAN}b0` }}>
+        <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.18em', color: `${CYAN}b0` }}>
           {t('BANDWIDTH', 'ПРОПУСКНАЯ СПОСОБНОСТЬ')}
         </span>
-        <span style={{ fontSize: 7.5, fontWeight: 800, color: `${CYAN}70`, marginLeft: 'auto' }}>
+        <span style={{ fontSize: 10, fontWeight: 800, color: `${CYAN}70`, marginLeft: 'auto' }}>
           {bandwidthUsed(state)}/2 {t('ALLOCATED', 'ЗАНЯТО')}
         </span>
       </div>
@@ -109,20 +109,20 @@ function SlotLine({ goal, accent, label, rate }: {
         background: goal ? accent : 'rgba(148,163,184,0.25)',
         boxShadow: goal ? `0 0 6px ${accent}` : 'none',
       }} />
-      <span style={{ fontSize: 6.5, fontWeight: 700, letterSpacing: '0.14em',
-        color: 'rgba(148,163,184,0.5)', width: 62, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
+        color: 'rgba(148,163,184,0.5)', width: 84, flexShrink: 0 }}>{label}</span>
       <span style={{
-        flex: 1, minWidth: 0, fontSize: 10, fontWeight: 800, letterSpacing: '0.06em',
+        flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 800, letterSpacing: '0.06em',
         color: goal ? accent : 'rgba(148,163,184,0.35)',
         textShadow: goal ? `0 0 8px ${accent}45` : 'none',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>{goal ? goal.title : t('unallocated', 'не занят')}</span>
       {goal && (
         <>
-          <span style={{ fontSize: 7, color: 'rgba(148,163,184,0.45)', flexShrink: 0 }}>
+          <span style={{ fontSize: 11.5, color: 'rgba(148,163,184,0.45)', flexShrink: 0 }}>
             {goal.nodes.length} {t('routines', 'рутин')}
           </span>
-          <span style={{ fontSize: 7, color: `${accent}80`, flexShrink: 0, width: 24, textAlign: 'right' }}>{rate}</span>
+          <span style={{ fontSize: 11.5, color: `${accent}80`, flexShrink: 0, width: 32, textAlign: 'right' }}>{rate}</span>
         </>
       )}
     </div>

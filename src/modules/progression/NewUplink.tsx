@@ -86,7 +86,7 @@ function Picker({ accent, error, onClose, onDream, onDraft }: {
   const hasKey = !!loadSettings().aiApiKey
 
   const section: React.CSSProperties = {
-    fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800,
+    fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
     letterSpacing: '0.2em', color: `${accent}80`, margin: '16px 0 7px',
   }
   const card: React.CSSProperties = {
@@ -100,19 +100,19 @@ function Picker({ accent, error, onClose, onDream, onDraft }: {
       <div style={{ flexShrink: 0, padding: '11px 14px', borderBottom: `1px solid ${accent}20`,
         display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ flex: 1 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900, color: accent,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900, color: accent,
             letterSpacing: '0.2em', textShadow: `0 0 10px ${accent}80` }}>{tr('NEW UPLINK', 'НОВЫЙ КАНАЛ')}</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, marginTop: 3 }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM, marginTop: 3 }}>
             {tr('Dreams are unlimited. Bandwidth is two.', 'Мечты бесконечны. Каналов — два.')}
           </p>
         </div>
         <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer',
-          color: DIM, fontSize: 13 }}>✕</button>
+          color: DIM, fontSize: 15.5 }}>✕</button>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '4px 14px 16px' }}>
         {error && (
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: WARN, marginTop: 12,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: WARN, marginTop: 12,
             padding: '7px 9px', borderRadius: 6, background: `${WARN}0e`, border: `1px solid ${WARN}35` }}>
             ⊘ {error}
           </p>
@@ -120,7 +120,7 @@ function Picker({ accent, error, onClose, onDream, onDraft }: {
 
         <p style={section}>{tr('FROM A DREAM', 'ИЗ МЕЧТЫ')}</p>
         {dreams.length === 0 && (
-          <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: DIM, lineHeight: 1.6 }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: DIM, lineHeight: 1.6 }}>
             {tr('No dreams in PATHFINDER yet. Write one there first — the guide reads it to propose a chain.',
                 'В PATHFINDER пока нет мечт. Запишите одну там — гид прочтёт её и предложит цепь.')}
           </p>
@@ -130,23 +130,23 @@ function Picker({ accent, error, onClose, onDream, onDraft }: {
           return (
             <div key={d.id} style={{ ...card, opacity: promoted ? 0.5 : 1, cursor: 'default' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 800,
+                <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 12, fontWeight: 800,
                   color: 'rgba(230,242,255,0.9)', overflow: 'hidden', textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap' }}>{d.title}</span>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: DIM, flexShrink: 0 }}>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 11, color: DIM, flexShrink: 0 }}>
                   {d.category} · {d.missions.length}{tr('m', 'м')}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 5, marginTop: 7 }}>
                 {promoted ? (
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${accent}90` }}>
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${accent}90` }}>
                     ◆ {tr('already an uplink', 'уже канал')}
                   </span>
                 ) : (
                   <>
                     <button onClick={() => onDream(d)} disabled={!hasKey} style={{
                       padding: '5px 10px', borderRadius: 6, cursor: hasKey ? 'pointer' : 'default',
-                      fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.1em',
+                      fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
                       color: hasKey ? '#02121a' : 'rgba(148,163,184,0.3)',
                       background: hasKey ? accent : 'transparent',
                       border: `1px solid ${hasKey ? accent : 'rgba(255,255,255,0.1)'}`,
@@ -155,7 +155,7 @@ function Picker({ accent, error, onClose, onDream, onDraft }: {
                       ...blankDraft(d.title.toUpperCase()), sourceDreamId: d.id,
                     })} style={{
                       padding: '5px 10px', borderRadius: 6, cursor: 'pointer', background: 'transparent',
-                      border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font)', fontSize: 7.5,
+                      border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font)', fontSize: 10,
                       fontWeight: 700, letterSpacing: '0.1em', color: DIM,
                     }}>{tr('BY HAND', 'ВРУЧНУЮ')}</button>
                   </>
@@ -165,7 +165,7 @@ function Picker({ accent, error, onClose, onDream, onDraft }: {
           )
         })}
         {dreams.length > 0 && !hasKey && (
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, marginTop: 4 }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM, marginTop: 4 }}>
             {tr('No API key in Settings — the guide can\'t propose. Building by hand works either way.',
                 'В настройках нет API-ключа — гид не сможет предложить. Вручную работает всегда.')}
           </p>
@@ -187,21 +187,21 @@ function Working({ accent, title, onCancel }: { accent: string; title: string; o
     <div style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24,
       background: 'rgba(2,6,12,0.97)', backdropFilter: 'blur(6px)' }}>
-      <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900, color: accent,
+      <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900, color: accent,
         letterSpacing: '0.2em', textShadow: `0 0 12px ${accent}`, animation: 'pulse 1.8s ease-in-out infinite' }}>
         {tr('THE GUIDE IS READING', 'ГИД ЧИТАЕТ')}
       </p>
-      <p style={{ fontFamily: 'var(--font)', fontSize: 9, color: 'rgba(230,242,255,0.8)', textAlign: 'center' }}>
+      <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(230,242,255,0.8)', textAlign: 'center' }}>
         {title}
       </p>
-      <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: DIM, textAlign: 'center', maxWidth: 280,
+      <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: DIM, textAlign: 'center', maxWidth: 280,
         lineHeight: 1.7 }}>
         {tr('It proposes a chain. Nothing is created until you have read every node and committed it yourself.',
             'Он предложит цепь. Ничего не создаётся, пока вы не прочтёте каждый узел и не подтвердите сами.')}
       </p>
       <button onClick={onCancel} style={{ marginTop: 6, padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
         background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font)',
-        fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', color: DIM }}>
+        fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: DIM }}>
         {tr('CANCEL', 'ОТМЕНА')}
       </button>
     </div>

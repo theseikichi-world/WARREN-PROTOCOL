@@ -159,7 +159,7 @@ function TaskRow({ task, onToggle, onDelete, onSync }: {
 
       {/* Type badge */}
       <span style={{
-        fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700,
+        fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
         letterSpacing: '0.12em', color: typeColor, flexShrink: 0,
         padding: '1px 5px', borderRadius: 3,
         border: `1px solid ${typeColor}30`,
@@ -169,7 +169,7 @@ function TaskRow({ task, onToggle, onDelete, onSync }: {
       {/* S-7 synced badge */}
       {task.scrap7Id && (
         <span title={tr('Synced to SCRAP-7', 'Синхронизировано со SCRAP-7')} style={{
-          fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800,
+          fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
           color: S7_NEON, letterSpacing: '0.1em', flexShrink: 0,
           padding: '1px 5px', borderRadius: 3,
           border: `1px solid ${S7_NEON}35`, background: `${S7_NEON}0c`,
@@ -179,7 +179,7 @@ function TaskRow({ task, onToggle, onDelete, onSync }: {
       {/* Sync button (hover, daily/habit only, not yet synced) */}
       {hov && canSync && (
         <button onClick={e => { e.stopPropagation(); onSync() }} title={tr('Send to SCRAP-7', 'Отправить в SCRAP-7')} style={{
-          fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800,
+          fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
           color: S7_NEON, letterSpacing: '0.08em', flexShrink: 0,
           padding: '2px 6px', borderRadius: 3, cursor: 'pointer',
           border: `1px solid ${S7_NEON}40`, background: `${S7_NEON}0c`,
@@ -193,7 +193,7 @@ function TaskRow({ task, onToggle, onDelete, onSync }: {
       {/* Delete */}
       {hov && (
         <button onClick={e => { e.stopPropagation(); onDelete() }} style={{
-          fontSize: 13, color: 'rgba(255,0,51,0.25)', flexShrink: 0,
+          fontSize: 15.5, color: 'rgba(255,0,51,0.25)', flexShrink: 0,
           padding: '0 3px', transition: 'color 0.12s',
         }}
           onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
@@ -265,18 +265,18 @@ function AnalysisPanel({ result, dream, state, onChange, onClose }: {
         background: `${LOG_NEON}08`,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, filter: `drop-shadow(0 0 5px ${LOG_NEON})` }}>⊹</span>
+          <span style={{ fontSize: 14.5, filter: `drop-shadow(0 0 5px ${LOG_NEON})` }}>⊹</span>
           <div>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
               color: LOG_NEON, letterSpacing: '0.2em' }}>PATHFINDER ANALYSIS</p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5,
               color: `${LOG_NEON}50`, letterSpacing: '0.1em' }}>{tr('TRAJECTORY COMPUTED', 'ТРАЕКТОРИЯ ГОТОВА')}</p>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {!allDone && (
             <button onClick={addAll} style={{
-              fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800,
+              fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800,
               color: LOG_NEON, letterSpacing: '0.12em', cursor: 'pointer',
               padding: '4px 10px', borderRadius: 4,
               border: `1px solid ${LOG_NEON}40`, background: LOG_DIM,
@@ -286,7 +286,7 @@ function AnalysisPanel({ result, dream, state, onChange, onClose }: {
               onMouseLeave={e => e.currentTarget.style.background = LOG_DIM}
             >{tr('DEPLOY ALL', 'СОЗДАТЬ ВСЁ')}</button>
           )}
-          <button onClick={onClose} style={{ fontSize: 13, color: 'rgba(192,132,252,0.3)', cursor: 'pointer',
+          <button onClick={onClose} style={{ fontSize: 15.5, color: 'rgba(192,132,252,0.3)', cursor: 'pointer',
             transition: 'color 0.12s' }}
             onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
             onMouseLeave={e => e.currentTarget.style.color = 'rgba(192,132,252,0.3)'}
@@ -325,17 +325,17 @@ function AnalysisPanel({ result, dream, state, onChange, onClose }: {
                   boxShadow: `0 0 5px ${pColor}`, flexShrink: 0 }} />
                 <p style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                   color: 'rgba(220,210,255,0.88)', letterSpacing: '0.06em' }}>{m.title}</p>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: pColor,
+                <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: pColor,
                   fontWeight: 700, letterSpacing: '0.1em', flexShrink: 0 }}>
                   {PRIORITY_LABELS[m.priority]}
                 </span>
                 {m.deadline_days > 0 && (
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 7,
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 11.5,
                     color: 'rgba(148,163,184,0.4)', letterSpacing: '0.08em', flexShrink: 0 }}>
                     T-{m.deadline_days}d
                   </span>
                 )}
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7,
+                <span style={{ fontFamily: 'var(--font)', fontSize: 11.5,
                   color: `${LOG_NEON}50`, flexShrink: 0 }}>
                   {tasksDone}/{m.tasks.length}
                 </span>
@@ -362,7 +362,7 @@ function AnalysisPanel({ result, dream, state, onChange, onClose }: {
                           border: `1.5px solid ${isDone ? `${LOG_NEON}30` : `${LOG_NEON}60`}`,
                           background: isDone ? LOG_DIM : 'transparent',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 10, color: isDone ? LOG_NEON : `${LOG_NEON}80`,
+                          fontSize: 12.5, color: isDone ? LOG_NEON : `${LOG_NEON}80`,
                           transition: 'all 0.15s',
                         }}
                         onMouseEnter={e => { if (!isDone) e.currentTarget.style.background = LOG_DIM }}
@@ -382,7 +382,7 @@ function AnalysisPanel({ result, dream, state, onChange, onClose }: {
 
                       {/* Type chip */}
                       <span style={{
-                        fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700,
+                        fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
                         color: tColor, letterSpacing: '0.1em', flexShrink: 0,
                         padding: '1px 5px', borderRadius: 3,
                         border: `1px solid ${tColor}30`, background: `${tColor}08`,
@@ -391,7 +391,7 @@ function AnalysisPanel({ result, dream, state, onChange, onClose }: {
                       {/* SCRAP-7 indicator */}
                       {toScrap && (
                         <span style={{
-                          fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700,
+                          fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
                           color: isDone ? `${S7_NEON}50` : `${S7_NEON}80`,
                           letterSpacing: '0.08em', flexShrink: 0,
                           padding: '1px 5px', borderRadius: 3,
@@ -411,7 +411,7 @@ function AnalysisPanel({ result, dream, state, onChange, onClose }: {
       {allDone && (
         <div style={{ padding: '8px 12px', borderTop: `1px solid ${LOG_NEON}15`,
           textAlign: 'center' }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${LOG_NEON}60`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${LOG_NEON}60`,
             letterSpacing: '0.15em' }}>✦ ALL NODES CONNECTED · CHECK SCRAP-7 FOR YOUR NEW TASKS</p>
         </div>
       )}
@@ -495,13 +495,13 @@ function MissionBlock({ mission, dream, state, onChange }: {
 
         {/* Meta chips */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700,
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
             color: pColor, letterSpacing: '0.1em' }}>{PRIORITY_LABELS[mission.priority]}</span>
           {days !== null && (
-            <span style={{ fontFamily: 'var(--font)', fontSize: 7,
+            <span style={{ fontFamily: 'var(--font)', fontSize: 11.5,
               color: etaColor(days), letterSpacing: '0.08em' }}>{formatEta(days)}</span>
           )}
-          <span style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800,
+          <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800,
             color: completed ? '#f59e0b' : `${LOG_NEON}80` }}>{progress}%</span>
         </div>
 
@@ -511,18 +511,18 @@ function MissionBlock({ mission, dream, state, onChange }: {
             {!completed && (
               <button title={tr('Mark mission complete', 'Отметить миссию выполненной')}
                 onClick={() => onChange(completeMission(state, dream.id, mission.id))}
-                style={{ fontSize: 11, color: 'rgba(245,158,11,0.35)', transition: 'color 0.12s' }}
+                style={{ fontSize: 13.5, color: 'rgba(245,158,11,0.35)', transition: 'color 0.12s' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#f59e0b'}
                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(245,158,11,0.35)'}
               >✦</button>
             )}
             <button onClick={() => setAddingTask(v => !v)} title={tr('Add task', 'Добавить задачу')}
-              style={{ fontSize: 13, color: `${LOG_NEON}50`, transition: 'color 0.12s' }}
+              style={{ fontSize: 15.5, color: `${LOG_NEON}50`, transition: 'color 0.12s' }}
               onMouseEnter={e => e.currentTarget.style.color = LOG_NEON}
               onMouseLeave={e => e.currentTarget.style.color = `${LOG_NEON}50`}
             >+</button>
             <button onClick={() => onChange(deleteMission(state, dream.id, mission.id))} title={tr('Delete mission', 'Удалить миссию')}
-              style={{ fontSize: 13, color: 'rgba(255,0,51,0.2)', transition: 'color 0.12s' }}
+              style={{ fontSize: 15.5, color: 'rgba(255,0,51,0.2)', transition: 'color 0.12s' }}
               onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
               onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,0,51,0.2)'}
             >×</button>
@@ -579,7 +579,7 @@ function MissionBlock({ mission, dream, state, onChange }: {
             background: taskText.trim() ? LOG_DIM : 'transparent',
           }}>+</button>
           <button onClick={() => setAddingTask(false)} style={{
-            fontSize: 13, color: 'rgba(148,163,184,0.3)', cursor: 'pointer',
+            fontSize: 15.5, color: 'rgba(148,163,184,0.3)', cursor: 'pointer',
           }}>×</button>
         </div>
       )}
@@ -601,7 +601,7 @@ function MissionBlock({ mission, dream, state, onChange }: {
       {mission.signals.length > 0 || showSignals ? (
         <div style={{ borderTop: '1px solid rgba(192,132,252,0.05)', padding: '6px 10px' }}>
           <button onClick={() => setShowSignals(v => !v)} style={{
-            fontFamily: 'var(--font)', fontSize: 7, color: `${LOG_NEON}40`,
+            fontFamily: 'var(--font)', fontSize: 11.5, color: `${LOG_NEON}40`,
             letterSpacing: '0.15em', cursor: 'pointer', transition: 'color 0.12s', marginBottom: showSignals ? 6 : 0,
           }}
             onMouseEnter={e => e.currentTarget.style.color = `${LOG_NEON}80`}
@@ -620,7 +620,7 @@ function MissionBlock({ mission, dream, state, onChange }: {
                   <p style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
                     color: 'rgba(220,210,255,0.5)', lineHeight: 1.5 }}>{s.text}</p>
                   <button onClick={() => onChange(deleteSignal(state, dream.id, mission.id, s.id))}
-                    style={{ fontSize: 12, color: 'rgba(255,0,51,0.2)', flexShrink: 0, transition: 'color 0.12s' }}
+                    style={{ fontSize: 14.5, color: 'rgba(255,0,51,0.2)', flexShrink: 0, transition: 'color 0.12s' }}
                     onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,0,51,0.2)'}
                   >×</button>
@@ -715,16 +715,16 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
             flexShrink: 0, paddingTop: 1, userSelect: 'none' }}
             onClick={e => e.stopPropagation()}>
             <button onClick={() => onMove(-1)} disabled={rank === 1} title={tr('Raise priority', 'Повысить приоритет')}
-              style={{ fontSize: 9, lineHeight: 1, padding: '1px 3px', cursor: rank === 1 ? 'default' : 'pointer',
+              style={{ fontSize: 11.5, lineHeight: 1, padding: '1px 3px', cursor: rank === 1 ? 'default' : 'pointer',
                 color: rank === 1 ? 'rgba(192,132,252,0.15)' : `${LOG_NEON}70`, transition: 'color 0.12s' }}
               onMouseEnter={e => { if (rank !== 1) e.currentTarget.style.color = LOG_NEON }}
               onMouseLeave={e => { if (rank !== 1) e.currentTarget.style.color = `${LOG_NEON}70` }}
             >▲</button>
-            <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+            <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
               color: rank === 1 ? '#ff6b00' : LOG_NEON, lineHeight: 1,
               textShadow: rank === 1 ? '0 0 6px #ff6b0080' : 'none' }}>#{rank}</span>
             <button onClick={() => onMove(1)} disabled={rank === total} title={tr('Lower priority', 'Понизить приоритет')}
-              style={{ fontSize: 9, lineHeight: 1, padding: '1px 3px', cursor: rank === total ? 'default' : 'pointer',
+              style={{ fontSize: 11.5, lineHeight: 1, padding: '1px 3px', cursor: rank === total ? 'default' : 'pointer',
                 color: rank === total ? 'rgba(192,132,252,0.15)' : `${LOG_NEON}70`, transition: 'color 0.12s' }}
               onMouseEnter={e => { if (rank !== total) e.currentTarget.style.color = LOG_NEON }}
               onMouseLeave={e => { if (rank !== total) e.currentTarget.style.color = `${LOG_NEON}70` }}
@@ -737,7 +737,7 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
             background: `${LOG_NEON}12`,
             border: `1px solid ${LOG_NEON}35`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 15, transition: 'all 0.2s',
+            fontSize: 17.5, transition: 'all 0.2s',
             boxShadow: expanded ? `0 0 14px ${LOG_NEON}30` : 'none',
           }}>
             <span style={{ filter: `drop-shadow(0 0 5px ${LOG_NEON})` }}>
@@ -748,20 +748,20 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
           {/* Title + meta */}
           <div style={{ flex: 1, minWidth: 0 }} onClick={onToggleExpand}>
             <p style={{
-              fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
+              fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 800,
               color: 'rgba(230,220,255,0.92)', letterSpacing: '0.05em',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{dream.title}</p>
             <div style={{ display: 'flex', gap: 8, marginTop: 3, alignItems: 'center' }}>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7,
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5,
                 color: `${LOG_NEON}55`, letterSpacing: '0.1em' }}>{dream.category}</span>
               {active > 0 && (
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${LOG_NEON}45` }}>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${LOG_NEON}45` }}>
                   {active} active
                 </span>
               )}
               {done > 0 && (
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(245,158,11,0.5)' }}>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(245,158,11,0.5)' }}>
                   {done} done
                 </span>
               )}
@@ -771,24 +771,24 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
           {/* Right side: progress + controls */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <div style={{ textAlign: 'right' }}>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 16, fontWeight: 900,
+              <p style={{ fontFamily: 'var(--font)', fontSize: 18, fontWeight: 900,
                 color: progress === 100 ? '#f59e0b' : LOG_NEON,
                 textShadow: `0 0 10px ${progress === 100 ? '#f59e0b' : LOG_NEON}60`,
                 lineHeight: 1 }}>{progress}%</p>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 6,
+              <p style={{ fontFamily: 'var(--font)', fontSize: 11,
                 color: `${LOG_NEON}40`, letterSpacing: '0.1em', marginTop: 1 }}>{tr('TRAJ.', 'ТРАЕКТ.')}</p>
             </div>
 
             {hovHeader && (
               <div style={{ display: 'flex', gap: 3 }}>
                 <button onClick={e => { e.stopPropagation(); onEdit() }} title={tr('Edit dream', 'Изменить мечту')}
-                  style={{ fontSize: 12, color: `${LOG_NEON}45`, padding: '2px 4px', transition: 'color 0.12s' }}
+                  style={{ fontSize: 14.5, color: `${LOG_NEON}45`, padding: '2px 4px', transition: 'color 0.12s' }}
                   onMouseEnter={e => e.currentTarget.style.color = LOG_NEON}
                   onMouseLeave={e => e.currentTarget.style.color = `${LOG_NEON}45`}
                 >✎</button>
                 <button onClick={e => { e.stopPropagation(); onChange(deleteDream(state, dream.id)) }}
                   title={tr('Delete dream', 'Удалить мечту')}
-                  style={{ fontSize: 13, color: 'rgba(255,0,51,0.2)', padding: '2px 4px', transition: 'color 0.12s' }}
+                  style={{ fontSize: 15.5, color: 'rgba(255,0,51,0.2)', padding: '2px 4px', transition: 'color 0.12s' }}
                   onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
                   onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,0,51,0.2)'}
                 >×</button>
@@ -796,7 +796,7 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
             )}
 
             <button onClick={onToggleExpand} style={{
-              fontSize: 11, color: `${LOG_NEON}50`, padding: '2px 4px', transition: 'all 0.15s',
+              fontSize: 13.5, color: `${LOG_NEON}50`, padding: '2px 4px', transition: 'all 0.15s',
               transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
             }}>▾</button>
           </div>
@@ -839,13 +839,13 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
             border: `1px solid rgba(0,245,255,${promoted ? 0.16 : 0.32})`,
             opacity: promoted ? 0.65 : 1, transition: 'all 0.18s',
           }}>
-            <span style={{ fontSize: 13, filter: 'drop-shadow(0 0 4px #00f5ff)' }}>◈</span>
+            <span style={{ fontSize: 15.5, filter: 'drop-shadow(0 0 4px #00f5ff)' }}>◈</span>
             <div style={{ flex: 1, textAlign: 'left' }}>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+              <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
                 color: '#00f5ff', letterSpacing: '0.15em' }}>
                 {promoted ? tr('ALREADY AN UPLINK', 'УЖЕ КАНАЛ') : tr('PROMOTE TO UPLINK', 'ПРОДВИНУТЬ В КАНАЛ')}
               </p>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 7,
+              <p style={{ fontFamily: 'var(--font)', fontSize: 11.5,
                 color: 'rgba(0,245,255,0.5)', letterSpacing: '0.06em', marginTop: 1 }}>
                 {promoted
                   ? tr('Its protocol lives in UPLINKS', 'Его протокол — в UPLINKS')
@@ -865,16 +865,16 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
               onMouseEnter={e => { e.currentTarget.style.background = `${LOG_NEON}12`; e.currentTarget.style.borderColor = `${LOG_NEON}55` }}
               onMouseLeave={e => { e.currentTarget.style.background = `${LOG_NEON}07`; e.currentTarget.style.borderColor = `${LOG_NEON}30` }}
             >
-              <span style={{ fontSize: 14, filter: `drop-shadow(0 0 4px ${LOG_NEON})` }}>⊹</span>
+              <span style={{ fontSize: 16.5, filter: `drop-shadow(0 0 4px ${LOG_NEON})` }}>⊹</span>
               <div style={{ flex: 1, textAlign: 'left' }}>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
                   color: LOG_NEON, letterSpacing: '0.15em' }}>{tr('ANALYZE WITH PATHFINDER', 'АНАЛИЗ С PATHFINDER')}</p>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 7,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 11.5,
                   color: `${LOG_NEON}50`, letterSpacing: '0.08em', marginTop: 1 }}>
                   AI will plot missions, tasks, dailies & habits
                 </p>
               </div>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 9, color: `${LOG_NEON}50` }}>↯</span>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${LOG_NEON}50` }}>↯</span>
             </button>
           )}
 
@@ -883,12 +883,12 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
             <div style={{ display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 12px', marginBottom: 10, borderRadius: 8,
               background: `${LOG_NEON}06`, border: `1px solid ${LOG_NEON}20` }}>
-              <span style={{ fontSize: 14, animation: 'pulse 1.5s ease-in-out infinite',
+              <span style={{ fontSize: 16.5, animation: 'pulse 1.5s ease-in-out infinite',
                 filter: `drop-shadow(0 0 6px ${LOG_NEON})` }}>⊹</span>
               <div>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
                   color: LOG_NEON, letterSpacing: '0.15em' }}>{tr('COMPUTING TRAJECTORY...', 'ВЫЧИСЛЯЮ ТРАЕКТОРИЮ...')}</p>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${LOG_NEON}45`,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${LOG_NEON}45`,
                   letterSpacing: '0.08em', marginTop: 1 }}>{tr('Connecting all the dots', 'Соединяю все точки')}</p>
               </div>
               <div style={{ display: 'flex', gap: 3, marginLeft: 'auto' }}>
@@ -907,7 +907,7 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
               <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: '#ff4444' }}>
                 {analyzeError}
               </p>
-              <button onClick={analyze} style={{ fontFamily: 'var(--font)', fontSize: 8,
+              <button onClick={analyze} style={{ fontFamily: 'var(--font)', fontSize: 10.5,
                 color: LOG_NEON, letterSpacing: '0.1em', cursor: 'pointer', marginTop: 4 }}>
                 RETRY ↺
               </button>
@@ -1007,7 +1007,7 @@ function MissionModal({ initial, onSave, onCancel }: {
         display: 'flex', flexDirection: 'column', gap: 9,
         maxHeight: '80%', overflowY: 'auto',
       }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 700,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
           color: LOG_NEON, letterSpacing: '0.2em', marginBottom: 2 }}>
           {initial ? tr('UPDATE MISSION','ОБНОВИТЬ МИССИЮ') : tr('DEPLOY MISSION','СОЗДАТЬ МИССИЮ')}
         </p>
@@ -1086,7 +1086,7 @@ function DreamModal({ categories, initial, onSave, onCancel }: {
         display: 'flex', flexDirection: 'column', gap: 9,
         maxHeight: '70%', overflowY: 'auto',
       }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 700,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
           color: LOG_NEON, letterSpacing: '0.2em', marginBottom: 2 }}>
           {initial ? tr('UPDATE DREAM','ОБНОВИТЬ МЕЧТУ') : tr('✧ NEW DREAM','✧ НОВАЯ МЕЧТА')}
         </p>
@@ -1155,16 +1155,16 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
         borderBottom: `1px solid ${LOG_NEON}22`, background: `${LOG_NEON}0a` }}>
-        <span style={{ fontSize: 13, filter: `drop-shadow(0 0 6px ${LOG_NEON})` }}>⟡</span>
+        <span style={{ fontSize: 15.5, filter: `drop-shadow(0 0 6px ${LOG_NEON})` }}>⟡</span>
         <div style={{ flex: 1 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
             color: LOG_NEON, letterSpacing: '0.2em' }}>{tr('CONSTELLATION SYNTHESIS', 'СИНТЕЗ СОЗВЕЗДИЯ')}</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${LOG_NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${LOG_NEON}50`,
             letterSpacing: '0.1em' }}>{c.plan.length} UNIFIED ACTIONS · {c.links.length} LINKS</p>
         </div>
         {remaining > 0 && (
           <button onClick={deployAll} style={{
-            fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, color: S7_NEON,
+            fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, color: S7_NEON,
             letterSpacing: '0.1em', cursor: 'pointer', padding: '4px 9px', borderRadius: 4,
             border: `1px solid ${S7_NEON}45`, background: `${S7_NEON}0c`, transition: 'background 0.15s',
           }}
@@ -1173,7 +1173,7 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
           >→ DEPLOY ALL</button>
         )}
         <button onClick={onDismiss} title={tr('Dismiss synthesis', 'Скрыть синтез')}
-          style={{ fontSize: 13, color: 'rgba(192,132,252,0.3)', cursor: 'pointer', transition: 'color 0.12s' }}
+          style={{ fontSize: 15.5, color: 'rgba(192,132,252,0.3)', cursor: 'pointer', transition: 'color 0.12s' }}
           onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
           onMouseLeave={e => e.currentTarget.style.color = 'rgba(192,132,252,0.3)'}
         >×</button>
@@ -1191,13 +1191,13 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
       {c.links.length > 0 && (
         <div style={{ padding: '8px 12px', borderBottom: `1px solid ${LOG_NEON}10`,
           display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: `${LOG_NEON}45`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: `${LOG_NEON}45`,
             letterSpacing: '0.18em' }}>{tr('INTERCONNECTIONS', 'ВЗАИМОСВЯЗИ')}</p>
           {c.links.map((l, i) => (
             <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 9, color: LOG_NEON, lineHeight: 1.5, flexShrink: 0 }}>◇</span>
+              <span style={{ fontSize: 11.5, color: LOG_NEON, lineHeight: 1.5, flexShrink: 0 }}>◇</span>
               <div>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${LOG_NEON}70`,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${LOG_NEON}70`,
                   fontWeight: 700, letterSpacing: '0.04em' }}>{l.dreams.join('  ✦  ')}</p>
                 <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
                   color: 'rgba(210,200,255,0.6)', lineHeight: 1.5 }}>{l.insight}</p>
@@ -1209,7 +1209,7 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
 
       {/* Unified plan → SCRAP-7 */}
       <div style={{ padding: '8px 12px 10px' }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: `${LOG_NEON}45`,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: `${LOG_NEON}45`,
           letterSpacing: '0.18em', marginBottom: 6 }}>UNIFIED PLAN → SCRAP-7</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {c.plan.map((p, i) => {
@@ -1224,7 +1224,7 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
                     border: `1.5px solid ${p.deployed ? `${S7_NEON}40` : `${S7_NEON}70`}`,
                     background: p.deployed ? `${S7_NEON}12` : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 10, color: p.deployed ? S7_NEON : `${S7_NEON}90`, transition: 'all 0.15s',
+                    fontSize: 12.5, color: p.deployed ? S7_NEON : `${S7_NEON}90`, transition: 'all 0.15s',
                   }}
                   onMouseEnter={e => { if (!p.deployed) e.currentTarget.style.background = `${S7_NEON}14` }}
                   onMouseLeave={e => { if (!p.deployed) e.currentTarget.style.background = 'transparent' }}
@@ -1236,13 +1236,13 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
                     {p.text}
                   </p>
                   {p.serves && (
-                    <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${LOG_NEON}45`,
+                    <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${LOG_NEON}45`,
                       letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       ↳ {p.serves}
                     </p>
                   )}
                 </div>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: tColor,
+                <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: tColor,
                   letterSpacing: '0.1em', flexShrink: 0, padding: '1px 5px', borderRadius: 3,
                   border: `1px solid ${tColor}30`, background: `${tColor}08` }}>
                   {TASK_TYPE_LABEL[p.type]}
@@ -1252,7 +1252,7 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
           })}
         </div>
         {remaining === 0 && (
-          <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${S7_NEON}70`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${S7_NEON}70`,
             letterSpacing: '0.12em', textAlign: 'center', marginTop: 8 }}>
             ✦ ALL ACTIONS DEPLOYED · CHECK SCRAP-7
           </p>
@@ -1351,9 +1351,9 @@ export default function Log() {
         display: 'flex', alignItems: 'center', gap: 14,
       }}>
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900,
             color: LOG_NEON, letterSpacing: '0.2em', textShadow: `0 0 10px ${LOG_NEON}` }}>PATHFINDER</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${LOG_NEON}40`, letterSpacing: '0.12em' }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${LOG_NEON}40`, letterSpacing: '0.12em' }}>
             {tr('ROUTE TO WHAT YOU WANT', 'МАРШРУТ К ТОМУ, ЧТО ВЫ ХОТИТЕ')}
           </p>
         </div>
@@ -1364,15 +1364,15 @@ export default function Log() {
           { v: `${overallPct}%`,            l: tr('PROGRESS', 'ПРОГРЕСС'), c: 'rgba(192,132,252,0.5)' },
         ].map(({ v, l, c }) => (
           <div key={l} style={{ textAlign: 'right' }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 900, color: c, lineHeight: 1 }}>{v}</p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(192,132,252,0.3)', letterSpacing: '0.1em' }}>{l}</p>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 16.5, fontWeight: 900, color: c, lineHeight: 1 }}>{v}</p>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(192,132,252,0.3)', letterSpacing: '0.1em' }}>{l}</p>
           </div>
         ))}
         {state.dreams.length >= 2 && (
           <button onClick={synthesize} disabled={synthesizing} title={tr('Analyze all dreams together', 'Проанализировать все мечты вместе')}
             style={{
               height: 28, padding: '0 10px', borderRadius: 7, cursor: synthesizing ? 'default' : 'pointer',
-              fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.1em',
+              fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.1em',
               color: synthesizing ? `${LOG_NEON}50` : LOG_NEON,
               border: `1px solid ${LOG_NEON}35`, background: LOG_DIM, transition: 'all 0.15s',
               display: 'flex', alignItems: 'center', gap: 5,
@@ -1385,7 +1385,7 @@ export default function Log() {
           </button>
         )}
         {!LOG_FROZEN && <button onClick={() => setDreamModal('new')} style={{
-          width: 28, height: 28, borderRadius: 7, fontSize: 16, fontWeight: 700,
+          width: 28, height: 28, borderRadius: 7, fontSize: 18, fontWeight: 700,
           color: `${LOG_NEON}80`, border: `1px solid ${LOG_NEON}30`,
           background: LOG_DIM, cursor: 'pointer', transition: 'all 0.15s',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1400,7 +1400,7 @@ export default function Log() {
         <div style={{ margin: '8px 10px 0', padding: '8px 10px', borderRadius: 7, flexShrink: 0,
           background: 'rgba(255,0,51,0.05)', border: '1px solid rgba(255,0,51,0.2)' }}>
           <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: '#ff4444' }}>{synthError}</p>
-          <button onClick={synthesize} style={{ fontFamily: 'var(--font)', fontSize: 8,
+          <button onClick={synthesize} style={{ fontFamily: 'var(--font)', fontSize: 10.5,
             color: LOG_NEON, letterSpacing: '0.1em', cursor: 'pointer', marginTop: 4 }}>RETRY ↺</button>
         </div>
       )}
@@ -1413,7 +1413,7 @@ export default function Log() {
           <div style={{ margin: '8px 10px 0', padding: '8px 10px', borderRadius: 7,
             background: 'rgba(255,0,51,0.05)', border: '1px solid rgba(255,0,51,0.2)' }}>
             <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: '#ff4444' }}>{synthError}</p>
-            <button onClick={synthesize} style={{ fontFamily: 'var(--font)', fontSize: 8,
+            <button onClick={synthesize} style={{ fontFamily: 'var(--font)', fontSize: 10.5,
               color: LOG_NEON, letterSpacing: '0.1em', cursor: 'pointer', marginTop: 4 }}>RETRY ↺</button>
           </div>
         )}

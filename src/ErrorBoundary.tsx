@@ -21,7 +21,7 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
 
     const btn: React.CSSProperties = {
       padding: '10px 22px', borderRadius: 7, cursor: 'pointer',
-      fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800, letterSpacing: '0.1em',
+      fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 800, letterSpacing: '0.1em',
       color: '#00f5ff', border: '1px solid rgba(0,245,255,0.4)',
       background: 'rgba(0,245,255,0.08)',
     }
@@ -33,14 +33,14 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
         background: 'rgba(6,11,22,0.97)',
       }}>
         <span style={{ fontSize: 34 }}>🛠</span>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 14, fontWeight: 900, color: '#00f5ff',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 16.5, fontWeight: 900, color: '#00f5ff',
           letterSpacing: '0.14em' }}>{t('SYSTEM FAULT', 'СБОЙ СИСТЕМЫ')}</p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(148,163,184,0.7)',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, color: 'rgba(148,163,184,0.7)',
           lineHeight: 1.7, maxWidth: 320 }}>
           {t('Warren hit an unexpected error. Your data is safe on this machine — reload to recover, or download a backup first.',
              'Warren столкнулся с неожиданной ошибкой. Ваши данные на этой машине целы — перезагрузитесь или сначала скачайте резервную копию.')}
         </p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: 'rgba(255,68,68,0.6)',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: 'rgba(255,68,68,0.6)',
           maxWidth: 340, wordBreak: 'break-word' }}>{this.state.error.message}</p>
         <div style={{ display: 'flex', gap: 10 }}>
           <button style={btn} onClick={() => window.location.reload()}>

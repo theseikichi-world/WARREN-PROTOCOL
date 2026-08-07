@@ -126,7 +126,7 @@ function StickerChip({ s, i, size = 'md' }: { s: Sticker; i: number; size?: 'sm'
       onMouseLeave={e => { e.currentTarget.style.transform = `rotate(${rot}deg)` }}>
       <span style={{ fontSize: big ? 16 : 13, lineHeight: 1 }}>{s.emoji}</span>
       {big && s.label && (
-        <span style={{ fontFamily: FONT, fontSize: 5.5, fontWeight: 800, color: '#3a3320',
+        <span style={{ fontFamily: FONT, fontSize: 11, fontWeight: 800, color: '#3a3320',
           letterSpacing: '0.04em', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis',
           whiteSpace: 'nowrap', textTransform: 'uppercase' }}>{s.label}</span>
       )}
@@ -147,12 +147,12 @@ function Composer({ initial, onSeal, onCancel }: {
     <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ padding: '10px 14px', flexShrink: 0, borderBottom: `1px solid ${NEON}18`,
         display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onCancel} style={{ fontFamily: FONT, fontSize: 11, color: `${NEON}55`,
+        <button onClick={onCancel} style={{ fontFamily: FONT, fontSize: 13.5, color: `${NEON}55`,
           letterSpacing: '0.1em', cursor: 'pointer' }}>← {tr('BACK', 'НАЗАД')}</button>
         <div>
-          <p style={{ fontFamily: FONT, fontSize: 9, fontWeight: 900, color: NEON,
+          <p style={{ fontFamily: FONT, fontSize: 11.5, fontWeight: 900, color: NEON,
             letterSpacing: '0.2em', textShadow: `0 0 8px ${NEON}` }}>{fmtStardate(todayKey())}</p>
-          <p style={{ fontFamily: FONT, fontSize: 6.5, color: `${NEON}45`, letterSpacing: '0.1em' }}>
+          <p style={{ fontFamily: FONT, fontSize: 11, color: `${NEON}45`, letterSpacing: '0.1em' }}>
             {fmtDay(todayKey()).toUpperCase()}</p>
         </div>
       </div>
@@ -165,14 +165,14 @@ function Composer({ initial, onSeal, onCancel }: {
           style={{
             flex: 1, width: '100%', padding: '12px 14px', borderRadius: 10, resize: 'none',
             background: 'rgba(0,0,0,0.45)', border: `1px solid ${NEON}22`, outline: 'none',
-            fontFamily: FONT, fontSize: 12, lineHeight: 1.8, color: 'rgba(255,248,220,0.92)',
+            fontFamily: FONT, fontSize: 14.5, lineHeight: 1.8, color: 'rgba(255,248,220,0.92)',
             letterSpacing: '0.02em', boxSizing: 'border-box',
             userSelect: 'text', WebkitUserSelect: 'text',
           }}
           onFocus={e => e.target.style.borderColor = `${NEON}50`}
           onBlur={e => e.target.style.borderColor = `${NEON}22`}
         />
-        <p style={{ fontFamily: FONT, fontSize: 7, color: 'rgba(148,163,184,0.4)', letterSpacing: '0.05em', flexShrink: 0 }}>
+        <p style={{ fontFamily: FONT, fontSize: 11.5, color: 'rgba(148,163,184,0.4)', letterSpacing: '0.05em', flexShrink: 0 }}>
           {text.trim().length} {tr('chars · your original words are always kept', 'симв. · ваш оригинал всегда сохраняется')}
         </p>
 
@@ -236,13 +236,13 @@ function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId, liveText
         {/* Date row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
           {entry.mood?.emoji && (
-            <span title={entry.mood.label} style={{ fontSize: 15,
+            <span title={entry.mood.label} style={{ fontSize: 17.5,
               filter: `drop-shadow(0 0 6px ${moodColor}70)` }}>{entry.mood.emoji}</span>
           )}
           <div style={{ flex: 1 }}>
-            <p style={{ fontFamily: FONT, fontSize: 8.5, fontWeight: 800, color: NEON,
+            <p style={{ fontFamily: FONT, fontSize: 11, fontWeight: 800, color: NEON,
               letterSpacing: '0.16em' }}>{fmtStardate(entry.date)}</p>
-            <p style={{ fontFamily: FONT, fontSize: 6.5, color: 'rgba(148,163,184,0.45)',
+            <p style={{ fontFamily: FONT, fontSize: 11, color: 'rgba(148,163,184,0.45)',
               letterSpacing: '0.08em', marginTop: 1 }}>
               {fmtDay(entry.date).toUpperCase()}
               {entry.mood?.label ? ` · ${entry.mood.label.toUpperCase()}` : ''}
@@ -254,7 +254,7 @@ function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId, liveText
               border: `1px solid ${NEON}25`, flexShrink: 0 }}>
               {([['raw', 'RAW'], ['polished', '✨']] as const).map(([v, l]) => (
                 <button key={v} onClick={() => onUpdate(entry.id, { view: v })} style={{
-                  padding: '3px 8px', fontFamily: FONT, fontSize: 7, fontWeight: 700, cursor: 'pointer',
+                  padding: '3px 8px', fontFamily: FONT, fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
                   letterSpacing: '0.06em',
                   color: entry.view === v ? NEON : 'rgba(148,163,184,0.35)',
                   background: entry.view === v ? NEON_D : 'transparent',
@@ -265,7 +265,7 @@ function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId, liveText
         </div>
 
         {/* Text */}
-        <p style={{ fontFamily: FONT, fontSize: 10.5, lineHeight: 1.8, whiteSpace: 'pre-wrap',
+        <p style={{ fontFamily: FONT, fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap',
           color: showPolished ? 'rgba(255,248,220,0.92)' : 'rgba(235,230,210,0.8)',
           letterSpacing: '0.02em' }}>{preview}</p>
 
@@ -274,11 +274,11 @@ function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId, liveText
           <div style={{ marginTop: 9, padding: '9px 12px', borderRadius: 9,
             background: 'rgba(30,24,6,0.9)', border: `1px solid ${NEON}30`,
             borderLeft: `3px solid ${NEON}`, boxShadow: `0 0 14px ${NEON}12` }}>
-            <p style={{ fontFamily: FONT, fontSize: 7, fontWeight: 800, color: `${NEON}90`,
+            <p style={{ fontFamily: FONT, fontSize: 11.5, fontWeight: 800, color: `${NEON}90`,
               letterSpacing: '0.18em', marginBottom: 5 }}>
               🦉 {tr('THE OWL IS POLISHING', 'СОВА ШЛИФУЕТ')}<span className="pulse">…</span>
             </p>
-            <p style={{ fontFamily: FONT, fontSize: 10.5, lineHeight: 1.8, whiteSpace: 'pre-wrap',
+            <p style={{ fontFamily: FONT, fontSize: 13, lineHeight: 1.8, whiteSpace: 'pre-wrap',
               color: 'rgba(255,248,220,0.92)', letterSpacing: '0.02em' }}>
               {liveText}
               <span style={{ display: 'inline-block', width: 7, height: 13, marginLeft: 2,
@@ -292,7 +292,7 @@ function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId, liveText
         {expanded && (entry.themes?.length ?? 0) > 0 && (
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 9 }}>
             {entry.themes!.map(t => (
-              <span key={t} style={{ fontFamily: FONT, fontSize: 7, fontWeight: 700, color: `${moodColor}cc`,
+              <span key={t} style={{ fontFamily: FONT, fontSize: 11.5, fontWeight: 700, color: `${moodColor}cc`,
                 letterSpacing: '0.08em', padding: '2px 7px', borderRadius: 4,
                 border: `1px solid ${moodColor}30`, background: `${moodColor}0c` }}>#{t}</span>
             ))}
@@ -304,9 +304,9 @@ function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId, liveText
       {expanded && entry.reflection && (
         <div style={{ margin: '0 14px 10px', padding: '9px 12px', borderRadius: 9,
           background: RAISED, border: `1px solid ${NEON}1c`, borderLeft: `3px solid ${NEON}60` }}>
-          <p style={{ fontFamily: FONT, fontSize: 7, fontWeight: 800, color: `${NEON}80`,
+          <p style={{ fontFamily: FONT, fontSize: 11.5, fontWeight: 800, color: `${NEON}80`,
             letterSpacing: '0.18em', marginBottom: 5 }}>🦉 {tr("FIRST-OFFICER'S DEBRIEF", 'РАЗБОР ПЕРВОГО ПОМОЩНИКА')}</p>
-          <p style={{ fontFamily: FONT, fontSize: 9.5, lineHeight: 1.7, color: 'rgba(255,240,200,0.7)',
+          <p style={{ fontFamily: FONT, fontSize: 12, lineHeight: 1.7, color: 'rgba(255,240,200,0.7)',
             fontStyle: 'italic' }}>{entry.reflection}</p>
         </div>
       )}
@@ -318,7 +318,7 @@ function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId, liveText
           {!hasAI && (
             <button disabled={enhancing} onClick={() => onEnhance(entry)} style={{
               padding: '5px 12px', borderRadius: 6, cursor: enhancing ? 'default' : 'pointer',
-              fontFamily: FONT, fontSize: 8, fontWeight: 800, letterSpacing: '0.08em',
+              fontFamily: FONT, fontSize: 10.5, fontWeight: 800, letterSpacing: '0.08em',
               color: '#1a1503', background: `linear-gradient(135deg, ${NEON}, #ffb700)`,
               border: 'none', boxShadow: `0 2px 10px ${NEON}35`,
             }}>{enhancing ? tr('🦉 ENHANCING…', '🦉 УЛУЧШАЮ…') : tr('✨ ENHANCE', '✨ УЛУЧШИТЬ')}</button>
@@ -326,13 +326,13 @@ function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId, liveText
           {hasAI && (
             <button disabled={enhancing} onClick={() => onEnhance(entry)} title={tr('Re-run enhancement', 'Запустить улучшение заново')} style={{
               padding: '5px 10px', borderRadius: 6, cursor: enhancing ? 'default' : 'pointer',
-              fontFamily: FONT, fontSize: 8, fontWeight: 700, letterSpacing: '0.06em',
+              fontFamily: FONT, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em',
               color: `${NEON}80`, background: 'transparent', border: `1px solid ${NEON}30`,
             }}>{enhancing ? '🦉 …' : tr('↻ RE-ENHANCE', '↻ УЛУЧШИТЬ ЗАНОВО')}</button>
           )}
           <div style={{ flex: 1 }}/>
           <button onClick={() => onDelete(entry.id)} style={{
-            fontFamily: FONT, fontSize: 8, color: 'rgba(248,113,113,0.45)', cursor: 'pointer',
+            fontFamily: FONT, fontSize: 10.5, color: 'rgba(248,113,113,0.45)', cursor: 'pointer',
             background: 'none', border: 'none', transition: 'color 0.12s' }}
             onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
             onMouseLeave={e => e.currentTarget.style.color = 'rgba(248,113,113,0.45)'}>{tr('burn page', 'сжечь страницу')}</button>
@@ -351,13 +351,13 @@ function StickerBook({ stickers, onClose }: { stickers: Sticker[]; onClose: () =
         width: '100%', maxHeight: '70%', overflowY: 'auto',
         background: 'rgba(20,16,4,0.98)', borderTop: `1px solid ${NEON}35`,
         borderTopLeftRadius: 14, borderTopRightRadius: 14, padding: '16px', backdropFilter: 'blur(20px)' }}>
-        <p style={{ fontFamily: FONT, fontSize: 9, fontWeight: 900, color: NEON,
+        <p style={{ fontFamily: FONT, fontSize: 11.5, fontWeight: 900, color: NEON,
           letterSpacing: '0.2em', marginBottom: 4 }}>🎟 {tr('STICKER COLLECTION', 'КОЛЛЕКЦИЯ НАКЛЕЕК')}</p>
-        <p style={{ fontFamily: FONT, fontSize: 7.5, color: `${NEON}50`, letterSpacing: '0.06em', marginBottom: 14 }}>
+        <p style={{ fontFamily: FONT, fontSize: 10, color: `${NEON}50`, letterSpacing: '0.06em', marginBottom: 14 }}>
           {stickers.length} {tr('collected — one for every moment you wrote down', 'собрано — по одной за каждый записанный момент')}
         </p>
         {stickers.length === 0 ? (
-          <p style={{ fontFamily: FONT, fontSize: 9, color: 'rgba(148,163,184,0.4)', textAlign: 'center', padding: '20px 0' }}>
+          <p style={{ fontFamily: FONT, fontSize: 11.5, color: 'rgba(148,163,184,0.4)', textAlign: 'center', padding: '20px 0' }}>
             {tr('Write and enhance entries to earn stickers', 'Пишите и улучшайте записи, чтобы получать наклейки')} ✨</p>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, padding: '6px 2px 12px' }}>
@@ -421,26 +421,26 @@ export default function Journal() {
         background: 'rgba(14,11,2,0.7)', display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ fontSize: 20, filter: `drop-shadow(0 0 8px ${NEON})` }}>🦉</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontFamily: FONT, fontSize: 11, fontWeight: 900, color: NEON,
+          <p style={{ fontFamily: FONT, fontSize: 13.5, fontWeight: 900, color: NEON,
             letterSpacing: '0.18em', textShadow: `0 0 12px ${NEON}` }}>CAPTAIN'S JOURNAL</p>
-          <p style={{ fontFamily: FONT, fontSize: 6.5, color: `${NEON}45`, letterSpacing: '0.12em' }}>
+          <p style={{ fontFamily: FONT, fontSize: 11, color: `${NEON}45`, letterSpacing: '0.12em' }}>
             {tr('PERSONAL LOG · WISE HOOT, FIRST OFFICER', 'ЛИЧНЫЙ ЖУРНАЛ · WISE HOOT, ПЕРВЫЙ ПОМОЩНИК')}
           </p>
         </div>
         {streak > 0 && (
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <p style={{ fontFamily: FONT, fontSize: 13, fontWeight: 900, color: '#ff6b00', lineHeight: 1 }}>{streak}🔥</p>
-            <p style={{ fontFamily: FONT, fontSize: 6, color: 'rgba(255,107,0,0.6)', letterSpacing: '0.1em' }}>{tr('DAY LOG', 'ДНЕЙ ПОДРЯД')}</p>
+            <p style={{ fontFamily: FONT, fontSize: 15.5, fontWeight: 900, color: '#ff6b00', lineHeight: 1 }}>{streak}🔥</p>
+            <p style={{ fontFamily: FONT, fontSize: 11, color: 'rgba(255,107,0,0.6)', letterSpacing: '0.1em' }}>{tr('DAY LOG', 'ДНЕЙ ПОДРЯД')}</p>
           </div>
         )}
         <button onClick={() => setShowStickers(true)} title={tr('Sticker collection', 'Коллекция наклеек')} style={{
-          height: 28, padding: '0 9px', borderRadius: 7, fontSize: 12, flexShrink: 0,
+          height: 28, padding: '0 9px', borderRadius: 7, fontSize: 14.5, flexShrink: 0,
           color: `${NEON}80`, border: `1px solid ${NEON}25`, background: 'transparent', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 4, fontFamily: FONT }}>
-          🎟<span style={{ fontSize: 8, fontWeight: 800 }}>{collection.length}</span>
+          🎟<span style={{ fontSize: 10.5, fontWeight: 800 }}>{collection.length}</span>
         </button>
         <button onClick={() => setScreen('compose')} style={{
-          width: 28, height: 28, borderRadius: 7, fontSize: 15, fontWeight: 700, flexShrink: 0,
+          width: 28, height: 28, borderRadius: 7, fontSize: 17.5, fontWeight: 700, flexShrink: 0,
           color: NEON, border: `1px solid ${NEON}30`, background: NEON_D, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,215,0,0.2)'}
@@ -456,21 +456,21 @@ export default function Journal() {
           border: `1px solid ${NEON}30`, transition: 'border-color 0.15s' }}
           onMouseEnter={e => e.currentTarget.style.borderColor = `${NEON}55`}
           onMouseLeave={e => e.currentTarget.style.borderColor = `${NEON}30`}>
-          <span style={{ fontSize: 16 }}>✍️</span>
+          <span style={{ fontSize: 18 }}>✍️</span>
           <div style={{ flex: 1, textAlign: 'left' }}>
-            <p style={{ fontFamily: FONT, fontSize: 9, fontWeight: 800, color: NEON, letterSpacing: '0.12em' }}>
+            <p style={{ fontFamily: FONT, fontSize: 11.5, fontWeight: 800, color: NEON, letterSpacing: '0.12em' }}>
               {tr("TODAY'S PAGE IS BLANK", 'СЕГОДНЯШНЯЯ СТРАНИЦА ПУСТА')}</p>
-            <p style={{ fontFamily: FONT, fontSize: 7, color: `${NEON}55`, letterSpacing: '0.04em', marginTop: 1 }}>
+            <p style={{ fontFamily: FONT, fontSize: 11.5, color: `${NEON}55`, letterSpacing: '0.04em', marginTop: 1 }}>
               {tr('Tell the story of', 'Расскажите историю')} {fmtDay(todayKey())} — {tr('the owl is listening', 'сова слушает')}</p>
           </div>
-          <span style={{ fontFamily: FONT, fontSize: 11, color: `${NEON}60` }}>→</span>
+          <span style={{ fontFamily: FONT, fontSize: 13.5, color: `${NEON}60` }}>→</span>
         </button>
       )}
 
       {error && (
         <div style={{ margin: '6px 10px 0', padding: '8px 10px', borderRadius: 7, flexShrink: 0,
           background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.25)' }}>
-          <p style={{ fontFamily: FONT, fontSize: 8.5, color: '#f87171' }}>{error}</p>
+          <p style={{ fontFamily: FONT, fontSize: 11, color: '#f87171' }}>{error}</p>
         </div>
       )}
 

@@ -57,7 +57,7 @@ export function FileBrowser({ path, onNavigate }: {
 
   if (!isTauri()) {
     return (
-      <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(148,163,184,0.55)',
+      <p style={{ fontFamily: 'var(--font)', fontSize: 13.5, color: 'rgba(148,163,184,0.55)',
         textAlign: 'center', padding: '60px 20px', lineHeight: 1.8 }}>
         {tr('Browsing your files needs the Warren desktop app.',
             'Просмотр файлов доступен в настольной версии Warren.')}</p>
@@ -76,12 +76,12 @@ export function FileBrowser({ path, onNavigate }: {
             color: path === null ? 'rgba(148,163,184,0.25)' : NEON,
             border: `1px solid ${path === null ? 'rgba(255,255,255,0.06)' : 'rgba(0,245,255,0.3)'}`,
             background: path === null ? 'transparent' : 'rgba(0,245,255,0.06)',
-            fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 15.5, display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>↑</button>
 
         <button onClick={() => onNavigate(null)} style={{
           padding: '7px 13px', borderRadius: 8, cursor: 'pointer',
-          fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
+          fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.1em',
           color: path === null ? NEON : 'rgba(148,163,184,0.6)',
           border: `1px solid ${path === null ? 'rgba(0,245,255,0.4)' : 'rgba(255,255,255,0.07)'}`,
           background: path === null ? 'rgba(0,245,255,0.08)' : 'transparent',
@@ -89,10 +89,10 @@ export function FileBrowser({ path, onNavigate }: {
 
         {crumbs.map((c, i) => (
           <span key={c.path} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: 'rgba(0,245,255,0.25)', fontSize: 9 }}>›</span>
+            <span style={{ color: 'rgba(0,245,255,0.25)', fontSize: 11.5 }}>›</span>
             <button onClick={() => onNavigate(c.path)} style={{
               padding: '6px 10px', borderRadius: 7, cursor: 'pointer',
-              fontFamily: 'var(--font)', fontSize: 9, fontWeight: i === crumbs.length - 1 ? 800 : 600,
+              fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: i === crumbs.length - 1 ? 800 : 600,
               color: i === crumbs.length - 1 ? 'rgba(230,250,255,0.95)' : 'rgba(148,163,184,0.65)',
               border: '1px solid transparent', background: 'transparent', maxWidth: 200,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -107,7 +107,7 @@ export function FileBrowser({ path, onNavigate }: {
             style={{
               width: 180, padding: '7px 12px', borderRadius: 8,
               background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,245,255,0.18)',
-              outline: 'none', fontFamily: 'var(--font)', fontSize: 10,
+              outline: 'none', fontFamily: 'var(--font)', fontSize: 12.5,
               color: 'rgba(225,250,255,0.9)', userSelect: 'text', WebkitUserSelect: 'text',
             }} />
         )}
@@ -138,23 +138,23 @@ export function FileBrowser({ path, onNavigate }: {
         {path !== null && (
           <>
             {loading && (
-              <p className="pulse" style={{ fontFamily: 'var(--font)', fontSize: 10,
+              <p className="pulse" style={{ fontFamily: 'var(--font)', fontSize: 12.5,
                 color: 'rgba(0,245,255,0.5)', letterSpacing: '0.14em', textAlign: 'center', padding: '40px 0' }}>
                 {tr('READING FOLDER…', 'ЧТЕНИЕ ПАПКИ…')}</p>
             )}
             {error && (
-              <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: '#ff5470',
+              <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, color: '#ff5470',
                 textAlign: 'center', padding: '30px 0' }}>⚠ {error}</p>
             )}
             {!loading && !error && shown.length === 0 && (
-              <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(148,163,184,0.45)',
+              <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, color: 'rgba(148,163,184,0.45)',
                 textAlign: 'center', padding: '40px 0' }}>
                 {query ? tr('Nothing matches that filter', 'Ничего не найдено по фильтру')
                        : tr('This folder is empty', 'Эта папка пуста')}</p>
             )}
             {!loading && shown.length > 0 && (
               <>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(148,163,184,0.4)',
+                <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(148,163,184,0.4)',
                   letterSpacing: '0.14em', marginBottom: 8 }}>
                   {folders} {tr('folders', 'папок')} · {shown.length - folders} {tr('files', 'файлов')}</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -171,7 +171,7 @@ export function FileBrowser({ path, onNavigate }: {
           padding: '10px 22px', borderRadius: 10, zIndex: 50,
           background: 'rgba(4,10,18,0.95)', border: '1px solid rgba(0,245,255,0.35)',
           boxShadow: '0 4px 24px rgba(0,0,0,0.6), 0 0 16px rgba(0,245,255,0.15)' }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 700,
             color: toast.startsWith('⚠') ? '#ff5470' : NEON, letterSpacing: '0.08em' }}>{toast}</p>
         </div>
       )}
@@ -182,7 +182,7 @@ export function FileBrowser({ path, onNavigate }: {
 function Section({ label, color }: { label: string; color: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '6px 0 12px' }}>
-      <span style={{ fontFamily: 'var(--font)', fontSize: 8.5, fontWeight: 800,
+      <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
         color: `${color}90`, letterSpacing: '0.22em' }}>{label}</span>
       <div style={{ flex: 1, height: 1, background: `${color}12` }} />
     </div>
@@ -205,7 +205,7 @@ function PlaceCard({ entry, onOpen, drive }: { entry: FileEntry; onOpen: () => v
         boxShadow: hov ? `0 0 18px ${color}20` : 'none', transition: 'all 0.15s',
       }}>
       <span style={{ fontSize: 21, flexShrink: 0 }}>{icon}</span>
-      <span style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, minWidth: 0,
+      <span style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 700, minWidth: 0,
         color: hov ? 'rgba(235,250,255,0.95)' : 'rgba(210,230,245,0.8)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
     </button>
@@ -231,17 +231,17 @@ function FileRow({ entry, onOpen }: { entry: FileEntry; onOpen: () => void }) {
         border: `1px solid ${hov ? `${kind.color}35` : 'transparent'}`,
         transition: 'all 0.12s',
       }}>
-      <span style={{ fontSize: 14, flexShrink: 0, width: 20, textAlign: 'center' }}>{kind.icon}</span>
-      <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 10,
+      <span style={{ fontSize: 16.5, flexShrink: 0, width: 20, textAlign: 'center' }}>{kind.icon}</span>
+      <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 12.5,
         fontWeight: entry.is_dir ? 700 : 500,
         color: entry.is_dir ? 'rgba(255,235,180,0.92)' : 'rgba(215,235,250,0.85)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
       {!entry.is_dir && (
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, flexShrink: 0,
+        <span style={{ fontFamily: 'var(--font)', fontSize: 10, flexShrink: 0,
           color: `${kind.color}80`, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           {entry.ext || kind.label}</span>
       )}
-      <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, flexShrink: 0, minWidth: 54,
+      <span style={{ fontFamily: 'var(--font)', fontSize: 10, flexShrink: 0, minWidth: 54,
         textAlign: 'right', color: 'rgba(148,163,184,0.45)' }}>
         {entry.is_dir ? '›' : fmtSize(entry.size)}</span>
     </button>

@@ -82,11 +82,11 @@ function OrbitRing({ consumed, target }: { consumed: number; target: number }) {
           color: over ? '#ff5470' : NEON, textShadow: `0 0 14px ${ringColor}80` }}>
           {Math.abs(Math.round(remaining))}
         </p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 7, letterSpacing: '0.12em',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, letterSpacing: '0.12em',
           color: over ? 'rgba(255,84,112,0.6)' : `${NEON}60`, marginTop: 2 }}>
           {over ? tr('KCAL OVER', 'ККАЛ СВЕРХ') : tr('KCAL LEFT', 'ККАЛ ОСТ.')}
         </p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 7, letterSpacing: '0.06em',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, letterSpacing: '0.06em',
           color: 'rgba(148,163,184,0.4)', marginTop: 4 }}>
           {Math.round(consumed)} / {target}
         </p>
@@ -104,9 +104,9 @@ function MacroBar({ kind, consumed, target }: {
   return (
     <div style={{ flex: 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700,
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
           color, letterSpacing: '0.1em' }}>{macroLabel(kind)}</span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7,
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5,
           color: 'rgba(148,163,184,0.5)' }}>{Math.round(consumed)}/{target}g</span>
       </div>
       <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
@@ -126,12 +126,12 @@ function BmiChip({ profile, showAdvice }: { profile: SolarisProfile; showAdvice?
     <div title={`${tr('Healthy weight for your height:', 'Здоровый вес для вашего роста:')} ${info.healthyKg[0]}–${info.healthyKg[1]} ${tr('kg', 'кг')}`}>
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
         padding: '3px 8px', borderRadius: 6, background: `${info.color}14`, border: `1px solid ${info.color}40` }}>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900, color: info.color }}>{info.bmi}</span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, letterSpacing: '0.1em',
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900, color: info.color }}>{info.bmi}</span>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.1em',
           color: info.color }}>ИМТ · {bmiLabel(info.label).toUpperCase()}</span>
       </div>
       {showAdvice && mismatch && (
-        <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.6)',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.6)',
           letterSpacing: '0.03em', marginTop: 4, lineHeight: 1.5 }}>
           {tr('Healthy range', 'Здоровый диапазон')} {info.healthyKg[0]}–{info.healthyKg[1]} {tr('kg', 'кг')} · {tr('station suggests a goal:', 'станция советует цель:')}{' '}
           <span style={{ color: GOAL_META[info.advise].color, fontWeight: 700 }}>{goalLabel(info.advise)}</span>
@@ -167,15 +167,15 @@ function WaterMeter({ drinks, targetMl, onAdd, onRemove }: {
       background: `${AQUA}08`, border: `1px solid ${AQUA}22` }}>
       {/* summary */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 13 }}>💧</span>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700, color: AQUA,
+        <span style={{ fontSize: 15.5 }}>💧</span>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 700, color: AQUA,
           letterSpacing: '0.14em', flex: 1 }}>{tr('HYDRATION', 'ГИДРАТАЦИЯ')}</p>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, color: fill }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, color: fill }}>
           {(effective / 1000).toFixed(1)}/{(targetMl / 1000).toFixed(1)} L
         </span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${AQUA}70` }}>{cups} {tr('cups', 'чаш.')}</span>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${AQUA}70` }}>{cups} {tr('cups', 'чаш.')}</span>
         <button onClick={() => setOpen(o => !o)} title={tr('Drink log & custom amount', 'Журнал напитков и свой объём')} style={{
-          fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, letterSpacing: '0.08em',
+          fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em',
           color: `${AQUA}90`, cursor: 'pointer' }}>{open ? tr('CLOSE ▴', 'ЗАКРЫТЬ ▴') : tr('LOG ▾', 'ЖУРНАЛ ▾')}</button>
       </div>
 
@@ -220,7 +220,7 @@ function WaterMeter({ drinks, targetMl, onAdd, onRemove }: {
 
           {/* today's drinks */}
           {drinks.length === 0 ? (
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(148,163,184,0.4)',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(148,163,184,0.4)',
               letterSpacing: '0.04em' }}>{tr('No drinks logged yet today.', 'Сегодня напитки ещё не записаны.')}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 120, overflowY: 'auto' }}>
@@ -230,15 +230,15 @@ function WaterMeter({ drinks, targetMl, onAdd, onRemove }: {
                 return (
                   <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8,
                     padding: '3px 4px' }}>
-                    <span style={{ fontSize: 12 }}>{meta.emoji}</span>
-                    <span style={{ fontFamily: 'var(--font)', fontSize: 8, color: 'rgba(225,245,255,0.8)', flex: 1 }}>
+                    <span style={{ fontSize: 14.5 }}>{meta.emoji}</span>
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: 'rgba(225,245,255,0.8)', flex: 1 }}>
                       {drinkLabel(d.kind)} · {d.ml} {tr('ml', 'мл')}
                       {meta.factor < 1 && (
                         <span style={{ color: `${AQUA}70` }}> → {eff} ml</span>
                       )}
                     </span>
                     <button onClick={() => onRemove(d.id)} title={tr('Remove', 'Удалить')} style={{
-                      fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(255,84,112,0.45)', cursor: 'pointer' }}
+                      fontFamily: 'var(--font)', fontSize: 13.5, color: 'rgba(255,84,112,0.45)', cursor: 'pointer' }}
                       onMouseEnter={e => e.currentTarget.style.color = '#ff5470'}
                       onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,84,112,0.45)'}
                     >✕</button>
@@ -253,7 +253,7 @@ function WaterMeter({ drinks, targetMl, onAdd, onRemove }: {
   )
 }
 const drinkChip: React.CSSProperties = {
-  minWidth: 30, height: 26, padding: '0 8px', borderRadius: 7, fontSize: 13, flexShrink: 0,
+  minWidth: 30, height: 26, padding: '0 8px', borderRadius: 7, fontSize: 15.5, flexShrink: 0,
   color: `${AQUA}90`, border: `1px solid ${AQUA}22`, background: 'rgba(56,189,248,0.05)', cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)',
 }
@@ -278,11 +278,11 @@ function MemberSwitcher({ members, activeId, onSwitch, onAdd }: {
             border: `1px solid ${on ? `${NEON}55` : 'rgba(255,255,255,0.07)'}`,
             background: on ? NEON_DIM : 'transparent', transition: 'all 0.15s',
           }}>
-            <span style={{ fontSize: 17, filter: on ? `drop-shadow(0 0 5px ${NEON}90)` : 'none' }}>{m.emoji}</span>
+            <span style={{ fontSize: 19, filter: on ? `drop-shadow(0 0 5px ${NEON}90)` : 'none' }}>{m.emoji}</span>
             <div style={{ textAlign: 'left' }}>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+              <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
                 color: on ? NEON : 'rgba(255,240,220,0.7)', letterSpacing: '0.04em' }}>{m.name}</p>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 6.5,
+              <p style={{ fontFamily: 'var(--font)', fontSize: 11,
                 color: on ? `${NEON}70` : 'rgba(148,163,184,0.4)', letterSpacing: '0.04em' }}>{left} {tr('kcal left', 'ккал осталось')}</p>
             </div>
           </button>
@@ -290,7 +290,7 @@ function MemberSwitcher({ members, activeId, onSwitch, onAdd }: {
       })}
       <button onClick={onAdd} title={tr('Add crew member', 'Добавить члена экипажа')} style={{
         flexShrink: 0, width: 34, borderRadius: 9, cursor: 'pointer',
-        fontFamily: 'var(--font)', fontSize: 16, fontWeight: 300, color: `${NEON}80`,
+        fontFamily: 'var(--font)', fontSize: 18, fontWeight: 300, color: `${NEON}80`,
         border: `1px dashed ${NEON}30`, background: 'transparent', transition: 'all 0.15s',
       }}
         onMouseEnter={e => e.currentTarget.style.background = NEON_DIM}
@@ -343,10 +343,10 @@ function ProfileForm({ initial, isFirst, onSave, onCancel, onDelete }: {
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${NEON}18`,
         display: 'flex', alignItems: 'center', gap: 10 }}>
         {onCancel && (
-          <button onClick={onCancel} style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}55`,
+          <button onClick={onCancel} style={{ fontFamily: 'var(--font)', fontSize: 13.5, color: `${NEON}55`,
             letterSpacing: '0.1em' }}>← {tr('BACK', 'НАЗАД')}</button>
         )}
-        <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
           color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>
           {isFirst ? tr('CREW CALIBRATION', 'КАЛИБРОВКА ЭКИПАЖА') : initial ? tr('EDIT CREW MEMBER', 'ИЗМЕНИТЬ ЧЛЕНА') : tr('NEW CREW MEMBER', 'НОВЫЙ ЧЛЕН')}
         </p>
@@ -360,7 +360,7 @@ function ProfileForm({ initial, isFirst, onSave, onCancel, onDelete }: {
 
         {/* identity: avatar + name */}
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}50`,
             letterSpacing: '0.12em', marginBottom: 6 }}>{tr('CREW IDENTITY', 'ЛИЧНОСТЬ')}</p>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input value={name} onChange={e => setName(e.target.value)} placeholder={tr('Name *', 'Имя *')}
@@ -371,7 +371,7 @@ function ProfileForm({ initial, isFirst, onSave, onCancel, onDelete }: {
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 8 }}>
             {MEMBER_EMOJI.map(em => (
               <button key={em} onClick={() => setEmoji(em)} style={{
-                width: 32, height: 32, borderRadius: 7, fontSize: 16, cursor: 'pointer',
+                width: 32, height: 32, borderRadius: 7, fontSize: 18, cursor: 'pointer',
                 border: `1px solid ${emoji === em ? `${NEON}55` : 'rgba(255,255,255,0.06)'}`,
                 background: emoji === em ? NEON_DIM : 'transparent', transition: 'all 0.12s',
               }}>{em}</button>
@@ -387,7 +387,7 @@ function ProfileForm({ initial, isFirst, onSave, onCancel, onDelete }: {
             { v: age,      set: setAge,    ph: tr('Age', 'Возраст'), unit: tr('yr', 'лет') },
           ].map(({ v, set, ph, unit }) => (
             <div key={ph} style={{ flex: 1 }}>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}50`,
+              <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}50`,
                 letterSpacing: '0.12em', marginBottom: 5 }}>{ph.toUpperCase()} ({unit})</p>
               <input type="number" value={v} onChange={e => set(e.target.value)} placeholder={ph}
                 style={inp}
@@ -399,7 +399,7 @@ function ProfileForm({ initial, isFirst, onSave, onCancel, onDelete }: {
 
         {/* sex */}
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}50`,
             letterSpacing: '0.12em', marginBottom: 6 }}>{tr('BIOMETRIC', 'БИОМЕТРИЯ')}</p>
           <div style={{ display: 'flex', gap: 6 }}>
             {(['male', 'female'] as Sex[]).map(s => (
@@ -412,7 +412,7 @@ function ProfileForm({ initial, isFirst, onSave, onCancel, onDelete }: {
 
         {/* activity */}
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}50`,
             letterSpacing: '0.12em', marginBottom: 6 }}>{tr('ACTIVITY LEVEL', 'УРОВЕНЬ АКТИВНОСТИ')}</p>
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {(Object.keys(ACTIVITY_META) as ActivityLevel[]).map(lvl => (
@@ -424,7 +424,7 @@ function ProfileForm({ initial, isFirst, onSave, onCancel, onDelete }: {
 
         {/* goal */}
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}50`,
             letterSpacing: '0.12em', marginBottom: 6 }}>{tr('MISSION GOAL', 'ЦЕЛЬ МИССИИ')}</p>
           <div style={{ display: 'flex', gap: 6 }}>
             {(Object.keys(GOAL_META) as Goal[]).map(g => {
@@ -439,7 +439,7 @@ function ProfileForm({ initial, isFirst, onSave, onCancel, onDelete }: {
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
                 }}>
                   <span style={{ fontSize: 'var(--fs-xs)' }}>{goalLabel(g)}</span>
-                  <span style={{ fontSize: 6.5, opacity: 0.7 }}>{goalSub(g)}</span>
+                  <span style={{ fontSize: 11, opacity: 0.7 }}>{goalSub(g)}</span>
                 </button>
               )
             })}
@@ -448,7 +448,7 @@ function ProfileForm({ initial, isFirst, onSave, onCancel, onDelete }: {
 
         {/* diet preference */}
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}50`,
             letterSpacing: '0.12em', marginBottom: 6 }}>{tr('DIETARY PREFERENCE (OPTIONAL)', 'ПРЕДПОЧТЕНИЯ В ЕДЕ (НЕОБЯЗ.)')}</p>
           <input value={diet} onChange={e => setDiet(e.target.value)}
             placeholder={tr('e.g. vegetarian, no dairy, high protein…', 'напр. вегетариан., без молочного, много белка…')} style={inp}
@@ -461,31 +461,31 @@ function ProfileForm({ initial, isFirst, onSave, onCancel, onDelete }: {
           <div style={{ padding: '12px 14px', borderRadius: 10,
             background: `${NEON}06`, border: `1px solid ${NEON}22` }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700,
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700,
                 color: NEON, letterSpacing: '0.18em', flex: 1 }}>{tr('DAILY RATION', 'ДНЕВНОЙ РАЦИОН')}</p>
               <BmiChip profile={draftProfile} />
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
               <span style={{ fontFamily: 'var(--font)', fontSize: 28, fontWeight: 900,
                 color: NEON, textShadow: `0 0 12px ${NEON}70`, lineHeight: 1 }}>{preview.calories}</span>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 9, color: `${NEON}60`,
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}60`,
                 letterSpacing: '0.1em' }}>{tr('KCAL / DAY', 'ККАЛ / ДЕНЬ')}</span>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.4)',
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.4)',
                 marginLeft: 'auto' }}>BMR {preview.bmr} · TDEE {preview.tdee}</span>
             </div>
             <div style={{ display: 'flex', gap: 14, marginBottom: 10 }}>
               {([['protein', preview.protein], ['carbs', preview.carbs], ['fat', preview.fat]] as const).map(([k, v]) => (
                 <div key={k}>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 15, fontWeight: 800,
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 17.5, fontWeight: 800,
                     color: MACRO[k].color, lineHeight: 1 }}>{v}g</p>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${MACRO[k].color}80`,
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${MACRO[k].color}80`,
                     letterSpacing: '0.1em', marginTop: 2 }}>{macroLabel(k)}</p>
                 </div>
               ))}
               <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 15, fontWeight: 800, color: AQUA, lineHeight: 1 }}>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 17.5, fontWeight: 800, color: AQUA, lineHeight: 1 }}>
                   {(recommendedWaterMl(draftProfile) / 1000).toFixed(1)}L</p>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${AQUA}80`,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${AQUA}80`,
                   letterSpacing: '0.1em', marginTop: 2 }}>💧 {tr('WATER', 'ВОДА')}</p>
               </div>
             </div>
@@ -545,9 +545,9 @@ function AddFoodForm({ slot, onSave, onCancel }: {
       background: 'rgba(8,4,0,0.92)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${NEON}18`,
         display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onCancel} style={{ fontFamily: 'var(--font)', fontSize: 11,
+        <button onClick={onCancel} style={{ fontFamily: 'var(--font)', fontSize: 13.5,
           color: `${NEON}55`, letterSpacing: '0.1em' }}>← {tr('CANCEL', 'ОТМЕНА')}</button>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
           color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>{tr('LOG NUTRIENTS', 'ЗАПИСЬ НУТРИЕНТОВ')}</p>
       </div>
 
@@ -557,13 +557,13 @@ function AddFoodForm({ slot, onSave, onCancel }: {
           {SLOT_ORDER.map(s => (
             <button key={s} onClick={() => setSlot(s)} style={{
               flex: 1, padding: '6px 2px', borderRadius: 5, cursor: 'pointer',
-              fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, letterSpacing: '0.04em',
+              fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.04em',
               color: curSlot === s ? NEON : 'rgba(148,163,184,0.4)',
               border: `1px solid ${curSlot === s ? `${NEON}45` : 'rgba(255,255,255,0.06)'}`,
               background: curSlot === s ? NEON_DIM : 'transparent', transition: 'all 0.12s',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
             }}>
-              <span style={{ fontSize: 11 }}>{SLOT_META[s].icon}</span>
+              <span style={{ fontSize: 13.5 }}>{SLOT_META[s].icon}</span>
               {slotLabel(s)}
             </button>
           ))}
@@ -572,13 +572,13 @@ function AddFoodForm({ slot, onSave, onCancel }: {
         <input value={name} onChange={e => setName(e.target.value)} placeholder={tr('Meal name *', 'Название блюда *')} style={inp} autoFocus />
 
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}50`,
             letterSpacing: '0.12em', marginBottom: 5 }}>{tr('CALORIES *', 'КАЛОРИИ *')}</p>
           <input type="number" value={cal} onChange={e => setCal(e.target.value)} placeholder={tr('kcal', 'ккал')} style={inp} />
         </div>
 
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}50`,
             letterSpacing: '0.12em', marginBottom: 5 }}>{tr('MACROS (GRAMS)', 'МАКРОСЫ (ГРАММЫ)')}</p>
           <div style={{ display: 'flex', gap: 8 }}>
             {([['protein', p, setP], ['carbs', c, setC], ['fat', f, setF]] as const).map(([k, v, set]) => (
@@ -586,7 +586,7 @@ function AddFoodForm({ slot, onSave, onCancel }: {
                 <input type="number" value={v} onChange={e => set(e.target.value)} placeholder="0"
                   style={{ ...inp, borderColor: `${MACRO[k as keyof typeof MACRO].color}30`,
                     textAlign: 'center' }} />
-                <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, textAlign: 'center', marginTop: 3,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 11, textAlign: 'center', marginTop: 3,
                   color: `${MACRO[k as keyof typeof MACRO].color}90`, letterSpacing: '0.08em' }}>
                   {macroLabel(k as keyof typeof MACRO)}
                 </p>
@@ -704,12 +704,12 @@ Suggest what to eat.`
       background: 'rgba(8,4,0,0.95)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${NEON}18`,
         display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 11,
+        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 13.5,
           color: `${NEON}55`, letterSpacing: '0.1em' }}>← {tr('BACK', 'НАЗАД')}</button>
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
             color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>{tr('WHAT SHOULD I EAT?', 'ЧТО МНЕ ПОЕСТЬ?')}</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}45`,
             letterSpacing: '0.08em' }}>{pantry.length ? `${tr('FROM YOUR PANTRY ·', 'ИЗ ВАШЕЙ КЛАДОВОЙ ·')} ${pantry.length} ${tr('ITEMS', 'ПОЗ.')}` : tr('SYNTHESISED FROM ORBITAL AGRI-BAY', 'СИНТЕЗ ИЗ ОРБИТАЛЬНОЙ АГРОБАЗЫ')}</p>
         </div>
       </div>
@@ -719,16 +719,16 @@ Suggest what to eat.`
         <div style={{ padding: '10px 12px', borderRadius: 8, marginBottom: 12,
           background: `${NEON}05`, border: `1px solid ${NEON}18`, display: 'flex', gap: 14 }}>
           <div>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 16, fontWeight: 900, color: NEON, lineHeight: 1 }}>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 18, fontWeight: 900, color: NEON, lineHeight: 1 }}>
               {remaining.calories}</p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}60`, letterSpacing: '0.1em' }}>{tr('KCAL LEFT', 'ККАЛ ОСТ.')}</p>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}60`, letterSpacing: '0.1em' }}>{tr('KCAL LEFT', 'ККАЛ ОСТ.')}</p>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             {([['protein', remaining.protein], ['carbs', remaining.carbs], ['fat', remaining.fat]] as const).map(([k, v]) => (
               <div key={k}>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 12, fontWeight: 800,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 14.5, fontWeight: 800,
                   color: MACRO[k].color, lineHeight: 1 }}>{v}g</p>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 6, color: `${MACRO[k].color}80`,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${MACRO[k].color}80`,
                   letterSpacing: '0.08em' }}>{macroLabel(k)}</p>
               </div>
             ))}
@@ -748,17 +748,17 @@ Suggest what to eat.`
             {/* how many people are eating */}
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 16,
               padding: '6px 10px', borderRadius: 8, background: `${NEON}06`, border: `1px solid ${NEON}20` }}>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, color: `${NEON}80`,
+              <span style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, color: `${NEON}80`,
                 letterSpacing: '0.1em' }}>🍽 {tr('EATING', 'ЕДЯТ')}</span>
               {[1, 2, 3, 4].map(n => (
                 <button key={n} onClick={() => setServings(n)} style={{
                   width: 24, height: 24, borderRadius: 6, cursor: 'pointer',
-                  fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
+                  fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 800,
                   color: servings === n ? NEON : 'rgba(148,163,184,0.4)',
                   border: `1px solid ${servings === n ? `${NEON}55` : 'rgba(255,255,255,0.06)'}`,
                   background: servings === n ? NEON_DIM : 'transparent' }}>{n}</button>
               ))}
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.45)' }}>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.45)' }}>
                 {servings === 1 ? tr('just me', 'только я') : `${servings} ${tr('people', 'чел.')}`}
               </span>
             </div>
@@ -797,10 +797,10 @@ Suggest what to eat.`
         {error && (
           <div style={{ padding: '10px 12px', borderRadius: 8, marginBottom: 12,
             background: 'rgba(255,84,112,0.08)', border: '1px solid rgba(255,84,112,0.3)' }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#ff5470',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: '#ff5470',
               letterSpacing: '0.08em', lineHeight: 1.6 }}>⚠ {error}</p>
             <button onClick={synthesize} style={{ marginTop: 8, fontFamily: 'var(--font)',
-              fontSize: 8, color: NEON, letterSpacing: '0.1em' }}>↻ {tr('RETRY', 'ЕЩЁ РАЗ')}</button>
+              fontSize: 10.5, color: NEON, letterSpacing: '0.1em' }}>↻ {tr('RETRY', 'ЕЩЁ РАЗ')}</button>
           </div>
         )}
 
@@ -813,30 +813,30 @@ Suggest what to eat.`
               transition: 'all 0.2s' }}>
               <div style={{ padding: '10px 12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 13 }}>{SLOT_META[m.slot].icon}</span>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
+                  <span style={{ fontSize: 15.5 }}>{SLOT_META[m.slot].icon}</span>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 800,
                     color: 'rgba(255,240,220,0.92)', flex: 1 }}>{m.name}</p>
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 900, color: NEON }}>
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 15.5, fontWeight: 900, color: NEON }}>
                     {m.calories}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginBottom: m.why ? 8 : 0 }}>
                   {([['protein', m.protein], ['carbs', m.carbs], ['fat', m.fat]] as const).map(([k, v]) => (
-                    <span key={k} style={{ fontFamily: 'var(--font)', fontSize: 8,
+                    <span key={k} style={{ fontFamily: 'var(--font)', fontSize: 10.5,
                       color: MACRO[k].color }}>{macroLabel(k)[0]} {v}g</span>
                   ))}
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 7, marginLeft: 'auto',
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, marginLeft: 'auto',
                     color: 'rgba(148,163,184,0.4)' }}>
                     {slotLabel(m.slot)}{servings > 1 ? ` · ${tr('/serving', '/порция')}` : ''}
                   </span>
                 </div>
                 {m.why && (
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}55`,
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${NEON}55`,
                     fontStyle: 'italic', letterSpacing: '0.02em', marginBottom: 8 }}>“{m.why}”</p>
                 )}
                 {m.uses && m.uses.length > 0 && (
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
                     {m.uses.map((u, j) => (
-                      <span key={j} style={{ fontFamily: 'var(--font)', fontSize: 7, color: '#4ade80',
+                      <span key={j} style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: '#4ade80',
                         padding: '2px 6px', borderRadius: 4, background: 'rgba(74,222,128,0.08)',
                         border: '1px solid rgba(74,222,128,0.25)' }}>🧺 {u}</span>
                     ))}
@@ -847,7 +847,7 @@ Suggest what to eat.`
                 <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
                   {m.recipe && m.recipe.length > 0 && (
                     <button onClick={() => setOpenRecipe(openRecipe === i ? null : i)} style={{
-                      fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
+                      fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
                       padding: '4px 8px', borderRadius: 5, cursor: 'pointer', color: `${NEON}b0`,
                       border: `1px solid ${NEON}28`, background: NEON_DIM }}>
                       👨‍🍳 {tr('RECIPE', 'РЕЦЕПТ')}{servings > 1 ? ` · ${tr('serves', 'на')} ${servings}` : ''} {openRecipe === i ? '▴' : '▾'}</button>
@@ -855,7 +855,7 @@ Suggest what to eat.`
                   {m.search && (
                     <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(m.search)}`}
                       target="_blank" rel="noreferrer" style={{
-                      fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
+                      fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
                       padding: '4px 8px', borderRadius: 5, textDecoration: 'none', color: '#ff5470',
                       border: '1px solid rgba(255,84,112,0.3)', background: 'rgba(255,84,112,0.06)' }}>▶ YOUTUBE</a>
                   )}
@@ -863,7 +863,7 @@ Suggest what to eat.`
                     const fav = favoriteNames.has(m.name.toLowerCase())
                     return (
                       <button onClick={() => onToggleFavorite(m)} title={fav ? tr('Remove from favourites', 'Убрать из избранного') : tr('Save to favourites', 'В избранное')}
-                        style={{ marginLeft: 'auto', fontFamily: 'var(--font)', fontSize: 12, cursor: 'pointer',
+                        style={{ marginLeft: 'auto', fontFamily: 'var(--font)', fontSize: 14.5, cursor: 'pointer',
                           padding: '2px 6px', borderRadius: 5, color: fav ? '#ffd700' : `${NEON}70`,
                           border: `1px solid ${fav ? 'rgba(255,215,0,0.4)' : `${NEON}22`}`,
                           background: fav ? 'rgba(255,215,0,0.08)' : 'transparent' }}>{fav ? '★' : '☆'}</button>
@@ -873,7 +873,7 @@ Suggest what to eat.`
                 {m.recipe && openRecipe === i && (
                   <ol style={{ margin: '0 0 8px', paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {m.recipe.map((step, j) => (
-                      <li key={j} style={{ fontFamily: 'var(--font)', fontSize: 8, lineHeight: 1.5,
+                      <li key={j} style={{ fontFamily: 'var(--font)', fontSize: 10.5, lineHeight: 1.5,
                         color: 'rgba(255,240,220,0.78)' }}>{step}</li>
                     ))}
                   </ol>
@@ -919,12 +919,12 @@ function FavoritesScreen({ favorites, onLog, onRemove, onClose }: {
       background: 'rgba(8,4,0,0.96)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${NEON}18`,
         display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 11,
+        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 13.5,
           color: `${NEON}55`, letterSpacing: '0.1em' }}>← {tr('BACK', 'НАЗАД')}</button>
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
             color: '#ffd700', letterSpacing: '0.18em', textShadow: '0 0 8px rgba(255,215,0,0.5)' }}>★ {tr('SAVED DISHES', 'СОХР. БЛЮДА')}</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}45`,
             letterSpacing: '0.08em' }}>{tr('YOUR FAVOURITE MEALS ·', 'ВАШИ ЛЮБИМЫЕ БЛЮДА ·')} {favorites.length}</p>
         </div>
       </div>
@@ -942,26 +942,26 @@ function FavoritesScreen({ favorites, onLog, onRemove, onClose }: {
               background: 'rgba(20,12,2,0.6)', border: `1px solid ${NEON}18` }}>
               <div style={{ padding: '10px 12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 13 }}>{SLOT_META[m.slot].icon}</span>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
+                  <span style={{ fontSize: 15.5 }}>{SLOT_META[m.slot].icon}</span>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 800,
                     color: 'rgba(255,240,220,0.92)', flex: 1 }}>{m.name}</p>
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 900, color: NEON }}>{m.calories}</span>
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 15.5, fontWeight: 900, color: NEON }}>{m.calories}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
                   {([['protein', m.protein], ['carbs', m.carbs], ['fat', m.fat]] as const).map(([k, v]) => (
-                    <span key={k} style={{ fontFamily: 'var(--font)', fontSize: 8, color: MACRO[k].color }}>{macroLabel(k)[0]} {v}g</span>
+                    <span key={k} style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: MACRO[k].color }}>{macroLabel(k)[0]} {v}g</span>
                   ))}
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 7, marginLeft: 'auto',
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, marginLeft: 'auto',
                     color: 'rgba(148,163,184,0.4)' }}>{slotLabel(m.slot)}</span>
                 </div>
                 {m.why && (
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}55`,
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${NEON}55`,
                     fontStyle: 'italic', marginBottom: 8 }}>“{m.why}”</p>
                 )}
                 {m.uses && m.uses.length > 0 && (
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
                     {m.uses.map((u, j) => (
-                      <span key={j} style={{ fontFamily: 'var(--font)', fontSize: 7, color: '#4ade80',
+                      <span key={j} style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: '#4ade80',
                         padding: '2px 6px', borderRadius: 4, background: 'rgba(74,222,128,0.08)',
                         border: '1px solid rgba(74,222,128,0.25)' }}>🧺 {u}</span>
                     ))}
@@ -970,7 +970,7 @@ function FavoritesScreen({ favorites, onLog, onRemove, onClose }: {
                 <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
                   {m.recipe && m.recipe.length > 0 && (
                     <button onClick={() => setOpenRecipe(openRecipe === m.id ? null : m.id)} style={{
-                      fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
+                      fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
                       padding: '4px 8px', borderRadius: 5, cursor: 'pointer', color: `${NEON}b0`,
                       border: `1px solid ${NEON}28`, background: NEON_DIM }}>
                       👨‍🍳 {tr('RECIPE', 'РЕЦЕПТ')} {openRecipe === m.id ? '▴' : '▾'}</button>
@@ -978,19 +978,19 @@ function FavoritesScreen({ favorites, onLog, onRemove, onClose }: {
                   {m.search && (
                     <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(m.search)}`}
                       target="_blank" rel="noreferrer" style={{
-                      fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
+                      fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
                       padding: '4px 8px', borderRadius: 5, textDecoration: 'none', color: '#ff5470',
                       border: '1px solid rgba(255,84,112,0.3)', background: 'rgba(255,84,112,0.06)' }}>▶ YOUTUBE</a>
                   )}
                   <button onClick={() => onRemove(m.id)} title={tr('Remove from favourites', 'Убрать из избранного')}
-                    style={{ marginLeft: 'auto', fontFamily: 'var(--font)', fontSize: 12, cursor: 'pointer',
+                    style={{ marginLeft: 'auto', fontFamily: 'var(--font)', fontSize: 14.5, cursor: 'pointer',
                       padding: '2px 6px', borderRadius: 5, color: '#ffd700',
                       border: '1px solid rgba(255,215,0,0.4)', background: 'rgba(255,215,0,0.08)' }}>★</button>
                 </div>
                 {m.recipe && openRecipe === m.id && (
                   <ol style={{ margin: '0 0 8px', paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {m.recipe.map((step, j) => (
-                      <li key={j} style={{ fontFamily: 'var(--font)', fontSize: 8, lineHeight: 1.5,
+                      <li key={j} style={{ fontFamily: 'var(--font)', fontSize: 10.5, lineHeight: 1.5,
                         color: 'rgba(255,240,220,0.78)' }}>{step}</li>
                     ))}
                   </ol>
@@ -1078,12 +1078,12 @@ function MealLogPanel({ defaultSlot, loggedSlots, onAccept, onClose }: {
       background: 'rgba(8,4,0,0.95)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${NEON}18`,
         display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 11,
+        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 13.5,
           color: `${NEON}55`, letterSpacing: '0.1em' }}>← {tr('CANCEL', 'ОТМЕНА')}</button>
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
             color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>{tr('LOG A MEAL', 'ЗАПИСАТЬ ПРИЁМ ПИЩИ')}</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}45`,
             letterSpacing: '0.08em' }}>{tr('DESCRIBE IT OR SNAP IT — SOLARIS DOES THE MATH', 'ОПИШИТЕ ИЛИ СФОТКАЙТЕ — SOLARIS ПОСЧИТАЕТ')}</p>
         </div>
       </div>
@@ -1105,17 +1105,17 @@ function MealLogPanel({ defaultSlot, loggedSlots, onAccept, onClose }: {
                 fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
                 color: `${NEON}90`, border: `1px solid ${NEON}30`, background: NEON_DIM }}>📷 {image ? tr('CHANGE PHOTO', 'СМЕНИТЬ ФОТО') : tr('ADD PHOTO', 'ДОБАВИТЬ ФОТО')}</button>
               {image && (
-                <span style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: '#4ade80', flex: 1,
+                <span style={{ fontFamily: 'var(--font)', fontSize: 10, color: '#4ade80', flex: 1,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✓ {imgName || tr('photo attached', 'фото прикреплено')}</span>
               )}
               {image && (
                 <button onClick={() => { setImage(null); setImgName('') }} title={tr('Remove photo', 'Убрать фото')} style={{
-                  fontFamily: 'var(--font)', fontSize: 12, color: 'rgba(255,84,112,0.5)', cursor: 'pointer' }}>✕</button>
+                  fontFamily: 'var(--font)', fontSize: 14.5, color: 'rgba(255,84,112,0.5)', cursor: 'pointer' }}>✕</button>
               )}
             </div>
 
             {error && (
-              <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#ff5470', letterSpacing: '0.06em' }}>⚠ {error}</p>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: '#ff5470', letterSpacing: '0.06em' }}>⚠ {error}</p>
             )}
 
             <button disabled={loading} onClick={parse} style={{
@@ -1128,7 +1128,7 @@ function MealLogPanel({ defaultSlot, loggedSlots, onAccept, onClose }: {
 
         {items && (
           <>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: `${NEON}70`, letterSpacing: '0.1em' }}>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: `${NEON}70`, letterSpacing: '0.1em' }}>
               {tr('SOLARIS READ', 'SOLARIS НАШЁЛ')} {items.length} {tr('items — add what is right', 'поз. — добавьте нужное')}
             </p>
             {items.map((m, i) => {
@@ -1137,16 +1137,16 @@ function MealLogPanel({ defaultSlot, loggedSlots, onAccept, onClose }: {
                 <div key={i} style={{ borderRadius: 9, padding: '10px 12px',
                   background: 'rgba(20,12,2,0.6)', border: `1px solid ${on ? '#4ade8040' : `${NEON}18`}`, opacity: on ? 0.6 : 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 13 }}>{SLOT_META[m.slot].icon}</span>
-                    <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
+                    <span style={{ fontSize: 15.5 }}>{SLOT_META[m.slot].icon}</span>
+                    <p style={{ fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 800,
                       color: 'rgba(255,240,220,0.92)', flex: 1 }}>{m.name}</p>
-                    <span style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 900, color: NEON }}>{m.calories}</span>
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 15.5, fontWeight: 900, color: NEON }}>{m.calories}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
                     {([['protein', m.protein], ['carbs', m.carbs], ['fat', m.fat]] as const).map(([k, v]) => (
-                      <span key={k} style={{ fontFamily: 'var(--font)', fontSize: 8, color: MACRO[k].color }}>{macroLabel(k)[0]} {v}g</span>
+                      <span key={k} style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: MACRO[k].color }}>{macroLabel(k)[0]} {v}g</span>
                     ))}
-                    <span style={{ fontFamily: 'var(--font)', fontSize: 7, marginLeft: 'auto',
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, marginLeft: 'auto',
                       color: 'rgba(148,163,184,0.4)' }}>{slotLabel(m.slot)}</span>
                   </div>
                   <button disabled={on} onClick={() => { onAccept(m); setAccepted(s => new Set(s).add(i)) }} style={{
@@ -1162,7 +1162,7 @@ function MealLogPanel({ defaultSlot, loggedSlots, onAccept, onClose }: {
               fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800, letterSpacing: '0.12em',
               color: SOLAR, border: `1px solid ${SOLAR}40`, background: `${SOLAR}10` }}>{tr('⬇ ADD ALL & CLOSE', '⬇ ДОБАВИТЬ ВСЁ И ЗАКРЫТЬ')}</button>
             <button onClick={() => { setItems(null); setAccepted(new Set()) }} style={{
-              fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}60`, letterSpacing: '0.1em' }}>↻ {tr('LOG SOMETHING ELSE', 'ЗАПИСАТЬ ДРУГОЕ')}</button>
+              fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}60`, letterSpacing: '0.1em' }}>↻ {tr('LOG SOMETHING ELSE', 'ЗАПИСАТЬ ДРУГОЕ')}</button>
           </>
         )}
       </div>
@@ -1224,12 +1224,12 @@ function PantryScreen({ pantry, kitchen, onAdd, onAddMany, onRemove, onToggleEqu
     <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${NEON}18`,
         display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 11,
+        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 13.5,
           color: `${NEON}55`, letterSpacing: '0.1em' }}>← {tr('BACK', 'НАЗАД')}</button>
         <div style={{ flex: 1 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
             color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>{tr('SHARED PANTRY', 'ОБЩАЯ КЛАДОВАЯ')}</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}45`,
             letterSpacing: '0.08em' }}>{tr('WHAT THE CREW HAS IN STOCK ·', 'ЧТО ЕСТЬ У ЭКИПАЖА ·')} {pantry.length} {tr('ITEMS', 'ПОЗ.')}</p>
         </div>
       </div>
@@ -1253,11 +1253,11 @@ function PantryScreen({ pantry, kitchen, onAdd, onAddMany, onRemove, onToggleEqu
           fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.1em',
           color: `${AQUA}d0`, border: `1px solid ${AQUA}35`, background: `${AQUA}0c`, opacity: scanning ? 0.6 : 1 }}>
           {scanning ? tr('◌ READING GROCERIES…', '◌ ЧИТАЮ ПРОДУКТЫ…') : tr('📷 SCAN GROCERIES FROM A PHOTO', '📷 СКАНИРОВАТЬ ПРОДУКТЫ С ФОТО')}</button>
-        {error && <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#ff5470', letterSpacing: '0.06em' }}>⚠ {error}</p>}
+        {error && <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: '#ff5470', letterSpacing: '0.06em' }}>⚠ {error}</p>}
 
         {/* kitchen setup — what we can cook with */}
         <div style={{ padding: '10px 12px', borderRadius: 8, background: `${NEON}05`, border: `1px solid ${NEON}16` }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}60`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}60`,
             letterSpacing: '0.12em', marginBottom: 7 }}>🍳 {tr('KITCHEN — DISHES ARE TAILORED TO THIS', 'КУХНЯ — БЛЮДА ПОДБИРАЮТСЯ ПОД НЕЁ')}</p>
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 8 }}>
             {KITCHEN_EQUIPMENT.map(eq => {
@@ -1288,12 +1288,12 @@ function PantryScreen({ pantry, kitchen, onAdd, onAddMany, onRemove, onToggleEqu
             {pantry.map(it => (
               <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 11px',
                 borderRadius: 7, background: 'rgba(18,11,2,0.55)', border: `1px solid ${NEON}10` }}>
-                <span style={{ fontSize: 11 }}>🧺</span>
+                <span style={{ fontSize: 13.5 }}>🧺</span>
                 <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
                   color: 'rgba(255,240,220,0.85)', flex: 1 }}>{it.name}</span>
-                {it.qty && <span style={{ fontFamily: 'var(--font)', fontSize: 8, color: `${NEON}70` }}>{it.qty}</span>}
+                {it.qty && <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}70` }}>{it.qty}</span>}
                 <button onClick={() => onRemove(it.id)} title={tr('Remove', 'Удалить')} style={{
-                  fontFamily: 'var(--font)', fontSize: 12, color: 'rgba(255,84,112,0.4)', cursor: 'pointer' }}
+                  fontFamily: 'var(--font)', fontSize: 14.5, color: 'rgba(255,84,112,0.4)', cursor: 'pointer' }}
                   onMouseEnter={e => e.currentTarget.style.color = '#ff5470'}
                   onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,84,112,0.4)'}
                 >✕</button>
@@ -1403,12 +1403,12 @@ Analyse coverage and suggest a shopping list.`
       background: 'rgba(8,4,0,0.96)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${NEON}18`,
         display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 11,
+        <button onClick={onClose} style={{ fontFamily: 'var(--font)', fontSize: 13.5,
           color: `${NEON}55`, letterSpacing: '0.1em' }}>← {tr('BACK', 'НАЗАД')}</button>
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
             color: NEON, letterSpacing: '0.18em', textShadow: `0 0 8px ${NEON}` }}>{tr('PANTRY ANALYSIS', 'АНАЛИЗ КЛАДОВОЙ')}</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}45`,
             letterSpacing: '0.08em' }}>{tr('WHAT YOU HAVE · WHAT IS MISSING · WHAT TO BUY', 'ЧТО ЕСТЬ · ЧЕГО НЕТ · ЧТО КУПИТЬ')}</p>
         </div>
       </div>
@@ -1416,7 +1416,7 @@ Analyse coverage and suggest a shopping list.`
       <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* budget selector */}
         <div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}50`,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}50`,
             letterSpacing: '0.12em', marginBottom: 6 }}>{tr('SHOPPING BUDGET', 'БЮДЖЕТ ПОКУПОК')}</p>
           <div style={{ display: 'flex', gap: 6 }}>
             {(Object.keys(BUDGET_META) as Budget[]).map(b => {
@@ -1430,7 +1430,7 @@ Analyse coverage and suggest a shopping list.`
                   background: on ? NEON_DIM : 'transparent',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                   <span style={{ fontSize: 'var(--fs-xs)' }}>{budgetLabel(b)}</span>
-                  <span style={{ fontSize: 6.5, opacity: 0.7 }}>{budgetHint(b)}</span>
+                  <span style={{ fontSize: 11, opacity: 0.7 }}>{budgetHint(b)}</span>
                 </button>
               )
             })}
@@ -1444,7 +1444,7 @@ Analyse coverage and suggest a shopping list.`
           {loading ? tr('◌ ANALYSING…', '◌ АНАЛИЗ…') : analysis ? tr('↻ RE-ANALYSE', '↻ ПЕРЕАНАЛИЗ') : tr('🔬 ANALYSE PANTRY', '🔬 АНАЛИЗ КЛАДОВОЙ')}</button>
 
         {error && (
-          <p style={{ fontFamily: 'var(--font)', fontSize: 8, color: '#ff5470', letterSpacing: '0.06em' }}>⚠ {error}</p>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: '#ff5470', letterSpacing: '0.06em' }}>⚠ {error}</p>
         )}
 
         {analysis && (
@@ -1456,7 +1456,7 @@ Analyse coverage and suggest a shopping list.`
             {/* coverage */}
             {analysis.coverage.length > 0 && (
               <div>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, color: `${NEON}70`,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, color: `${NEON}70`,
                   letterSpacing: '0.12em', marginBottom: 6 }}>{tr('COVERAGE', 'ПОКРЫТИЕ')}</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {analysis.coverage.map((c, j) => (
@@ -1466,9 +1466,9 @@ Analyse coverage and suggest a shopping list.`
                         background: COVER_COLOR[c.status], boxShadow: `0 0 6px ${COVER_COLOR[c.status]}` }} />
                       <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
                         color: 'rgba(255,240,220,0.85)', minWidth: 70 }}>{c.nutrient}</span>
-                      {c.note && <span style={{ fontFamily: 'var(--font)', fontSize: 7.5,
+                      {c.note && <span style={{ fontFamily: 'var(--font)', fontSize: 10,
                         color: 'rgba(148,163,184,0.55)', flex: 1 }}>{c.note}</span>}
-                      <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.08em',
+                      <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.08em',
                         color: COVER_COLOR[c.status] }}>{coverLabel(c.status).toUpperCase()}</span>
                     </div>
                   ))}
@@ -1479,7 +1479,7 @@ Analyse coverage and suggest a shopping list.`
             {/* shopping */}
             {analysis.shopping.length > 0 && (
               <div>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, color: `${NEON}70`,
+                <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, color: `${NEON}70`,
                   letterSpacing: '0.12em', marginBottom: 6 }}>{tr('SHOPPING LIST', 'СПИСОК ПОКУПОК')} · {budgetLabel(budget)}</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {analysis.shopping.map((s, j) => {
@@ -1491,16 +1491,16 @@ Analyse coverage and suggest a shopping list.`
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 700,
                               color: 'rgba(255,240,220,0.9)' }}>{s.item}</span>
-                            <span style={{ fontFamily: 'var(--font)', fontSize: 6, fontWeight: 800, letterSpacing: '0.06em',
+                            <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800, letterSpacing: '0.06em',
                               padding: '1px 5px', borderRadius: 3, color: COST_META[s.cost].color,
                               border: `1px solid ${COST_META[s.cost].color}45` }}>{costLabel(s.cost)}</span>
                           </div>
-                          {s.why && <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.55)',
+                          {s.why && <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.55)',
                             marginTop: 2 }}>{s.why}</p>}
                         </div>
                         <button disabled={on} onClick={() => { onAddItem(s.item); setAdded(p => new Set(p).add(s.item)) }}
                           title="Add to pantry" style={{
-                          fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.06em',
+                          fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
                           padding: '4px 8px', borderRadius: 5, flexShrink: 0, cursor: on ? 'default' : 'pointer',
                           color: on ? '#4ade80' : `${NEON}b0`,
                           border: `1px solid ${on ? '#4ade8040' : `${NEON}30`}`,
@@ -1531,15 +1531,15 @@ function SlotGroup({ slot, entries, onAdd, onRemove }: {
       background: 'rgba(18,11,2,0.55)', border: `1px solid ${NEON}12` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
         borderBottom: entries.length ? `1px solid ${NEON}10` : 'none' }}>
-        <span style={{ fontSize: 13 }}>{SLOT_META[slot].icon}</span>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, fontWeight: 700,
+        <span style={{ fontSize: 15.5 }}>{SLOT_META[slot].icon}</span>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 700,
           color: `${NEON}80`, letterSpacing: '0.14em', flex: 1 }}>{slotLabel(slot)}</p>
         {total > 0 && (
-          <span style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, color: NEON }}>
+          <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, color: NEON }}>
             {total} {tr('kcal', 'ккал')}</span>
         )}
         <button onClick={onAdd} style={{
-          width: 22, height: 22, borderRadius: 6, fontSize: 13, fontWeight: 700,
+          width: 22, height: 22, borderRadius: 6, fontSize: 15.5, fontWeight: 700,
           color: `${NEON}90`, border: `1px solid ${NEON}28`, background: NEON_DIM, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
         }}
@@ -1556,7 +1556,7 @@ function SlotGroup({ slot, entries, onAdd, onRemove }: {
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</p>
             <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
               {([['protein', e.protein], ['carbs', e.carbs], ['fat', e.fat]] as const).map(([k, v]) => (
-                <span key={k} style={{ fontFamily: 'var(--font)', fontSize: 6.5,
+                <span key={k} style={{ fontFamily: 'var(--font)', fontSize: 11,
                   color: `${MACRO[k].color}90` }}>{macroLabel(k)[0]} {v}g</span>
               ))}
             </div>
@@ -1564,7 +1564,7 @@ function SlotGroup({ slot, entries, onAdd, onRemove }: {
           <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 700,
             color: NEON, flexShrink: 0 }}>{e.calories}</span>
           <button onClick={() => onRemove(e.id)} title={tr('Remove', 'Удалить')} style={{
-            fontFamily: 'var(--font)', fontSize: 12, color: 'rgba(255,84,112,0.4)', flexShrink: 0,
+            fontFamily: 'var(--font)', fontSize: 14.5, color: 'rgba(255,84,112,0.4)', flexShrink: 0,
             cursor: 'pointer', transition: 'color 0.12s' }}
             onMouseEnter={ev => ev.currentTarget.style.color = '#ff5470'}
             onMouseLeave={ev => ev.currentTarget.style.color = 'rgba(255,84,112,0.4)'}
@@ -1752,22 +1752,22 @@ export default function Solaris() {
         borderBottom: `1px solid ${NEON}14`, background: 'rgba(14,8,2,0.7)',
         display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 900,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 900,
             color: NEON, letterSpacing: '0.22em', textShadow: `0 0 12px ${NEON}` }}>SOLARIS</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${NEON}45`, letterSpacing: '0.12em' }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}45`, letterSpacing: '0.12em' }}>
             {tr('THE SOLAR SYSTEM\'S KITCHEN', 'КУХНЯ СОЛНЕЧНОЙ СИСТЕМЫ')}
           </p>
         </div>
         {streak > 0 && (
           <div style={{ textAlign: 'right' }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 900,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 15.5, fontWeight: 900,
               color: SOLAR, lineHeight: 1 }}>{streak}🔥</p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${SOLAR}70`,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${SOLAR}70`,
               letterSpacing: '0.1em' }}>{tr('DAY STREAK', 'ДНЕЙ ПОДРЯД')}</p>
           </div>
         )}
         {solarisHas(tier, 'kitchen') && <button onClick={() => setScreen({ type: 'pantry' })} title={tr('Shared pantry', 'Общая кладовая')} style={{
-          width: 28, height: 28, borderRadius: 7, fontSize: 13,
+          width: 28, height: 28, borderRadius: 7, fontSize: 15.5,
           color: `${NEON}70`, border: `1px solid ${NEON}25`, background: 'transparent', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
         }}
@@ -1775,7 +1775,7 @@ export default function Solaris() {
           onMouseLeave={e => { e.currentTarget.style.color = `${NEON}70`; e.currentTarget.style.background = 'transparent' }}
         >🧺</button>}
         <button onClick={() => setScreen({ type: 'edit', memberId: member.id })} title={`${tr('Edit', 'Изменить')} ${member.name}`} style={{
-          width: 28, height: 28, borderRadius: 7, fontSize: 13,
+          width: 28, height: 28, borderRadius: 7, fontSize: 15.5,
           color: `${NEON}70`, border: `1px solid ${NEON}25`, background: 'transparent', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
         }}
@@ -1827,16 +1827,16 @@ export default function Solaris() {
           onMouseEnter={e => e.currentTarget.style.borderColor = `${NEON}60`}
           onMouseLeave={e => e.currentTarget.style.borderColor = `${NEON}35`}
         >
-          <span style={{ fontSize: 18, filter: `drop-shadow(0 0 8px ${NEON})` }}>✎</span>
+          <span style={{ fontSize: 20, filter: `drop-shadow(0 0 8px ${NEON})` }}>✎</span>
           <div style={{ flex: 1, textAlign: 'left' }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
               color: NEON, letterSpacing: '0.14em' }}>{tr('LOG A MEAL', 'ЗАПИСАТЬ ПРИЁМ ПИЩИ')}</p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}55`,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}55`,
               letterSpacing: '0.04em', marginTop: 1 }}>
               {tr('Describe it or snap a photo — SOLARIS does the math', 'Опишите или сфоткайте — SOLARIS посчитает')}
             </p>
           </div>
-          <span style={{ fontSize: 13 }}>📷</span>
+          <span style={{ fontSize: 15.5 }}>📷</span>
         </button>}
 
         {/* What should I eat? (pantry-aware dishes) — v3 */}
@@ -1849,18 +1849,18 @@ export default function Solaris() {
           onMouseEnter={e => e.currentTarget.style.borderColor = `${NEON}55`}
           onMouseLeave={e => e.currentTarget.style.borderColor = `${NEON}30`}
         >
-          <span style={{ fontSize: 18, filter: `drop-shadow(0 0 8px ${NEON})` }}>🍳</span>
+          <span style={{ fontSize: 20, filter: `drop-shadow(0 0 8px ${NEON})` }}>🍳</span>
           <div style={{ flex: 1, textAlign: 'left' }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
               color: NEON, letterSpacing: '0.14em' }}>{tr('WHAT SHOULD I EAT?', 'ЧТО МНЕ ПОЕСТЬ?')}</p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${NEON}55`,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${NEON}55`,
               letterSpacing: '0.04em', marginTop: 1 }}>
               {state.pantry.length
                 ? `${tr('Dishes from your pantry for', 'Блюда из кладовой под бюджет')} ${member.name}`
                 : `${tr('Meal ideas for', 'Идеи блюд под остаток бюджета')} ${member.name}`}
             </p>
           </div>
-          <span style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${NEON}60` }}>→</span>
+          <span style={{ fontFamily: 'var(--font)', fontSize: 13.5, color: `${NEON}60` }}>→</span>
         </button>}
 
         {/* Meals manifest — v1 */}
@@ -1881,16 +1881,16 @@ export default function Solaris() {
           <div style={{ margin: '4px 14px 18px', padding: '10px 12px', borderRadius: 9,
             background: `${NEON}07`, border: `1px solid ${NEON}20` }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, fontWeight: 800,
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
                 letterSpacing: '0.18em', color: `${NEON}90` }}>FIRMWARE v{tier}</span>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.5)',
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.5)',
                 marginLeft: 'auto' }}>{next.have}/{next.need}</span>
             </div>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 700, marginTop: 6,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, marginTop: 6,
               color: 'rgba(255,240,220,0.9)' }}>
               v{next.tier} · {tr(next.opens, next.opensRu)}
             </p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(148,163,184,0.55)',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(148,163,184,0.55)',
               marginTop: 3 }}>{tr(next.needs, next.needsRu)}</p>
             <div style={{ height: 3, borderRadius: 2, marginTop: 7, overflow: 'hidden',
               background: 'rgba(255,255,255,0.06)' }}>

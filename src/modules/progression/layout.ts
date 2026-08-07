@@ -4,8 +4,8 @@
 
 import type { ChainNode } from './types'
 
-export const NODE_W = 132
-export const NODE_H = 76
+export const NODE_W = 158
+export const NODE_H = 90
 export const GAP_X  = 18
 export const GAP_Y  = 46
 

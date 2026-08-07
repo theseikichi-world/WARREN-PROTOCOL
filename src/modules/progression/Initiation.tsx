@@ -116,12 +116,12 @@ export function Initiation({ name, onDone }: { name: string; onDone: () => void 
       {done ? (
         <button onClick={onDone} style={{
           marginTop: 18, padding: '10px 30px', borderRadius: 8, cursor: 'pointer',
-          fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900, letterSpacing: '0.22em',
+          fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900, letterSpacing: '0.22em',
           color: '#02121a', background: `linear-gradient(135deg, ${CYAN}, ${CYAN}b0)`,
           border: 'none', boxShadow: `0 0 22px ${CYAN}55`,
         }}>{tr('BEGIN', 'НАЧАТЬ')}</button>
       ) : (
-        <p style={{ marginTop: 18, fontFamily: 'var(--font)', fontSize: 7,
+        <p style={{ marginTop: 18, fontFamily: 'var(--font)', fontSize: 11.5,
           letterSpacing: '0.16em', color: 'rgba(148,163,184,0.3)' }}>
           {tr('click to skip', 'клик — пропустить')}
         </p>

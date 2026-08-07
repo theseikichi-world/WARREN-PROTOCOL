@@ -29,16 +29,16 @@ export function QuestHintBanner() {
       boxShadow: `0 4px 18px rgba(0,0,0,0.45), 0 0 14px ${GOLD}18`,
       animation: 'fadeInPlace 0.25s ease',
     }}>
-      <span style={{ fontSize: 10, color: GOLD, flexShrink: 0, marginTop: 1 }}>⚑</span>
+      <span style={{ fontSize: 12.5, color: GOLD, flexShrink: 0, marginTop: 1 }}>⚑</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 900, letterSpacing: '0.16em',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 900, letterSpacing: '0.16em',
           color: GOLD }}>{tr(quest.title, quest.ru)}</p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, lineHeight: 1.6, marginTop: 3,
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, lineHeight: 1.6, marginTop: 3,
           color: 'rgba(215,232,248,0.82)' }}>{tr(quest.brief, quest.briefRu)}</p>
       </div>
       <button onClick={() => setDismissed(true)}
         style={{ background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0,
-          color: 'rgba(148,163,184,0.45)', fontSize: 11, padding: '0 2px' }}>✕</button>
+          color: 'rgba(148,163,184,0.45)', fontSize: 13.5, padding: '0 2px' }}>✕</button>
     </div>
   )
 }

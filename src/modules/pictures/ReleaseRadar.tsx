@@ -32,25 +32,25 @@ function Row({ item, onOpen }: { item: RadarItem; onOpen: () => void }) {
         border: `1px solid ${hov ? 'rgba(255,107,0,0.28)' : 'transparent'}`,
         transition: 'all 0.12s',
       }}>
-      <span style={{ fontSize: 12, flexShrink: 0 }}>{item.emoji}</span>
+      <span style={{ fontSize: 14.5, flexShrink: 0 }}>{item.emoji}</span>
       <span style={{
-        flex: 1, minWidth: 0, fontSize: 9.5, fontWeight: 600,
+        flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600,
         color: 'rgba(230,240,250,0.88)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>{item.title}</span>
       {item.isNew && (
         <span style={{
-          fontSize: 6.5, fontWeight: 800, letterSpacing: '0.1em', flexShrink: 0,
+          fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', flexShrink: 0,
           color: '#4ade80', padding: '1px 5px', borderRadius: 3,
           border: '1px solid rgba(74,222,128,0.35)', background: 'rgba(74,222,128,0.08)',
         }}>{t('NEW', 'НОВОЕ')}</span>
       )}
       <span style={{
-        fontSize: 6.5, fontWeight: 700, letterSpacing: '0.08em', flexShrink: 0,
+        fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', flexShrink: 0,
         color: 'rgba(148,163,184,0.45)',
       }}>{KIND_LABEL[item.kind]()}</span>
       <span style={{
-        fontSize: 8, fontWeight: 700, flexShrink: 0, minWidth: 52, textAlign: 'right',
+        fontSize: 10.5, fontWeight: 700, flexShrink: 0, minWidth: 52, textAlign: 'right',
         color: accent, letterSpacing: '0.04em',
       }}>{text}</span>
     </button>
@@ -84,13 +84,13 @@ export function ReleaseRadar() {
       border: '1px solid rgba(255,107,0,0.2)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
-        <span style={{ fontSize: 11 }}>📡</span>
+        <span style={{ fontSize: 13.5 }}>📡</span>
         <span style={{
-          flex: 1, fontSize: 7.5, fontWeight: 800, letterSpacing: '0.18em',
+          flex: 1, fontSize: 10, fontWeight: 800, letterSpacing: '0.18em',
           color: 'rgba(255,107,0,0.75)',
         }}>{t('RELEASE RADAR', 'РАДАР РЕЛИЗОВ')}</span>
         <button onClick={() => navigate('/pictures')} style={{
-          fontSize: 7, fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer',
+          fontSize: 11.5, fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer',
           color: 'rgba(255,107,0,0.6)', background: 'none', border: 'none',
         }}>{t('ALL →', 'ВСЕ →')}</button>
       </div>

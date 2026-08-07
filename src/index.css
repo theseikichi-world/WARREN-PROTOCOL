@@ -13,12 +13,12 @@
   --font:       'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 
   /* Font scale — consistent across the whole app */
-  --fs-xl:   16px;   /* greetings, big numbers      */
-  --fs-lg:   14px;   /* task titles, body text       */
-  --fs-md:   12px;   /* secondary text, labels       */
-  --fs-sm:   11px;   /* small labels, tabs           */
-  --fs-xs:   10px;   /* badges, tiny labels          */
-  --fs-2xs:   9px;   /* micro labels                 */
+  --fs-xl:   18px;   /* greetings, big numbers      */
+  --fs-lg:   16.5px;   /* task titles, body text       */
+  --fs-md:   14.5px;   /* secondary text, labels       */
+  --fs-sm:   13.5px;   /* small labels, tabs           */
+  --fs-xs:   12.5px;   /* badges, tiny labels          */
+  --fs-2xs:  11.5px;   /* micro labels                 */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

@@ -25,12 +25,12 @@ const GENDERS: { value: Gender; en: string; ru: string }[] = [
 const field: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 8,
   background: 'rgba(2,8,16,0.8)', border: `1px solid ${CYAN}30`,
-  fontFamily: 'var(--font)', fontSize: 12, color: 'rgba(230,242,255,0.95)',
+  fontFamily: 'var(--font)', fontSize: 14.5, color: 'rgba(230,242,255,0.95)',
   letterSpacing: '0.06em', outline: 'none', boxSizing: 'border-box',
 }
 
 const label: React.CSSProperties = {
-  fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800,
+  fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
   letterSpacing: '0.2em', color: `${CYAN}80`, marginBottom: 7,
 }
 
@@ -49,7 +49,7 @@ export function Onboarding({ settings, onDone }: {
 
   const chip = (on: boolean): React.CSSProperties => ({
     flex: 1, padding: '8px 6px', borderRadius: 7, cursor: 'pointer',
-    fontFamily: 'var(--font)', fontSize: 8.5, fontWeight: 800, letterSpacing: '0.12em',
+    fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800, letterSpacing: '0.12em',
     color: on ? '#02121a' : DIM,
     background: on ? CYAN : 'transparent',
     border: `1px solid ${on ? CYAN : 'rgba(255,255,255,0.12)'}`,
@@ -66,13 +66,13 @@ export function Onboarding({ settings, onDone }: {
         background: 'repeating-linear-gradient(0deg, rgba(0,245,255,0.03) 0px, rgba(0,245,255,0.03) 1px, transparent 1px, transparent 3px)' }} />
 
       <div style={{ position: 'relative', width: '100%', maxWidth: 380 }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.24em',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.24em',
           color: `${CYAN}70` }}>{tr('FIRST CONTACT', 'ПЕРВЫЙ КОНТАКТ')}</p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 15, fontWeight: 900, letterSpacing: '0.08em',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 17.5, fontWeight: 900, letterSpacing: '0.08em',
           color: CYAN, textShadow: `0 0 14px ${CYAN}60`, marginTop: 5 }}>
           {tr('WHO IS THIS FOR?', 'ДЛЯ КОГО ЭТО?')}
         </p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8.5, lineHeight: 1.7, color: 'rgba(200,222,240,0.7)',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11, lineHeight: 1.7, color: 'rgba(200,222,240,0.7)',
           marginTop: 8 }}>
           {tr('Four questions, once. Everything here is measured off one specific person, and the hours decide where your routines can actually sit.',
               'Четыре вопроса, один раз. Всё здесь измеряет одного конкретного человека, а часы решают, куда вообще можно поставить рутины.')}
@@ -109,17 +109,17 @@ export function Onboarding({ settings, onDone }: {
         <div style={{ marginTop: 14, padding: '11px 13px', borderRadius: 9,
           background: `${CYAN}0a`, border: `1px solid ${CYAN}28` }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900,
+            <span style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900,
               letterSpacing: '0.14em', color: CYAN }}>
               {tr(CHRONOTYPE_LABEL[type].en, CHRONOTYPE_LABEL[type].ru)}
             </span>
             {hours !== null && (
-              <span style={{ fontFamily: 'var(--font)', fontSize: 8, color: DIM, marginLeft: 'auto' }}>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: DIM, marginLeft: 'auto' }}>
                 {Math.round(hours / 6) / 10}{tr('h in bed', 'ч в постели')}
               </span>
             )}
           </div>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 8, lineHeight: 1.6, color: 'rgba(200,222,240,0.7)',
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, lineHeight: 1.6, color: 'rgba(200,222,240,0.7)',
             marginTop: 5 }}>
             {tr(CHRONOTYPE_LABEL[type].note, CHRONOTYPE_LABEL[type].noteRu)}
           </p>
@@ -134,7 +134,7 @@ export function Onboarding({ settings, onDone }: {
           style={{
             width: '100%', marginTop: 18, padding: '11px', borderRadius: 9,
             cursor: ready ? 'pointer' : 'default',
-            fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900, letterSpacing: '0.2em',
+            fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900, letterSpacing: '0.2em',
             color: ready ? '#02121a' : 'rgba(148,163,184,0.35)',
             background: ready ? `linear-gradient(135deg, ${CYAN}, ${CYAN}b0)` : 'transparent',
             border: `1px solid ${ready ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
@@ -143,7 +143,7 @@ export function Onboarding({ settings, onDone }: {
           {ready ? tr('BEGIN', 'НАЧАТЬ') : tr('YOUR NAME FIRST', 'СНАЧАЛА ИМЯ')}
         </button>
 
-        <p style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.35)',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.35)',
           textAlign: 'center', marginTop: 9, lineHeight: 1.6 }}>
           {tr('All of it stays on this machine, and all of it is editable later in Settings.',
               'Всё остаётся на этой машине и в любой момент правится в настройках.')}

@@ -183,9 +183,9 @@ export default function Uplinks() {
       <div style={{ padding: '9px 14px', flexShrink: 0, borderBottom: `1px solid ${CYAN}14`,
         background: 'rgba(2,8,14,0.6)', display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900, color: CYAN,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900, color: CYAN,
             letterSpacing: '0.22em', textShadow: `0 0 12px ${CYAN}` }}>UPLINKS</p>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${CYAN}45`, letterSpacing: '0.12em', marginTop: 2 }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${CYAN}45`, letterSpacing: '0.12em', marginTop: 2 }}>
             {tr('BANDWIDTH', 'ПОЛОСА')} {bandwidthUsed(state)}/2
           </p>
         </div>
@@ -202,11 +202,11 @@ export default function Uplinks() {
           borderBottom: `2px solid ${view === 'character' ? CYAN : 'transparent'}`,
           fontFamily: 'var(--font)',
         }}>
-          <p style={{ fontSize: 6.5, fontWeight: 700, letterSpacing: '0.14em',
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
             color: view === 'character' ? `${CYAN}b0` : 'rgba(148,163,184,0.35)' }}>
             {tr('LV', 'УР')} {level}
           </p>
-          <p style={{ fontSize: 10.5, fontWeight: 900, letterSpacing: '0.08em', marginTop: 3,
+          <p style={{ fontSize: 13, fontWeight: 900, letterSpacing: '0.08em', marginTop: 3,
             color: view === 'character' ? CYAN : 'rgba(148,163,184,0.5)',
             textShadow: view === 'character' ? `0 0 10px ${CYAN}50` : 'none' }}>
             {tr('CHARACTER', 'ПЕРСОНАЖ')}
@@ -225,12 +225,12 @@ export default function Uplinks() {
               borderBottom: `2px solid ${on ? c : 'transparent'}`,
               fontFamily: 'var(--font)', opacity: locked ? 0.45 : 1,
             }}>
-              <p style={{ fontSize: 6.5, fontWeight: 700, letterSpacing: '0.14em',
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
                 color: on ? `${c}b0` : 'rgba(148,163,184,0.35)' }}>
                 {slot === 'primary' ? tr('PRIMARY', 'ОСНОВНОЙ') : tr('SECONDARY', 'ВТОРИЧНЫЙ')}
                 {g && (slot === 'primary' || secondaryOpen) ? ` · ${trainingCount(g, tasks)}/${maxNodesFor(g.slot)}` : ''}
               </p>
-              <p style={{ fontSize: 10.5, fontWeight: 900, letterSpacing: '0.08em', marginTop: 3,
+              <p style={{ fontSize: 13, fontWeight: 900, letterSpacing: '0.08em', marginTop: 3,
                 color: on ? c : 'rgba(148,163,184,0.5)',
                 textShadow: on ? `0 0 10px ${c}50` : 'none',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -268,17 +268,17 @@ export default function Uplinks() {
           </>
         ) : view !== 'character' ? (
           <div style={{ textAlign: 'center', padding: '36px 16px' }}>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 9, color: DIM }}>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM }}>
               {tr('This uplink is unallocated.', 'Этот канал свободен.')}
             </p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, color: 'rgba(148,163,184,0.35)',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(148,163,184,0.35)',
               marginTop: 7, lineHeight: 1.7, maxWidth: 300, marginLeft: 'auto', marginRight: 'auto' }}>
               {tr('A goal starts as a dream. Write one in PATHFINDER and promote it — the guide proposes the chain, you edit every node.',
                   'Цель начинается с мечты. Запишите её в PATHFINDER и продвиньте — гид предложит цепь, вы правите каждый узел.')}
             </p>
             <button onClick={() => navigate('/log')} style={{
               marginTop: 12, padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
-              fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
+              fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.14em',
               color: '#02121a', background: `linear-gradient(135deg, ${accent}, ${accent}b0)`,
               border: 'none', boxShadow: `0 0 16px ${accent}45`,
             }}>◈ {tr('OPEN PATHFINDER', 'ОТКРЫТЬ PATHFINDER')}</button>
@@ -288,7 +288,7 @@ export default function Uplinks() {
         {/* Frozen goals — recoverable, never deleted */}
         {archived.length > 0 && (
           <>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, color: DIM,
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, color: DIM,
               letterSpacing: '0.2em', margin: '18px 0 7px' }}>
               {tr('FROZEN', 'ЗАМОРОЖЕНО')} · {archived.length}
             </p>
@@ -296,13 +296,13 @@ export default function Uplinks() {
               <div key={g.id} style={{ marginBottom: 5, padding: '9px 11px', borderRadius: 8,
                 background: 'rgba(13,24,48,0.4)', border: '1px solid rgba(255,255,255,0.06)',
                 display: 'flex', alignItems: 'center', gap: 9 }}>
-                <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 9.5,
+                <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 12,
                   fontWeight: 800, color: 'rgba(200,220,235,0.7)' }}>{g.title}</span>
                 <button
                   disabled={!!primary && !!secondary}
                   onClick={() => persist(!secondary ? assignSecondary(state, g.id, now) : assignPrimary(state, g.id, now))}
                   style={{
-                    padding: '5px 10px', borderRadius: 6, fontFamily: 'var(--font)', fontSize: 7.5,
+                    padding: '5px 10px', borderRadius: 6, fontFamily: 'var(--font)', fontSize: 10,
                     fontWeight: 700, letterSpacing: '0.08em', flexShrink: 0,
                     cursor: (!!primary && !!secondary) ? 'default' : 'pointer',
                     color: (!!primary && !!secondary) ? 'rgba(148,163,184,0.3)' : CYAN,
@@ -329,7 +329,7 @@ export default function Uplinks() {
           padding: '9px 20px', borderRadius: 9, zIndex: 60,
           background: 'rgba(4,10,18,0.96)', border: `1px solid ${CYAN}40`,
           boxShadow: `0 4px 22px rgba(0,0,0,0.6), 0 0 14px ${CYAN}20` }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, fontWeight: 700, color: CYAN,
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: CYAN,
             letterSpacing: '0.08em' }}>{toast}</p>
         </div>
       )}
@@ -344,7 +344,7 @@ function GoalActions({ goal, view, cooldown, canInstallMore, onEdit, onPromote, 
 }) {
   const btn = (disabled: boolean): React.CSSProperties => ({
     padding: '5px 10px', borderRadius: 6, cursor: disabled ? 'default' : 'pointer',
-    fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.08em',
+    fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
     color: disabled ? 'rgba(148,163,184,0.3)' : DIM,
     border: '1px solid rgba(255,255,255,0.1)', background: 'transparent',
   })
@@ -363,11 +363,11 @@ function GoalActions({ goal, view, cooldown, canInstallMore, onEdit, onPromote, 
       )}
       <button onClick={onFreeze} style={btn(false)}>❄ {tr('FREEZE', 'ЗАМОРОЗИТЬ')}</button>
       {!canInstallMore && (
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${GOLD}90`, marginLeft: 'auto' }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${GOLD}90`, marginLeft: 'auto' }}>
           {tr('training slots full', 'слоты тренировки заняты')}
         </span>
       )}
-      <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: 'rgba(148,163,184,0.3)', marginLeft: 'auto' }}>
+      <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.3)', marginLeft: 'auto' }}>
         {goal.nodes.filter(n => nodeState(n, []) !== 'locked').length}/{goal.nodes.length}
       </span>
     </div>

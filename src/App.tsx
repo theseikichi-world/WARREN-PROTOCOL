@@ -121,7 +121,7 @@ function IntroScreen({ onDone, displayName }: { onDone: () => void; displayName:
       <div style={{ marginBottom: 24 }}>
         {lines.map((line, i) => (
           <p key={i} style={{
-            fontFamily: 'var(--font)', fontSize: 11,
+            fontFamily: 'var(--font)', fontSize: 13.5,
             color: line === '' ? 'transparent' : 'rgba(0,245,180,0.75)',
             lineHeight: 1.8, letterSpacing: '0.06em',
             animation: 'fadeIn 0.15s ease forwards',
@@ -155,7 +155,7 @@ function IntroScreen({ onDone, displayName }: { onDone: () => void; displayName:
             HELLO, {username}
           </p>
           <p style={{
-            fontFamily: 'var(--font)', fontSize: 10,
+            fontFamily: 'var(--font)', fontSize: 12.5,
             color: 'rgba(0,245,255,0.4)', letterSpacing: '0.15em', marginTop: 6,
           }}>
             WARREN IS NOW ACTIVE
@@ -181,10 +181,10 @@ function Clock() {
   return (
     <div style={{ textAlign: 'right', lineHeight: 1 }}>
       <p style={{
-        fontSize: 18, fontWeight: 800, letterSpacing: '0.04em',
+        fontSize: 20, fontWeight: 800, letterSpacing: '0.04em',
         color: '#fff', textShadow: '0 0 12px rgba(0,245,255,0.5)',
       }}>{time}</p>
-      <p style={{ fontSize: 8, color: 'rgba(0,245,255,0.6)', letterSpacing: '0.12em', marginTop: 2, textTransform: 'uppercase' }}>
+      <p style={{ fontSize: 10.5, color: 'rgba(0,245,255,0.6)', letterSpacing: '0.12em', marginTop: 2, textTransform: 'uppercase' }}>
         {weekday} · {date}
       </p>
     </div>
@@ -215,15 +215,15 @@ function TitleBar() {
           background: 'linear-gradient(135deg, rgba(0,245,255,0.15), rgba(0,245,255,0.04))',
           border: '1px solid rgba(0,245,255,0.3)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 12, fontWeight: 900, color: '#00f5ff',
+          fontSize: 14.5, fontWeight: 900, color: '#00f5ff',
           textShadow: '0 0 10px #00f5ff',
           boxShadow: '0 0 12px rgba(0,245,255,0.15)',
         }}>W</div>
         <div>
-          <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.22em', color: 'rgba(0,245,255,0.8)', textTransform: 'uppercase' }}>
+          <p style={{ fontSize: 13.5, fontWeight: 800, letterSpacing: '0.22em', color: 'rgba(0,245,255,0.8)', textTransform: 'uppercase' }}>
             Warren
           </p>
-          <p style={{ fontSize: 7.5, color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: 1 }}>
+          <p style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: 1 }}>
             <span className="pulse" style={{ color: '#39ff14', marginRight: 4 }}>●</span>
             {t('all systems nominal', 'все системы в норме')}
           </p>
@@ -239,7 +239,7 @@ function TitleBar() {
               display: 'flex', alignItems: 'center', gap: 5,
               color: 'rgba(0,245,255,0.55)', border: '1px solid rgba(0,245,255,0.2)',
               background: 'rgba(0,245,255,0.05)', transition: 'all 0.15s',
-              fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.1em',
+              fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.1em',
             }}
             onMouseEnter={e => { e.currentTarget.style.color = '#00f5ff'; e.currentTarget.style.borderColor = 'rgba(0,245,255,0.5)' }}
             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(0,245,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(0,245,255,0.2)' }}>
@@ -260,7 +260,7 @@ function TitleBar() {
                 width: 20, height: 20, borderRadius: 5,
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.07)',
-                fontSize: 12, color: 'rgba(148,163,184,0.35)',
+                fontSize: 14.5, color: 'rgba(148,163,184,0.35)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all 0.15s',
               }}
@@ -311,7 +311,7 @@ function SidebarBtn({ iconId, neon, active, title, dim = false, locked = false, 
       <CyberIcon id={iconId} size={18}
         color={locked ? 'rgba(148,163,184,0.3)' : on ? neon : 'rgba(148,163,184,0.4)'} glow={on} />
       {locked && (
-        <span style={{ position: 'absolute', right: 3, bottom: 2, fontSize: 7, lineHeight: 1,
+        <span style={{ position: 'absolute', right: 3, bottom: 2, fontSize: 11.5, lineHeight: 1,
           color: 'rgba(148,163,184,0.55)' }}>🔒</span>
       )}
       {active && (
@@ -385,24 +385,24 @@ function NowCard() {
       <span style={{ fontSize: 22, filter: `drop-shadow(0 0 8px ${INF})`,
         animation: 'pulse 2.4s ease-in-out infinite' }}>∞</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 7.5, fontWeight: 700, letterSpacing: '0.18em',
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em',
           color: isFreeNow ? 'rgba(57,255,20,0.7)' : idleNow ? 'rgba(255,215,0,0.75)' : INF }}>
           {isFreeNow ? t('● FREE NOW', '● СЕЙЧАС СВОБОДНО')
             : idleNow ? t('● QUESTS OPEN', '● ЕСТЬ ЗАДАНИЯ')
             : t('● HAPPENING NOW', '● ИДЁТ СЕЙЧАС')}
         </p>
-        <p style={{ fontSize: 14, fontWeight: 800, color: 'rgba(225,250,255,0.95)',
+        <p style={{ fontSize: 16.5, fontWeight: 800, color: 'rgba(225,250,255,0.95)',
           letterSpacing: '0.02em', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {headline}
         </p>
-        <p style={{ fontSize: 8.5, color: 'rgba(148,163,184,0.6)', letterSpacing: '0.04em', marginTop: 2 }}>{sub}</p>
+        <p style={{ fontSize: 11, color: 'rgba(148,163,184,0.6)', letterSpacing: '0.04em', marginTop: 2 }}>{sub}</p>
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        <p style={{ fontSize: 16, fontWeight: 900, color: '#39ff14', lineHeight: 1,
+        <p style={{ fontSize: 18, fontWeight: 900, color: '#39ff14', lineHeight: 1,
           textShadow: '0 0 10px rgba(57,255,20,0.4)' }}>{fmtDur(snap.freeMinutes)}</p>
-        <p style={{ fontSize: 7, color: 'rgba(57,255,20,0.5)', letterSpacing: '0.1em', marginTop: 2 }}>{t('FREE LEFT', 'СВОБОДНО ОСТАЛОСЬ')}</p>
+        <p style={{ fontSize: 11.5, color: 'rgba(57,255,20,0.5)', letterSpacing: '0.1em', marginTop: 2 }}>{t('FREE LEFT', 'СВОБОДНО ОСТАЛОСЬ')}</p>
         {snap.committedCount > 0 && (
-          <p style={{ fontSize: 7.5, color: `${INF}70`, marginTop: 3 }}>{snap.doneCount}/{snap.committedCount} {t('done', 'готово')}</p>
+          <p style={{ fontSize: 10, color: `${INF}70`, marginTop: 3 }}>{snap.doneCount}/{snap.committedCount} {t('done', 'готово')}</p>
         )}
       </div>
     </button>
@@ -419,18 +419,18 @@ function NowCard() {
         onMouseEnter={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}70`}
         onMouseLeave={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}38`}
       >
-        <span style={{ fontSize: 18, flexShrink: 0 }}>{suggest.icon}</span>
+        <span style={{ fontSize: 20, flexShrink: 0 }}>{suggest.icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 7, fontWeight: 800, letterSpacing: '0.16em',
+          <p style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: '0.16em',
             color: `${SUGGEST_TONE[suggest.tone]}b0` }}>{t('THE GUILD SUGGESTS', 'ГИЛЬДИЯ СОВЕТУЕТ')}</p>
-          <p style={{ fontSize: 12, fontWeight: 700, color: 'rgba(225,250,255,0.95)', marginTop: 1,
+          <p style={{ fontSize: 14.5, fontWeight: 700, color: 'rgba(225,250,255,0.95)', marginTop: 1,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.label}</p>
           {suggest.detail && (
-            <p style={{ fontSize: 8, color: 'rgba(148,163,184,0.6)', marginTop: 1,
+            <p style={{ fontSize: 10.5, color: 'rgba(148,163,184,0.6)', marginTop: 1,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.detail}</p>
           )}
         </div>
-        <span style={{ fontSize: 8, color: `${SUGGEST_TONE[suggest.tone]}cc`, flexShrink: 0 }}>~{fmtDur(suggest.minutes)}</span>
+        <span style={{ fontSize: 10.5, color: `${SUGGEST_TONE[suggest.tone]}cc`, flexShrink: 0 }}>~{fmtDur(suggest.minutes)}</span>
       </button>
     )}
    </div>
@@ -475,10 +475,10 @@ function Dashboard({ displayName }: { displayName: string }) {
 
       {/* Greeting */}
       <div style={{ marginBottom: 22 }}>
-        <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.03em' }}>
+        <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.03em' }}>
           {greeting}{name ? `, ${name}` : ''} <span style={{ color: 'var(--accent)', textShadow: '0 0 10px var(--accent-dim)' }}>👋</span>
         </p>
-        <p style={{ fontSize: 9, color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: 4, textTransform: 'uppercase' }}>
+        <p style={{ fontSize: 11.5, color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: 4, textTransform: 'uppercase' }}>
           {t('Warren hub · select a module →', 'Хаб Warren · выберите модуль →')}
         </p>
       </div>
@@ -511,11 +511,11 @@ function Dashboard({ displayName }: { displayName: string }) {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <CyberIcon id={icon} size={14} color={neon} glow />
-              <span style={{ fontSize: 15, fontWeight: 800, color: neon, textShadow: `0 0 8px ${neon}50` }}>
+              <span style={{ fontSize: 17.5, fontWeight: 800, color: neon, textShadow: `0 0 8px ${neon}50` }}>
                 {value}
               </span>
             </div>
-            <p style={{ fontSize: 8, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <p style={{ fontSize: 10.5, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               {label}
             </p>
           </button>
@@ -524,10 +524,10 @@ function Dashboard({ displayName }: { displayName: string }) {
 
       {/* Status */}
       <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(57,255,20,0.04)', border: '1px solid rgba(57,255,20,0.1)' }}>
-        <p style={{ fontSize: 9, color: 'rgba(57,255,20,0.6)', letterSpacing: '0.1em', fontWeight: 700 }}>
+        <p style={{ fontSize: 11.5, color: 'rgba(57,255,20,0.6)', letterSpacing: '0.1em', fontWeight: 700 }}>
           <span className="pulse">●</span> {t('ALL SYSTEMS NOMINAL', 'ВСЕ СИСТЕМЫ В НОРМЕ')}
         </p>
-        <p style={{ fontSize: 8, color: 'var(--text-muted)', marginTop: 3, letterSpacing: '0.06em' }}>
+        <p style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: 3, letterSpacing: '0.06em' }}>
           {t('Warren is running · modules can be accessed from the sidebar →', 'Warren работает · модули доступны на боковой панели →')}
         </p>
       </div>
@@ -795,7 +795,7 @@ export default function App() {
         <div style={{ position: 'fixed', bottom: 26, right: 60, zIndex: 60,
           padding: '7px 13px', borderRadius: 8, background: 'rgba(4,10,18,0.96)',
           border: '1px solid rgba(148,163,184,0.3)', animation: 'fadeInPlace 0.18s ease' }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700, letterSpacing: '0.12em',
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em',
             color: 'rgba(200,220,240,0.75)' }}>🔒 {t('OPENS AT', 'ОТКРОЕТСЯ НА')} {lockNote}</p>
         </div>
       )}
@@ -808,7 +808,7 @@ export default function App() {
         background: 'rgba(6,11,22,0.35)',
       }}>
         <span className="pulse" style={{ fontSize: 5, color: '#39ff14' }}>●</span>
-        <span style={{ fontSize: 8, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
+        <span style={{ fontSize: 10.5, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
           {activeModule
             ? `${activeModule.name} · ${activeModule.role}`
             : 'Warren Protocol · Active'}

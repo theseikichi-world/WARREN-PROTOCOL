@@ -54,7 +54,7 @@ export function LevelUp({ level, onDone }: { level: number; onDone: () => void }
         background: 'repeating-linear-gradient(0deg, rgba(0,245,255,0.035) 0px, rgba(0,245,255,0.035) 1px, transparent 1px, transparent 3px)' }} />
 
       <div style={{ position: 'relative', width: '100%', maxWidth: 380, textAlign: 'center' }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.26em',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.26em',
           color: `${CYAN}70`, animation: 'fadeInPlace 0.4s ease' }}>
           {tr('THRESHOLD CROSSED', 'ПОРОГ ПРОЙДЕН')}
         </p>
@@ -64,20 +64,20 @@ export function LevelUp({ level, onDone }: { level: number; onDone: () => void }
           margin: '10px 0 2px', animation: 'slideUp 0.45s ease' }}>
           {level}
         </p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800, letterSpacing: '0.28em',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 800, letterSpacing: '0.28em',
           color: `${CYAN}b0` }}>{tr('LEVEL', 'УРОВЕНЬ')}</p>
 
         <div style={{ height: 1, margin: '18px 0', background:
           `linear-gradient(90deg, transparent, ${CYAN}55, transparent)` }} />
 
         {rewardIsBare(reward) ? (
-          <p style={{ fontFamily: 'var(--font)', fontSize: 9, lineHeight: 1.7, color: 'rgba(200,222,240,0.72)' }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, lineHeight: 1.7, color: 'rgba(200,222,240,0.72)' }}>
             {tr('No new capacity at this one — just a deeper record. The curve keeps going whether or not it hands you a button.',
                 'Новых возможностей здесь нет — только более глубокая запись. Кривая идёт дальше, даже когда не выдаёт кнопку.')}
           </p>
         ) : (
           <>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.2em',
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.2em',
               color: DIM, marginBottom: 10 }}>{tr('WHAT OPENED', 'ЧТО ОТКРЫЛОСЬ')}</p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -88,8 +88,8 @@ export function LevelUp({ level, onDone }: { level: number; onDone: () => void }
                   background: `${l.tone}0d`, border: `1px solid ${l.tone}35`,
                   animation: 'slideUp 0.32s ease',
                 }}>
-                  <span style={{ fontSize: 12, flexShrink: 0 }}>{l.icon}</span>
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 700,
+                  <span style={{ fontSize: 14.5, flexShrink: 0 }}>{l.icon}</span>
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 12, fontWeight: 700,
                     color: 'rgba(232,244,255,0.92)' }}>{l.en}</span>
                 </div>
               ))}
@@ -99,7 +99,7 @@ export function LevelUp({ level, onDone }: { level: number; onDone: () => void }
 
         <button onClick={onDone} style={{
           width: '100%', marginTop: 20, padding: '11px', borderRadius: 9, cursor: 'pointer',
-          fontFamily: 'var(--font)', fontSize: 10, fontWeight: 900, letterSpacing: '0.2em',
+          fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900, letterSpacing: '0.2em',
           color: '#02121a', background: `linear-gradient(135deg, ${CYAN}, ${CYAN}b0)`,
           border: 'none', boxShadow: `0 0 22px ${CYAN}50`,
         }}>{tr('CONTINUE', 'ПРОДОЛЖИТЬ')}</button>

@@ -31,7 +31,7 @@ export function WeekStrip({ tasks }: { tasks: Task[] }) {
           textShadow: streak > 0 ? '0 0 12px #ff6b0070' : 'none', lineHeight: 1 }}>{streak}</span>
         <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
           color: 'rgba(148,163,184,0.35)', letterSpacing: '0.06em' }}>day streak</span>
-        {streak > 0 && <span style={{ fontSize: 14 }}>🔥</span>}
+        {streak > 0 && <span style={{ fontSize: 16.5 }}>🔥</span>}
       </div>
       <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
         {weekDates.map((date, i) => {
@@ -50,7 +50,7 @@ export function WeekStrip({ tasks }: { tasks: Task[] }) {
                 {done && <div style={{ width: 8, height: 8, borderRadius: 3, background: NEON, boxShadow: `0 0 4px ${NEON}` }} />}
                 {!done && isPast && <div style={{ width: 4, height: 4, borderRadius: 2, background: 'rgba(255,0,51,0.35)' }} />}
               </div>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 7, letterSpacing: '0.04em',
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, letterSpacing: '0.04em',
                 color: isToday ? NEON : done ? `${NEON}70` : 'rgba(148,163,184,0.22)',
                 fontWeight: isToday ? 700 : 400 }}>{DAY_LABELS[i]}</span>
             </div>

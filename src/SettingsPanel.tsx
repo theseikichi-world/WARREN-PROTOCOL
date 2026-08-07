@@ -41,7 +41,7 @@ function Toggle({ on, onChange, accent }: { on: boolean; onChange: (v: boolean) 
 function Section({ label }: { label: string }) {
   return (
     <p style={{
-      fontSize: 8, fontWeight: 700, letterSpacing: '0.2em',
+      fontSize: 10.5, fontWeight: 700, letterSpacing: '0.2em',
       textTransform: 'uppercase', color: 'rgba(148,163,184,0.4)',
       margin: '18px 0 10px', fontFamily: 'var(--font)',
     }}>{label}</p>
@@ -53,10 +53,10 @@ function Row({ label, sub, children }: { label: string; sub?: string; children: 
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
       <div>
-        <p style={{ fontSize: 10, color: 'rgba(220,240,255,0.8)', fontFamily: 'var(--font)', letterSpacing: '0.04em' }}>
+        <p style={{ fontSize: 12.5, color: 'rgba(220,240,255,0.8)', fontFamily: 'var(--font)', letterSpacing: '0.04em' }}>
           {label}
         </p>
-        {sub && <p style={{ fontSize: 8, color: 'rgba(148,163,184,0.4)', fontFamily: 'var(--font)', marginTop: 1 }}>{sub}</p>}
+        {sub && <p style={{ fontSize: 10.5, color: 'rgba(148,163,184,0.4)', fontFamily: 'var(--font)', marginTop: 1 }}>{sub}</p>}
       </div>
       {children}
     </div>
@@ -162,9 +162,9 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           borderBottom: '1px solid rgba(255,255,255,0.05)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 14 }}>⚙️</span>
+            <span style={{ fontSize: 16.5 }}>⚙️</span>
             <p style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: '0.18em',
+              fontSize: 12.5, fontWeight: 700, letterSpacing: '0.18em',
               color: acc, textShadow: `0 0 8px ${acc}`,
               fontFamily: 'var(--font)', textTransform: 'uppercase',
             }}>{t('Settings', 'Настройки')}</p>
@@ -172,7 +172,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           <button
             onClick={close}
             style={{
-              width: 22, height: 22, borderRadius: 5, fontSize: 12,
+              width: 22, height: 22, borderRadius: 5, fontSize: 14.5,
               color: 'rgba(148,163,184,0.4)',
               border: '1px solid rgba(255,255,255,0.07)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -196,7 +196,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
                 return (
                   <button key={l} onClick={() => setLocale(l)} style={{
                     padding: '5px 12px', borderRadius: 6, cursor: 'pointer',
-                    fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800, letterSpacing: '0.06em',
+                    fontFamily: 'var(--font)', fontSize: 13.5, fontWeight: 800, letterSpacing: '0.06em',
                     color: on ? acc : 'rgba(148,163,184,0.45)',
                     border: `1px solid ${on ? acc : 'rgba(255,255,255,0.08)'}`,
                     background: on ? `${acc}18` : 'transparent', transition: 'all 0.12s',
@@ -210,7 +210,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           <Section label={t('Appearance', 'Оформление')} />
 
           {/* Accent color */}
-          <p style={{ fontSize: 9, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 8, letterSpacing: '0.06em' }}>
+          <p style={{ fontSize: 11.5, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 8, letterSpacing: '0.06em' }}>
             Accent color
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -244,10 +244,10 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           {/* Opacity */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <p style={{ fontSize: 9, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', letterSpacing: '0.06em' }}>
+              <p style={{ fontSize: 11.5, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', letterSpacing: '0.06em' }}>
                 Window opacity
               </p>
-              <p style={{ fontSize: 9, color: acc, fontFamily: 'var(--font)', fontWeight: 700 }}>
+              <p style={{ fontSize: 11.5, color: acc, fontFamily: 'var(--font)', fontWeight: 700 }}>
                 {Math.round(settings.opacity * 100)}%
               </p>
             </div>
@@ -263,8 +263,8 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
               }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-              <span style={{ fontSize: 7.5, color: 'rgba(148,163,184,0.3)', fontFamily: 'var(--font)' }}>45%</span>
-              <span style={{ fontSize: 7.5, color: 'rgba(148,163,184,0.3)', fontFamily: 'var(--font)' }}>100%</span>
+              <span style={{ fontSize: 10, color: 'rgba(148,163,184,0.3)', fontFamily: 'var(--font)' }}>45%</span>
+              <span style={{ fontSize: 10, color: 'rgba(148,163,184,0.3)', fontFamily: 'var(--font)' }}>100%</span>
             </div>
           </div>
 
@@ -297,7 +297,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
               setTimeout(() => window.location.reload(), 700)
             }}
               style={{ padding: '5px 11px', borderRadius: 6, cursor: 'pointer',
-                fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700, letterSpacing: '0.1em',
+                fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em',
                 color: acc, background: 'transparent', border: `1px solid ${acc}40` }}>
               ↻ {t('REPLAY', 'ЗАНОВО')}
             </button>
@@ -314,7 +314,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
               hours genuinely change when a job or a baby does. */}
           <Section label={t('Profile', 'Профиль')} />
 
-          <p style={{ fontSize: 9, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 6, letterSpacing: '0.06em' }}>
+          <p style={{ fontSize: 11.5, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 6, letterSpacing: '0.06em' }}>
             {t('Display name', 'Отображаемое имя')}
           </p>
           <input
@@ -328,7 +328,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
               background: 'rgba(255,255,255,0.04)',
               border: `1px solid rgba(255,255,255,0.08)`,
               borderRadius: 6, outline: 'none',
-              fontFamily: 'var(--font)', fontSize: 10,
+              fontFamily: 'var(--font)', fontSize: 12.5,
               color: 'rgba(220,240,255,0.8)',
               letterSpacing: '0.06em',
               transition: 'border-color 0.15s',
@@ -345,7 +345,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
               return (
                 <button key={g.value} onClick={() => update({ gender: on ? '' : g.value })}
                   style={{ flex: 1, padding: '7px 4px', borderRadius: 6, cursor: 'pointer',
-                    fontFamily: 'var(--font)', fontSize: 8, fontWeight: 700, letterSpacing: '0.1em',
+                    fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em',
                     color: on ? '#02121a' : 'rgba(148,163,184,0.55)',
                     background: on ? acc : 'transparent',
                     border: `1px solid ${on ? acc : 'rgba(255,255,255,0.1)'}` }}>
@@ -357,22 +357,22 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
 
           <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 8, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 5, letterSpacing: '0.08em' }}>
+              <p style={{ fontSize: 10.5, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 5, letterSpacing: '0.08em' }}>
                 {t('I WAKE AT', 'ПОДЪЁМ В')}
               </p>
               <input type="time" value={settings.wakeTime} onChange={e => update({ wakeTime: e.target.value })}
                 style={{ width: '100%', padding: '7px 9px', borderRadius: 6, boxSizing: 'border-box',
                   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                  fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(220,240,255,0.8)', outline: 'none' }} />
+                  fontFamily: 'var(--font)', fontSize: 12.5, color: 'rgba(220,240,255,0.8)', outline: 'none' }} />
             </div>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 8, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 5, letterSpacing: '0.08em' }}>
+              <p style={{ fontSize: 10.5, color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 5, letterSpacing: '0.08em' }}>
                 {t('I SLEEP AT', 'ОТБОЙ В')}
               </p>
               <input type="time" value={settings.sleepTime} onChange={e => update({ sleepTime: e.target.value })}
                 style={{ width: '100%', padding: '7px 9px', borderRadius: 6, boxSizing: 'border-box',
                   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                  fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(220,240,255,0.8)', outline: 'none' }} />
+                  fontFamily: 'var(--font)', fontSize: 12.5, color: 'rgba(220,240,255,0.8)', outline: 'none' }} />
             </div>
           </div>
 
@@ -655,10 +655,10 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           {/* ── About ── */}
           <Section label={t('About', 'О программе')} />
           <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <p style={{ fontSize: 9, color: acc, fontFamily: 'var(--font)', fontWeight: 700, letterSpacing: '0.1em', marginBottom: 4 }}>
+            <p style={{ fontSize: 11.5, color: acc, fontFamily: 'var(--font)', fontWeight: 700, letterSpacing: '0.1em', marginBottom: 4 }}>
               WARREN v0.1.0
             </p>
-            <p style={{ fontSize: 8, color: 'rgba(148,163,184,0.35)', fontFamily: 'var(--font)', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 10.5, color: 'rgba(148,163,184,0.35)', fontFamily: 'var(--font)', lineHeight: 1.6 }}>
               Personal life hub · Tauri v2 + React
             </p>
           </div>

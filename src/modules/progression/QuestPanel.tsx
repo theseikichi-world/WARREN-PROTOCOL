@@ -93,9 +93,9 @@ export function QuestPanel() {
     return (
       <div style={{ marginBottom: 16, padding: '11px 13px', borderRadius: 10,
         background: `${GOLD}08`, border: `1px solid ${GOLD}28` }}>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.2em',
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.2em',
           color: `${GOLD}b0` }}>⚑ {tr('MAIN QUEST', 'ОСНОВНОЙ КВЕСТ')}</p>
-        <p style={{ fontFamily: 'var(--font)', fontSize: 9, color: 'rgba(230,242,255,0.85)', marginTop: 6 }}>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(230,242,255,0.85)', marginTop: 6 }}>
           {tr('The starting zone is behind you. Everything from here is your own line.',
               'Стартовая зона позади. Дальше — только ваша линия.')}
         </p>
@@ -111,19 +111,19 @@ export function QuestPanel() {
       {celebrating && <QuestCleared quest={celebrating} />}
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 800, letterSpacing: '0.2em',
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.2em',
           color: `${GOLD}b0` }}>
           ⚑ {stage.stage === 1 ? tr('SETUP', 'НАСТРОЙКА') : tr('MAIN QUEST', 'ОСНОВНОЙ КВЕСТ')}
         </span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM }}>
           {tr('STAGE', 'ЭТАП')} {stage.stage}/{LAST_GATED_STAGE}
         </span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, fontWeight: 700, color: `${GOLD}c0`,
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: `${GOLD}c0`,
           marginLeft: 'auto' }}>{stage.cleared}/{stage.total}</span>
       </div>
 
       {/* What the stage is holding — stated, never implied by a stuck bar */}
-      <p style={{ fontFamily: 'var(--font)', fontSize: 8, lineHeight: 1.6, marginTop: 6,
+      <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, lineHeight: 1.6, marginTop: 6,
         color: lvl.capped ? `${GOLD}c0` : 'rgba(200,220,240,0.6)' }}>
         {lvl.capped
           ? tr(`Level ${lvl.level + 1} is held until this stage is clear — ${stage.total - stage.cleared} left. XP alone does not advance you.`,
@@ -143,10 +143,10 @@ export function QuestPanel() {
           boxShadow: `0 0 10px ${GOLD}90`, transition: 'width 0.8s cubic-bezier(0.2,0.8,0.2,1)' }} />
       </div>
       <div style={{ display: 'flex', marginTop: 4 }}>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM }}>
           {lvl.capped ? `${stage.cleared}/${stage.total} ${tr('objectives', 'задач')}` : `${lvl.intoNext} / ${lvl.needed} XP`}
         </span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 7, color: `${GOLD}90`, marginLeft: 'auto' }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${GOLD}90`, marginLeft: 'auto' }}>
           {tr('LEVEL', 'УРОВЕНЬ')} {lvl.level} → {lvl.level + 1}
         </span>
       </div>
@@ -166,34 +166,34 @@ export function QuestPanel() {
                 opacity: cleared ? 0.65 : 1,
               }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 9, flexShrink: 0, width: 9, textAlign: 'center',
+                <span style={{ fontSize: 11.5, flexShrink: 0, width: 12, textAlign: 'center',
                   color: cleared ? '#39ff14' : GOLD }}>
                   {cleared ? '✓' : '◈'}
                 </span>
-                <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 9,
+                <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 11.5,
                   fontWeight: 800, letterSpacing: '0.06em',
                   color: cleared ? 'rgba(148,163,184,0.6)' : GOLD,
                   textDecoration: cleared ? 'line-through' : 'none' }}>
                   {tr(p.quest.title, p.quest.ru)}
                 </span>
-<span style={{ fontFamily: 'var(--font)', fontSize: 7, color: DIM, flexShrink: 0,
-                  width: 26, textAlign: 'right' }}>
+<span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM, flexShrink: 0,
+                  width: 34, textAlign: 'right' }}>
                   {p.have}/{p.need}
                 </span>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 6.5, color: `${GOLD}70`, flexShrink: 0,
-                  width: 26, textAlign: 'right' }}>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 11, color: `${GOLD}70`, flexShrink: 0,
+                  width: 34, textAlign: 'right' }}>
                   +{p.quest.xp}
                 </span>
               </div>
 
               {!cleared && (
                 <>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, lineHeight: 1.6, marginTop: 5,
-                    marginLeft: 17, color: 'rgba(215,232,248,0.72)' }}>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 10, lineHeight: 1.6, marginTop: 5,
+                    marginLeft: 20, color: 'rgba(215,232,248,0.72)' }}>
                     {tr(p.quest.brief, p.quest.briefRu)}
                   </p>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 7.5, fontWeight: 800,
-                    letterSpacing: '0.12em', color: GOLD, marginTop: 6, marginLeft: 17 }}>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
+                    letterSpacing: '0.12em', color: GOLD, marginTop: 6, marginLeft: 20 }}>
                     {tr(cta.en, cta.ru)} →
                   </p>
                 </>
@@ -218,17 +218,17 @@ function QuestCleared({ quest }: { quest: Quest }) {
       border: `1px solid ${GOLD}`, boxShadow: `0 0 30px ${GOLD}45, inset 0 0 40px ${GOLD}12`,
       animation: 'fadeIn 0.25s ease',
     }}>
-      <span style={{ fontSize: 18, animation: 'pulse 1.1s ease-in-out infinite',
+      <span style={{ fontSize: 20, animation: 'pulse 1.1s ease-in-out infinite',
         filter: `drop-shadow(0 0 10px ${GOLD})` }}>⚑</span>
-      <p style={{ fontFamily: 'var(--font)', fontSize: 8, fontWeight: 800, letterSpacing: '0.24em',
+      <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.24em',
         color: `${GOLD}c0`, animation: 'slideUp 0.3s ease' }}>
         {tr('OBJECTIVE CLEARED', 'ЗАДАЧА ВЫПОЛНЕНА')}
       </p>
-      <p style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 900, letterSpacing: '0.08em',
+      <p style={{ fontFamily: 'var(--font)', fontSize: 15.5, fontWeight: 900, letterSpacing: '0.08em',
         color: GOLD, textShadow: `0 0 16px ${GOLD}80`, animation: 'slideUp 0.36s ease' }}>
         {tr(quest.title, quest.ru)}
       </p>
-      <p style={{ fontFamily: 'var(--font)', fontSize: 15, fontWeight: 900, color: '#ffe98a',
+      <p style={{ fontFamily: 'var(--font)', fontSize: 17.5, fontWeight: 900, color: '#ffe98a',
         textShadow: `0 0 18px ${GOLD}`, marginTop: 2, animation: 'slideUp 0.44s ease' }}>
         +{quest.xp} XP
       </p>
