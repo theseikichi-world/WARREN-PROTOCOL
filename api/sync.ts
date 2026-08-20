@@ -10,7 +10,13 @@ import { put, list } from '@vercel/blob'
 // Vercel Blob is public-by-URL, which is exactly why the client encrypts. The
 // blob URL is never returned to the client either — reads are proxied here.
 
-export const config = { runtime: 'edge' }
+// NODE runtime, deliberately — do NOT set `runtime: 'edge'` here.
+//
+// Edge is a V8 isolate with no Node core modules, and @vercel/blob reaches
+// undici for HTTP, which needs node:stream, net, tls, zlib and friends. Asking
+// for Edge makes the build fail listing every one of them. Nothing in this
+// function wants an isolate: it is a handful of blob reads a day, not something
+// that needs to run in thirty regions.
 
 interface Record {
   sealed:    unknown
