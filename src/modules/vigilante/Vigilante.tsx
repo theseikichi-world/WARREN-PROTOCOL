@@ -13,7 +13,7 @@ import {
   setTier, currentStage, finishedCount, setHabit,
 } from './store'
 import { LocalAudio } from './music'
-import { installTrainingHabit, DEFAULT_DAYS, type WhenChoice } from './schedule'
+import { installTrainingHabit, scheduleExisting, existingBasics, slotsFree, DEFAULT_DAYS, type WhenChoice } from './schedule'
 import { trackFromList } from '../progression/store'
 import { loadState as loadScrap7 } from '../scrap7/store'
 import { habitDoneToday } from '../scrap7/store'
@@ -79,6 +79,11 @@ export default function Vigilante() {
   const [marked, setMarked]   = useState(false)
   const [pickDays, setPickDays] = useState<string[]>(DEFAULT_DAYS)
   const [pickWhen, setPickWhen] = useState<WhenChoice>('auto')
+  // Read on render, not memoised: both come from localStorage, and a basic
+  // added on the character sheet a moment ago has to show up here. They are only
+  // computed while the panel is unlinked, which is a handful of renders.
+  const basics = state.habitId ? [] : existingBasics()
+  const free   = state.habitId ? 1 : slotsFree()
 
   const tick = useRef<ReturnType<typeof setInterval> | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
@@ -695,13 +700,54 @@ export default function Vigilante() {
                       )
                     })}
                   </div>
+                  {/* Already keep a training habit under another name? Link it
+                      rather than growing a second one beside it. Offered as a
+                      choice, never guessed: only you know which basic is this. */}
+                  {basics.length > 0 && (
+                    <div style={{ marginBottom: 8 }}>
+                      <p style={{ fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 800,
+                        letterSpacing: '0.1em', color: 'rgba(148,163,184,0.45)', marginBottom: 4 }}>
+                        {tr('USE ONE I ALREADY HAVE', 'ВЗЯТЬ УЖЕ СУЩЕСТВУЮЩУЮ')}
+                      </p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {basics.map(t => (
+                          <button key={t.id}
+                            disabled={!pickDays.length}
+                            onClick={() => {
+                              const mins = Math.round(specHoldSeconds(state.spec, stage) / 60) + 5
+                              const period = scheduleExisting(t.id, pickDays, pickWhen, mins)
+                              persist(setHabit(loadState(), t.id, pickDays))
+                              window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'vigilante' } }))
+                              setFlash(tr(`LINKED · ${PERIOD_LABEL[period].en}`,
+                                          `ПРИВЯЗАНО · ${PERIOD_LABEL[period].ru}`))
+                              setTimeout(() => setFlash(''), 2600)
+                              playCue('open')
+                            }}
+                            style={{ padding: '5px 9px', borderRadius: 5, cursor: 'pointer',
+                              fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700,
+                              color: 'rgba(200,215,240,0.85)', background: 'transparent',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                              opacity: pickDays.length ? 1 : 0.4 }}>
+                            {t.text}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <button
-                    disabled={!pickDays.length}
+                    disabled={!pickDays.length || free <= 0}
                     onClick={() => {
                       const mins = Math.round(specHoldSeconds(state.spec, stage) / 60) + 5
-                      const { taskId, period } = installTrainingHabit(
+                      const { taskId, period, full } = installTrainingHabit(
                         tr('Statics', 'Статика'), pickDays, pickWhen, mins)
-                      if (!taskId) { setFlash(tr('COULD NOT ADD', 'НЕ УДАЛОСЬ')); return }
+                      if (!taskId) {
+                        setFlash(full
+                          ? tr('LIFE SUPPORT IS FULL', 'ЖИЗНЕОБЕСПЕЧЕНИЕ ЗАПОЛНЕНО')
+                          : tr('COULD NOT ADD', 'НЕ УДАЛОСЬ'))
+                        setTimeout(() => setFlash(''), 2600)
+                        return
+                      }
                       persist(setHabit(loadState(), taskId, pickDays))
                       window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'vigilante' } }))
                       setFlash(tr(`SCHEDULED · ${PERIOD_LABEL[period].en}`,
@@ -709,9 +755,16 @@ export default function Vigilante() {
                       setTimeout(() => setFlash(''), 2600)
                       playCue('open')
                     }}
-                    style={{ ...btn(NEON), opacity: pickDays.length ? 1 : 0.4 }}>
-                    ✛ {tr('ADD TO MY HABITS', 'ДОБАВИТЬ В ПРИВЫЧКИ')}
+                    style={{ ...btn(NEON), opacity: (pickDays.length && free > 0) ? 1 : 0.4 }}>
+                    ✛ {tr('CREATE A NEW HABIT', 'СОЗДАТЬ НОВУЮ ПРИВЫЧКУ')}
                   </button>
+                  {free <= 0 && (
+                    <p style={{ fontFamily: 'var(--font)', fontSize: 10, marginTop: 6,
+                      color: 'rgba(255,107,0,0.75)', lineHeight: 1.5 }}>
+                      {tr('Every life support slot is full — link one above, or free a slot on the character sheet.',
+                          'Все слоты жизнеобеспечения заняты — привяжите одну выше или освободите слот на листе персонажа.')}
+                    </p>
+                  )}
                 </>
               )}
             </div>

@@ -7,7 +7,7 @@ import {
 } from './types'
 import { clampSec, clampRounds, logSession, deriveVigilante, LOG_CAP, setTier } from './store'
 import { cueFor, countdownAt, prepareCue, PREPARE_AT } from './voice'
-import { freeByPeriod, bestPeriod } from './schedule'
+import { freeByPeriod, bestPeriod, slugFor } from './schedule'
 
 const spec = (over: Partial<CircuitSpec> = {}): CircuitSpec => ({ ...DEFAULT_SPEC, ...over })
 /** Most sequence assertions are about work/rest, so start cold by default. */
@@ -330,5 +330,22 @@ describe('picking the best time', () => {
     // A day with no room anywhere still has to answer, and the afternoon is
     // when the body is warmest — the same reason anchor.ts describes it so.
     expect(bestPeriod(free({}), 60)).toBe('afternoon')
+  })
+})
+
+describe('why adoption matches on title, not on the derived id', () => {
+  it('shows the id slug is lossy enough to collide', () => {
+    // installCustomLifeSupport strips everything non-latin when building an id,
+    // so EVERY Cyrillic-named basic collapses to the same slug. Adopting by id
+    // would have handed a Russian user whichever unrelated habit claimed it
+    // first — hence the title match instead.
+    expect(slugFor('Статика')).toBe('basic')
+    expect(slugFor('Растяжка')).toBe('basic')
+    expect(slugFor('Статика')).toBe(slugFor('Растяжка'))   // the collision
+  })
+
+  it('is still lossy for anything with no latin at all', () => {
+    expect(slugFor('!!!')).toBe('basic')
+    expect(slugFor('')).toBe('basic')
   })
 })
