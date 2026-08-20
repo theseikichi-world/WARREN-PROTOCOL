@@ -1,7 +1,7 @@
 import {
   type Task, type Scrap7State, type ChatMessage, type Schedule, type Priority, type Direction,
   type TaskOrigin,
-  DEFAULT_CATEGORIES, HABIT_MILESTONES, todayKey, taskOrigin,
+  DEFAULT_CATEGORIES, HABIT_MILESTONES, todayKey, taskOrigin, isCountableUnit,
   daysBetweenKeys, shiftDateKey,
 } from './types'
 
@@ -243,7 +243,13 @@ export function trackHabit(state: Scrap7State, id: string, dir: 1 | -1 = 1): Tra
     const wasAlreadyDone = todayCount >= target
 
     if (dir > 0) {
-      const newCount   = todayCount + 1
+      // A tap means "I did it". For a unit you repeat that is one more; for a
+      // unit that MEASURES a single session it is the whole thing. Stepping by
+      // one through "15 minutes" meant fourteen taps that changed nothing —
+      // not the score, not the streak, not the row — and then a fifteenth that
+      // did everything, which is indistinguishable from a broken button.
+      const step       = isCountableUnit(t.unit) ? 1 : Math.max(1, target - todayCount)
+      const newCount   = todayCount + step
       const trackHist  = [...(t.trackingHistory ?? [])]
       let   newScore   = score
       let   newStreak  = t.streak ?? 0
@@ -274,8 +280,9 @@ export function trackHabit(state: Scrap7State, id: string, dir: 1 | -1 = 1): Tra
         trackingHistory: trackHist,
       }
     } else {
-      // Decrease count only — score is forward-only per day
-      return { ...t, todayCount: Math.max(0, todayCount - 1) }
+      // Undo takes back what the tap gave: one rep, or the whole session.
+      const back = isCountableUnit(t.unit) ? 1 : todayCount
+      return { ...t, todayCount: Math.max(0, todayCount - back) }
     }
   })
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { t as tr } from '../../i18n'
+import { isCountableUnit } from '../scrap7/types'
 import { getHabitTier, isBaseline, type Task } from '../scrap7/types'
 import { THRESHOLD_UNLOCK_AT } from './types'
 import { useSpotlight } from './questNav'
@@ -236,6 +237,8 @@ function BaselineRow({ task, onTrack, onDelete }: {
   const target = task.target ?? 1
   const count  = task.todayCount ?? 0
   const doneToday = count >= target
+  /** Repeatable units tick up; measured ones are one action with a size. */
+  const countable = isCountableUnit(task.unit)
   const automatic = score >= THRESHOLD_UNLOCK_AT
 
   return (
@@ -251,7 +254,11 @@ function BaselineRow({ task, onTrack, onDelete }: {
             color: 'rgba(230,242,255,0.92)', overflow: 'hidden', textOverflow: 'ellipsis',
             whiteSpace: 'nowrap' }}>{task.text}</p>
           <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM, marginTop: 3 }}>
-            {template ? `▸ ${tr(template.cue, template.cueRu)} · ` : ''}{count}/{target} {task.unit ?? ''}
+            {template ? `▸ ${tr(template.cue, template.cueRu)} · ` : ''}
+            {/* A tally only reads as a tally when you can actually tick it up.
+                "0/15 minutes" invited fifteen taps; "15 minutes" states the
+                commitment, which is what a measured basic actually has. */}
+            {countable ? `${count}/${target}` : target} {task.unit ?? ''}
           </p>
         </div>
 
@@ -265,13 +272,14 @@ function BaselineRow({ task, onTrack, onDelete }: {
           )}
         </div>
 
-        <button onClick={onTrack} title={`${count}/${target}`} style={{
+        <button onClick={onTrack}
+          title={countable ? `${count}/${target}` : tr('Mark done', 'Отметить')} style={{
           width: 34, height: 30, borderRadius: 7, cursor: 'pointer', flexShrink: 0,
           fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 800,
           color: doneToday ? GREEN : '#02121a',
           background: doneToday ? 'transparent' : `linear-gradient(135deg, ${GREEN}, ${GREEN}b0)`,
           border: `1px solid ${doneToday ? `${GREEN}45` : 'transparent'}`,
-        }}>{doneToday ? '✓' : '+1'}</button>
+        }}>{doneToday ? '✓' : countable ? '+1' : '✓'}</button>
 
         <button onClick={() => setConfirmDelete(v => !v)} title={tr('delete this basic', 'удалить эту основу')}
           style={{ background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createTask, duplicateTask, pickableCategories, orbitTasks, taskSource, habitDoneToday, type NewTaskData } from './store'
+import { createTask, trackHabit, duplicateTask, pickableCategories, orbitTasks, taskSource, habitDoneToday, type NewTaskData } from './store'
 import { parseCommand } from './commandParser'
 import { isOrphanHabit, todayKey, dateKey, parseDateKey, shiftDateKey, daysBetweenKeys, dayKeyAt, sleepCutoffMin } from './types'
 import type { Scrap7State, Task } from './types'
@@ -310,5 +310,54 @@ describe('the fast parser knows what it cannot handle', () => {
     const weekly = parseCommand('every monday gym', tasks)
     expect(weekly).not.toBeNull()
     expect(weekly!.actions[0]).toMatchObject({ type: 'create_direct', recurrence: 'weekly' })
+  })
+})
+
+describe('one tap means "I did it"', () => {
+  const habit = (over: Partial<Task>): Scrap7State => ({
+    ...empty,
+    tasks: [{ ...createTask(empty, mk({ taskType: 'habit' })).tasks[0], id: 'h', ...over }],
+  })
+  const after = (s: Scrap7State) => trackHabit(s, 'h', 1).state.tasks[0]
+
+  it('completes a measured session in one tap, not fifteen', () => {
+    // "Move the body · 1/15 minutes". Tapping added a minute, and because score
+    // only moves when the count REACHES the target, the first fourteen taps
+    // changed nothing at all — which is indistinguishable from a dead button.
+    const t = after(habit({ target: 15, unit: 'minutes' }))
+    expect(t.todayCount).toBe(15)
+    expect(t.score).toBeGreaterThan(0)
+    expect(t.streak).toBe(1)
+  })
+
+  it('still steps one at a time for something you genuinely repeat', () => {
+    const t = after(habit({ target: 2, unit: 'times' }))
+    expect(t.todayCount).toBe(1)
+    expect(t.score).toBe(0)          // not done yet — twice means twice
+  })
+
+  it('finishes the repeatable one on its last tap', () => {
+    const t = after(habit({ target: 2, unit: 'times', todayCount: 1 }))
+    expect(t.todayCount).toBe(2)
+    expect(t.score).toBeGreaterThan(0)
+  })
+
+  it('treats an unknown unit as measured, the safer wrong answer', () => {
+    // Generous beats unusable: completing in one tap is merely lenient, while
+    // demanding thirty taps makes the habit impossible to tick.
+    expect(after(habit({ target: 30, unit: 'laps' })).todayCount).toBe(30)
+  })
+
+  it('undo takes back exactly what the tap gave', () => {
+    const done = trackHabit(habit({ target: 15, unit: 'minutes' }), 'h', 1).state
+    expect(trackHabit(done, 'h', -1).state.tasks[0].todayCount).toBe(0)
+
+    const once = trackHabit(habit({ target: 3, unit: 'times' }), 'h', 1).state
+    expect(trackHabit(once, 'h', -1).state.tasks[0].todayCount).toBe(0)
+  })
+
+  it('lets you over-achieve a measured basic without breaking', () => {
+    const done = trackHabit(habit({ target: 15, unit: 'minutes' }), 'h', 1).state
+    expect(trackHabit(done, 'h', 1).state.tasks[0].todayCount).toBe(16)
   })
 })

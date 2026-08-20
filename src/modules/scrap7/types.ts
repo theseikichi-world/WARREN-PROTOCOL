@@ -106,6 +106,28 @@ export const isRoutine = (t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): 
   taskOrigin(t) === 'chain'
 
 /** LIFE SUPPORT — chosen from a template, no tree, a fraction of the XP. */
+/**
+ * Is this unit something you REPEAT, or something that measures one session?
+ *
+ * "Teeth, twice" is two events in a day and a tap each is right. "Move the body,
+ * 15 minutes" is one event with a size — nobody taps once per minute, and until
+ * the fifteenth tap the score does not move at all, so the first fourteen looked
+ * like the button was broken.
+ *
+ * Anything not listed is treated as a measure, because that is the safer wrong
+ * answer: completing in one tap is merely generous, while demanding thirty is
+ * unusable.
+ */
+const COUNTABLE_UNITS = new Set([
+  'time', 'times', 'dose', 'doses', 'glass', 'glasses', 'serving', 'servings',
+  'rep', 'reps', 'set', 'sets', 'session', 'sessions', 'page', 'pages',
+  'night', 'nights', 'day', 'days', 'morning', 'mornings', 'person', 'people',
+  'раз', 'раза', 'ночь', 'день', 'доза', 'стакан', 'страница',
+])
+
+export const isCountableUnit = (unit: string | undefined): boolean =>
+  COUNTABLE_UNITS.has((unit ?? 'times').trim().toLowerCase())
+
 export const isBaseline = (t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): boolean =>
   taskOrigin(t) === 'baseline'
 
