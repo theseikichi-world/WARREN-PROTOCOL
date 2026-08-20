@@ -33,6 +33,7 @@ export function loadState(): VigilanteState {
           }
         : { ...DEFAULT_SPEC },
       log: Array.isArray(parsed.log) ? parsed.log : [],
+      voiceOn: typeof parsed.voiceOn === 'boolean' ? parsed.voiceOn : true,
     }
   } catch {
     return { ...EMPTY_STATE, spec: { ...DEFAULT_SPEC } }
@@ -69,6 +70,10 @@ export function setSpec(s: VigilanteState, spec: CircuitSpec): VigilanteState {
 
 export function setMusicName(s: VigilanteState, musicName: string): VigilanteState {
   return { ...s, musicName }
+}
+
+export function setVoiceOn(s: VigilanteState, voiceOn: boolean): VigilanteState {
+  return { ...s, voiceOn }
 }
 
 /**

@@ -1,20 +1,40 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { t as tr, plural } from '../../i18n'
+import { t as tr, plural, getLocale } from '../../i18n'
 import { play as playCue } from '../../sound'
 import {
   HOLD_BY_ID, buildPhases, specHoldSeconds, clock, type Phase,
 } from './types'
 import {
   loadState, saveState, setSpec, setMusicName, logSession,
-  clampSec, clampRounds, clampLeadIn, deriveVigilante,
+  clampSec, clampRounds, clampLeadIn, deriveVigilante, setVoiceOn,
 } from './store'
 import { LocalAudio } from './music'
 import { saveTrack, loadTrack } from './musicStore'
+import { speak, silence, cueFor, countdownAt, voiceSupported, type Cue } from './voice'
 
 const NEON = '#6366f1'
 const WORK = '#ff3b6b'   // the hold — the colour you learn to dread
 const REST = '#4ade80'
 const READY = '#facc15'
+
+/** A cue becomes words here, so the corner man speaks whatever language the app is in. */
+function say(cue: Cue, nameOf: (id: string) => string): string {
+  switch (cue.kind) {
+    case 'ready':
+      return tr(`Get into position. ${nameOf(cue.holdId)}.`,
+                `Займите позицию. ${nameOf(cue.holdId)}.`)
+    case 'work':
+      return cue.named
+        ? tr(`${nameOf(cue.holdId)}. Hold.`, `${nameOf(cue.holdId)}. Держите.`)
+        : tr(`Round ${cue.round}. Hold.`,    `Круг ${cue.round}. Держите.`)
+    case 'rest':
+      return cue.nextHoldId
+        ? tr(`Rest. Next: ${nameOf(cue.nextHoldId)}.`, `Отдых. Далее: ${nameOf(cue.nextHoldId)}.`)
+        : tr('Rest.', 'Отдых.')
+    case 'done':
+      return tr('Session complete.', 'Сессия завершена.')
+  }
+}
 
 /** Running clock. Driven off wall time, never off a decrementing counter. */
 interface Running {
@@ -37,11 +57,32 @@ export default function Vigilante() {
   const fileRef = useRef<HTMLInputElement | null>(null)
   /** Mirrors `run` so the interval can check expiry without a state updater. */
   const runRef = useRef<Running | null>(null)
+  /** Last second already counted down, so a 200ms tick says "three" once. */
+  const spokenSec = useRef<number | null>(null)
 
   const phases = useMemo(() => buildPhases(state.spec), [state.spec])
   const summary = useMemo(() => deriveVigilante(state), [state])
 
   const persist = useCallback((s: typeof state) => { saveState(s); setState(s) }, [])
+
+  const holdName = useCallback(
+    (id: string) => { const h = HOLD_BY_ID[id]; return h ? tr(h.name, h.nameRu) : '' }, [])
+
+  /**
+   * Speak a cue, ducking the music underneath it.
+   *
+   * A cue competing with a chorus at full volume is a cue you miss, and missing
+   * "next: plank" means holding the wrong position for thirty seconds.
+   */
+  const voiceRef = useRef(state.voiceOn)
+  useEffect(() => { voiceRef.current = state.voiceOn }, [state.voiceOn])
+
+  const announce = useCallback((cue: Cue) => {
+    if (!voiceRef.current) return
+    music?.setVolume(0.25)
+    speak(say(cue, holdName), getLocale())
+    window.setTimeout(() => music?.setVolume(1), 1900)
+  }, [music, holdName])
 
   // The one fact both the soundtrack and the clock care about. Depending on
   // `run` directly would re-fire these effects on every tick — tearing down and
@@ -125,6 +166,7 @@ export default function Vigilante() {
       startedAt: cur.startedAt,
     }))
     void music?.stop()
+    silence()
     setFlash(finished
       ? tr('SESSION COMPLETE', 'СЕССИЯ ЗАВЕРШЕНА')
       : tr('SESSION ENDED', 'СЕССИЯ ПРЕРВАНА'))
@@ -165,6 +207,7 @@ export default function Vigilante() {
         startedAt: cur.startedAt,
       }))
       void music?.stop()
+      announce({ kind: 'done' })
       setFlash(tr('SESSION COMPLETE', 'СЕССИЯ ЗАВЕРШЕНА'))
       setTimeout(() => setFlash(''), 2600)
       playCue('level')
@@ -172,6 +215,9 @@ export default function Vigilante() {
     }
 
     playCue(phases[next].kind === 'work' ? 'check' : 'tick')
+    spokenSec.current = null
+    const cue = cueFor(phases, next)
+    if (cue) announce(cue)
     const stepped: Running = {
       ...cur,
       index: next,
@@ -182,7 +228,7 @@ export default function Vigilante() {
     }
     runRef.current = stepped
     setRun(stepped)
-  }, [phases, music, persist, state.spec])
+  }, [phases, music, persist, state.spec, announce])
 
   // The clock. Remaining is recomputed from wall time every tick, so a
   // backgrounded window or a throttled interval cannot make a 30-second hold
@@ -197,6 +243,12 @@ export default function Vigilante() {
       if (!cur || cur.paused) return
       const left = (cur.endsAt - Date.now()) / 1000
       if (left <= 0) { advance(cur.index); return }
+      const n = countdownAt(left)
+      if (n !== null && spokenSec.current !== n && voiceRef.current) {
+        spokenSec.current = n
+        // Not an interrupt: a bare number must never cut off the phase cue.
+        speak(String(n), getLocale(), false)
+      }
       runRef.current = { ...cur, remaining: left }
       setRun(prev => (prev ? { ...prev, remaining: left } : prev))
     }, 200)
@@ -216,7 +268,10 @@ export default function Vigilante() {
       doneWork: 0,
     }
     runRef.current = first
+    spokenSec.current = null
     setRun(first)
+    const cue = cueFor(phases, 0)
+    if (cue) announce(cue)
   }
 
   const togglePause = () => {
@@ -226,6 +281,8 @@ export default function Vigilante() {
       ? { ...cur, paused: false, endsAt: Date.now() + cur.remaining * 1000 }
       : { ...cur, paused: true,  remaining: (cur.endsAt - Date.now()) / 1000 }
     playCue(cur.paused ? 'open' : 'tick')
+    if (!cur.paused) silence()          // pausing stops the corner man too
+    spokenSec.current = null
     runRef.current = next
     setRun(next)
   }
@@ -394,6 +451,33 @@ export default function Vigilante() {
                 {music ? tr('CHANGE TRACK', 'СМЕНИТЬ ТРЕК') : tr('CHOOSE TRACK', 'ВЫБРАТЬ ТРЕК')}
               </button>
             </div>
+
+            {/* Spoken cues. Hidden where the engine does not exist rather than
+                offering a switch that does nothing. */}
+            {voiceSupported() && (
+              <div style={{ padding: '9px 11px', borderRadius: 8, marginBottom: 12,
+                background: 'rgba(10,12,30,0.45)', border: `1px solid ${NEON}22` }}>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
+                  letterSpacing: '0.14em', color: `${NEON}b0`, marginBottom: 5 }}>
+                  ◗ {tr('SPOKEN CUES', 'ГОЛОСОВЫЕ ПОДСКАЗКИ')}
+                </p>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 10.5,
+                  color: 'rgba(148,163,184,0.6)', lineHeight: 1.5, marginBottom: 7 }}>
+                  {tr('The session calls each position and counts you down, so you never turn your head to read the screen.',
+                      'Сессия называет каждую позицию и отсчитывает секунды — не нужно поворачивать голову к экрану.')}
+                </p>
+                <button
+                  onClick={() => {
+                    const on = !state.voiceOn
+                    persist(setVoiceOn(loadState(), on))
+                    if (on) speak(tr('Ready.', 'Готов.'), getLocale())
+                    else silence()
+                  }}
+                  style={btn(state.voiceOn ? NEON : 'rgba(148,163,184,0.5)')}>
+                  {state.voiceOn ? tr('VOICE ON', 'ГОЛОС ВКЛ') : tr('VOICE OFF', 'ГОЛОС ВЫКЛ')}
+                </button>
+              </div>
+            )}
 
             <button onClick={start} disabled={!phases.length} style={{
               width: '100%', padding: '13px', borderRadius: 9, cursor: 'pointer',

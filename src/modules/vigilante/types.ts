@@ -148,6 +148,8 @@ export interface VigilanteState {
   log:      SessionLog[]
   /** A local audio file the user picked. Empty = the timer runs silent. */
   musicName: string
+  /** Spoken cues, so you never look at the screen mid-hold. */
+  voiceOn:  boolean
   version:  number
 }
 
@@ -155,6 +157,7 @@ export const EMPTY_STATE: VigilanteState = {
   spec: DEFAULT_SPEC,
   log: [],
   musicName: '',
+  voiceOn: true,
   version: 1,
 }
 

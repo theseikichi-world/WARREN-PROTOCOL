@@ -4,6 +4,7 @@ import {
   type CircuitSpec,
 } from './types'
 import { clampSec, clampRounds, logSession, deriveVigilante, LOG_CAP } from './store'
+import { cueFor, countdownAt } from './voice'
 import { EMPTY_STATE } from './types'
 
 const spec = (over: Partial<CircuitSpec> = {}): CircuitSpec => ({ ...DEFAULT_SPEC, ...over })
@@ -150,5 +151,61 @@ describe('clock', () => {
 
   it('never renders a negative clock', () => {
     expect(clock(-10)).toBe('0:00')
+  })
+})
+
+describe('cueFor (what the corner man says)', () => {
+  const phases = buildPhases(spec({ holdIds: ['wall-sit', 'plank'], rounds: 2, leadInSec: 10 }))
+  // ready, w1 r1, rest, w1 r2, rest, w2 r1, rest, w2 r2
+
+  it('opens by naming the position you are getting into', () => {
+    expect(cueFor(phases, 0)).toEqual({ kind: 'ready', holdId: 'wall-sit' })
+  })
+
+  it('names the hold on its first round', () => {
+    expect(cueFor(phases, 1)).toMatchObject({ kind: 'work', holdId: 'wall-sit', round: 1, named: true })
+  })
+
+  it('says the round number instead of repeating the name', () => {
+    // Hearing "Wall sit" twelve times is noise; the round number is the news.
+    expect(cueFor(phases, 3)).toMatchObject({ kind: 'work', round: 2, named: false })
+  })
+
+  it('names the hold again when the exercise actually changes', () => {
+    // Missing this means holding the wrong position for a full round.
+    expect(cueFor(phases, 5)).toMatchObject({ kind: 'work', holdId: 'plank', round: 1, named: true })
+  })
+
+  it('warns during the rest before a new position', () => {
+    expect(cueFor(phases, 4)).toEqual({ kind: 'rest', nextHoldId: 'plank' })
+  })
+
+  it('stays quiet about what is next when nothing changes', () => {
+    expect(cueFor(phases, 2)).toEqual({ kind: 'rest', nextHoldId: null })
+  })
+
+  it('returns nothing past the end rather than throwing', () => {
+    expect(cueFor(phases, 999)).toBeNull()
+  })
+
+  it('names the first hold even with no lead-in', () => {
+    const cold2 = buildPhases(cold({ holdIds: ['plank'], rounds: 1 }))
+    expect(cueFor(cold2, 0)).toMatchObject({ kind: 'work', named: true })
+  })
+})
+
+describe('countdownAt', () => {
+  it('counts only the last three seconds', () => {
+    expect(countdownAt(3.0)).toBe(3)
+    expect(countdownAt(2.4)).toBe(3)   // ceil — still inside the third second
+    expect(countdownAt(1.2)).toBe(2)
+    expect(countdownAt(0.4)).toBe(1)
+  })
+
+  it('is silent early in a phase and once it has expired', () => {
+    expect(countdownAt(30)).toBeNull()
+    expect(countdownAt(3.6)).toBeNull()
+    expect(countdownAt(0)).toBeNull()
+    expect(countdownAt(-2)).toBeNull()
   })
 })
