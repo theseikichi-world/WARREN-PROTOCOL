@@ -624,7 +624,17 @@ export default function App() {
   const activeModule = GUILD.find(m => location.pathname.startsWith(m.path)) ?? null
 
   /** Navigate and drop the settings overlay — it covers wherever you're going. */
-  const go = (path: string) => { setSettingsOpen(false); navigate(path) }
+  /**
+   * Moving between modules. The cue is the only feedback that the tap landed
+   * before the next screen paints — without it a slow route change reads as a
+   * dead button, which is why the locked path already had one and the working
+   * path did not.
+   */
+  const go = (path: string) => {
+    if (path !== location.pathname) playCue('open')
+    setSettingsOpen(false)
+    navigate(path)
+  }
 
   /** A locked module says what opens it rather than doing nothing at all. */
   const flashLocked = (id: ModuleId) => {

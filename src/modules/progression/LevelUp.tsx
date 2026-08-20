@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { t as tr } from '../../i18n'
 import { levelReward, rewardIsBare } from './xp'
 import { GUILD } from '../../guild'
+import { play as playCue } from '../../sound'
 
 // ─── LEVEL REACHED ────────────────────────────────────────────────────────────
 // The same shape as the arrival, on purpose: a full-screen beat, typed in, that
@@ -20,6 +21,11 @@ const DIM  = 'rgba(148,163,184,0.5)'
 export function LevelUp({ level, onDone }: { level: number; onDone: () => void }) {
   const reward = levelReward(level)
   const [shown, setShown] = useState(0)   // how many reward lines have landed
+
+  // The biggest moment in the loop was completely silent. Three notes, per the
+  // cue's own brief — informational, not a fanfare. Rule 10 governs the sound
+  // as much as the words: it marks the threshold, it does not applaud you.
+  useEffect(() => { playCue('level') }, [])
 
   const lines = [
     // Modules first: a new instrument is the biggest thing a level can hand you

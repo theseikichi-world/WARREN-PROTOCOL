@@ -23,6 +23,7 @@ import { loadState as loadScrap7, saveState as saveScrap7, trackHabit } from '..
 import type { Task } from '../scrap7/types'
 import { getModuleSummaries, type ModuleSummaries } from '../bigscreen/moduleStats'
 import { loadSettings } from '../../settings'
+import { play as playCue } from '../../sound'
 import { maxNodesFor, type Goal, type ProgressionState } from './types'
 
 const CYAN = '#00f5ff'
@@ -54,7 +55,19 @@ export default function Uplinks() {
     const { state: next, cleared } = syncQuests(chained, {
       sums: sumsNow, goals: chained.goals, tasks: tasksNow })
     saveProgression(next)
-    if (cleared.length) flash(`⚑ ${tr(cleared[0].title, cleared[0].ru)} — +${cleared[0].xp} XP`)
+    if (cleared.length) {
+      flash(`⚑ ${tr(cleared[0].title, cleared[0].ru)} — +${cleared[0].xp} XP`)
+      playCue('quest')
+      // Tell the rest of the app. Clearing a quest pays XP, and XP is what
+      // crosses a level — but the watcher that raises the level screen lives in
+      // App and only listens for this event or a window focus. Without it the
+      // threshold sat there unannounced until something unrelated happened to
+      // fire, which read as the app taking a minute to notice.
+      //
+      // Safe to send from inside the listener: the second pass finds nothing
+      // left to clear, so it does not send again.
+      window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'quests' } }))
+    }
     setState(next)
     setTasks(tasksNow)
     setSums(sumsNow)
