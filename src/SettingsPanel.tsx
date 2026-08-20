@@ -725,8 +725,8 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           <Section label={t('Sync across devices', 'Синхронизация')} />
           <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(148,163,184,0.45)',
             lineHeight: 1.6, marginBottom: 10 }}>
-            {t('Same passphrase on two devices = same data. It is encrypted before it leaves, so the server stores something it cannot read — and your API key is never included, so enter that once per device.',
-               'Одинаковая фраза на двух устройствах = одни данные. Шифруется перед отправкой. API-ключ не передаётся.')}
+            {t('Same passphrase on two devices = same data, API keys included. It is encrypted before it leaves, so the server stores something it cannot read. The passphrase is the only thing protecting it — make it long. Exported backup files still carry no keys.',
+               'Одинаковая фраза на двух устройствах = одни данные, включая API-ключи. Шифруется перед отправкой — сервер хранит то, что не может прочитать. Фраза — единственная защита, сделайте её длинной. В файлах резервных копий ключей по-прежнему нет.')}
           </p>
 
           <Row label={t('Enable sync', 'Включить')}

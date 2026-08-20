@@ -26,10 +26,34 @@ interface Record {
 
 const KEY = (room: string) => `warren-sync/${room}.json`
 
+/**
+ * CORS, because only ONE of the two clients is same-origin.
+ *
+ * The PWA is served from this deployment and talks to /api/sync on its own
+ * origin, so it never needed any of this. The desktop app is a Tauri webview on
+ * tauri.localhost calling the same URL across origins — and since the client
+ * sends content-type and a bypass header, the browser preflights with OPTIONS
+ * first. With no CORS headers and no OPTIONS handler that preflight failed, and
+ * the app could only report "Failed to fetch": no status, no body, nothing to
+ * show the user, because the request never left the browser.
+ *
+ * `*` is the right answer rather than a lax one. The room id is the credential —
+ * 256 bits derived through PBKDF2 — and no cookie or session rides these
+ * requests, so there is nothing for an origin to be trusted WITH. CORS only
+ * restrains browsers anyway; anything server-side could always call this.
+ */
+const CORS = {
+  'access-control-allow-origin':  '*',
+  'access-control-allow-methods': 'GET, PUT, OPTIONS',
+  'access-control-allow-headers': 'content-type, x-vercel-protection-bypass',
+  'access-control-max-age':       '86400',
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
     headers: {
+      ...CORS,
       'content-type': 'application/json',
       // No caching: a stale read here is a lost day of work
       'cache-control': 'no-store, max-age=0',
@@ -49,13 +73,38 @@ async function read(room: string): Promise<Record | null> {
   return await res.json() as Record
 }
 
+/**
+ * Say what actually went wrong.
+ *
+ * An unhandled throw here reaches the client as FUNCTION_INVOCATION_FAILED and
+ * a Vercel trace id — which tells the person staring at the settings screen
+ * nothing they can act on. The overwhelmingly likely cause is that no Blob
+ * store is connected, because @vercel/blob throws the moment it has no
+ * BLOB_READ_WRITE_TOKEN, so that gets named explicitly rather than guessed at.
+ */
+function failed(err: unknown): Response {
+  const msg = err instanceof Error ? err.message : String(err)
+  const noStore = /BLOB_READ_WRITE_TOKEN|No token found|blob store/i.test(msg)
+  return json({
+    error: noStore ? 'no blob store' : 'server error',
+    detail: noStore
+      ? 'This deployment has no Blob store connected. In Vercel: Storage → create a Blob store → connect it to this project, then redeploy.'
+      : msg.slice(0, 200),
+  }, noStore ? 503 : 500)
+}
+
 export default async function handler(req: Request): Promise<Response> {
+  // The preflight. Must answer before any cross-origin GET or PUT is allowed.
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
+
   const room = new URL(req.url).searchParams.get('room')
   if (!validRoom(room)) return json({ error: 'bad room' }, 400)
 
   if (req.method === 'GET') {
-    const record = await read(room)
-    return record ? json(record) : json({ error: 'empty' }, 404)
+    try {
+      const record = await read(room)
+      return record ? json(record) : json({ error: 'empty' }, 404)
+    } catch (err) { return failed(err) }
   }
 
   if (req.method === 'PUT') {
@@ -66,6 +115,7 @@ export default async function handler(req: Request): Promise<Response> {
     // Optimistic concurrency. The client tells us which version it edited from;
     // if the room moved on since, we refuse rather than overwrite the other
     // device's work — the client turns this into a question for the user.
+    try {
     const current = await read(room)
     const base = typeof body.baseUpdatedAt === 'string' ? body.baseUpdatedAt : null
     if (current && current.updatedAt !== base) {
@@ -88,6 +138,7 @@ export default async function handler(req: Request): Promise<Response> {
       cacheControlMaxAge: 0,
     })
     return json({ updatedAt: record.updatedAt, device: record.device })
+    } catch (err) { return failed(err) }
   }
 
   return json({ error: 'method not allowed' }, 405)
