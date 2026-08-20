@@ -10,6 +10,7 @@ import {
   type Quest, type QuestContext,
 } from './quests'
 import { questNav } from './questNav'
+import { play as playCue } from '../../sound'
 
 // ─── The quest log, on the hub ────────────────────────────────────────────────
 // Quests live where navigation lives. Every objective is one tap from the thing
@@ -48,7 +49,7 @@ export function QuestPanel() {
       setTick(t => t + 1)
       // A quest clearing silently was the flattest moment in the loop: real work
       // landed and the only trace was a number changing somewhere off-screen.
-      if (next.cleared.length) setCelebrating(next.cleared[next.cleared.length - 1])
+      if (next.cleared.length) { setCelebrating(next.cleared[next.cleared.length - 1]); playCue('quest') }
     }
     refresh()
     window.addEventListener('warren:sync', refresh)
@@ -66,8 +67,10 @@ export function QuestPanel() {
     return () => clearTimeout(id)
   }, [celebrating])
 
-  const stage = stageState(state.quests, ctx)
   const lvl   = gatedLevel(state.xp, state.quests)
+  // The level caps which stage may be shown — a stage ahead of your level points
+  // at modules that have not opened yet. See `stageState`.
+  const stage = stageState(state.quests, ctx, lvl.level)
   const hasUplink = state.goals.some(g => g.slot !== 'archived')
 
   /**

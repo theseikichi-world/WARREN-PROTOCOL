@@ -160,6 +160,7 @@ export async function fetchDetails(c: Candidate): Promise<DetailsResult> {
         overview?: string; tagline?: string; vote_average?: number
         poster_path?: string | null; credits?: TmdbCredits
         external_ids?: { imdb_id?: string | null }
+        runtime?: number | null
       }
       const genre = (d.genres ?? []).slice(0, 3).map(g => g.name)
       const vibe = vibeFor(genre[0] ?? '', 'movie')
@@ -180,6 +181,7 @@ export async function fetchDetails(c: Candidate): Promise<DetailsResult> {
         poster_url: d.poster_path ? `${TMDB_IMG}${d.poster_path}` : null,
         next_episode_date: null, air_schedule: null,
         episodes_in_season: null, episodes_released: null,
+        runtime: d.runtime ?? null,
       }
     } else {
       const d = await tmdb(`/tv/${resolved.id}?append_to_response=credits,external_ids`) as {
@@ -193,6 +195,7 @@ export async function fetchDetails(c: Candidate): Promise<DetailsResult> {
         networks?: Array<{ name: string }>
         credits?: TmdbCredits
         external_ids?: { imdb_id?: string | null }
+        episode_run_time?: number[]
       }
       const genre = (d.genres ?? []).slice(0, 3).map(g => g.name)
       const vibe = vibeFor(genre[0] ?? '', 'tv')
@@ -222,6 +225,9 @@ export async function fetchDetails(c: Candidate): Promise<DetailsResult> {
         air_schedule: dayStr && network ? `${dayStr} · ${network}` : network,
         episodes_in_season: seasonData?.episode_count ?? null,
         episodes_released: lastEp?.episode_number ?? null,
+        // One episode, not the whole series. TMDB gives a list when a show has
+        // mixed lengths (specials, double-length finales); the first is typical.
+        runtime: d.episode_run_time?.[0] ?? null,
       }
     }
   }

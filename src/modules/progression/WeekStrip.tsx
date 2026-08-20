@@ -1,4 +1,5 @@
-import { thisWeekDates, weeklyDoneSet, calcStreak, type Task } from '../scrap7/types'
+import { thisWeekDates, weeklyDoneSet, calcStreak, todayKey, type Task } from '../scrap7/types'
+import { t as tr, plural } from '../../i18n'
 
 // ─── ON TRACK — the week behind you, on the hub ───────────────────────────────
 // This used to sit above ORBIT's task list, which was the wrong room: that
@@ -18,7 +19,7 @@ export function WeekStrip({ tasks }: { tasks: Task[] }) {
   const weekDates = thisWeekDates()
   const doneSet   = weeklyDoneSet(tasks)
   const streak    = calcStreak(tasks)
-  const todayStr  = new Date().toISOString().slice(0, 10)
+  const todayStr  = todayKey()
   const doneCnt   = weekDates.filter(d => doneSet.has(d)).length
 
   return (
@@ -30,7 +31,9 @@ export function WeekStrip({ tasks }: { tasks: Task[] }) {
           color: streak > 0 ? '#ff6b00' : 'rgba(148,163,184,0.3)',
           textShadow: streak > 0 ? '0 0 12px #ff6b0070' : 'none', lineHeight: 1 }}>{streak}</span>
         <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
-          color: 'rgba(148,163,184,0.35)', letterSpacing: '0.06em' }}>day streak</span>
+          color: 'rgba(148,163,184,0.35)', letterSpacing: '0.06em' }}>
+          {tr('day streak', `${plural(streak, 'день', 'дня', 'дней')} подряд`)}
+        </span>
         {streak > 0 && <span style={{ fontSize: 16.5 }}>🔥</span>}
       </div>
       <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>

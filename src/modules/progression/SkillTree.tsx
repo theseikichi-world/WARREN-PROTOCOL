@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { t as tr } from '../../i18n'
 import { getHabitTier, type Task } from '../scrap7/types'
 import { nodeScore, unlockRequirements, nodeState, type NodeState } from './chain'
-import { layoutTree, NODE_W, NODE_H, type Placed } from './layout'
+import { layoutTree, fitScale, NODE_W, NODE_H, BAND_HEAD, type Placed } from './layout'
 import { TIER_META, estimateDays, THRESHOLD_UNLOCK_AT, type ChainNode, type Goal } from './types'
 
 const DIM  = 'rgba(148,163,184,0.55)'
@@ -26,7 +26,25 @@ export function SkillTree({ goal, tasks, accent, onInstall, onTrack }: {
   onTrack:   (taskId: string) => void
 }) {
   const [selected, setSelected] = useState<string | null>(null)
-  const { placed, edges, width, height } = useMemo(() => layoutTree(goal.nodes), [goal.nodes])
+  // The live tree draws its acts as bands too — the forge and the thing it
+  // commits have to look like the same object, or the preview teaches nothing.
+  const { placed, edges, bands, width, height } = useMemo(
+    () => layoutTree(goal.nodes, goal.chapters), [goal.nodes, goal.chapters])
+
+  // Fit to the panel. A protocol whose widest act is five routines is ~860px,
+  // and this used to sit in an overflow-x box inside a much narrower column —
+  // reading your own tree began with resizing the window.
+  const frame = useRef<HTMLDivElement>(null)
+  const [avail, setAvail] = useState(0)
+  useLayoutEffect(() => { setAvail(frame.current?.clientWidth ?? 0) }, [])
+  useEffect(() => {
+    const el = frame.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => setAvail(el.clientWidth))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const scale = fitScale(width, avail)
 
   const sel     = goal.nodes.find(n => n.id === selected) ?? null
   const frozen  = goal.slot === 'archived'
@@ -35,8 +53,35 @@ export function SkillTree({ goal, tasks, accent, onInstall, onTrack }: {
   return (
     <div>
       {/* Diagram */}
-      <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-        <div style={{ position: 'relative', width, height, margin: '0 auto', opacity: frozen ? 0.6 : 1 }}>
+      <div ref={frame} style={{ paddingBottom: 4 }}>
+        {/* Scrolls only when the fit hits its readability floor — an act five
+            routines wide in a very narrow window. Shrinking past that would
+            trade one unusable diagram for another (rule 38). */}
+        <div style={{ height: height * scale, overflowX: 'auto', overflowY: 'hidden' }}>
+        <div style={{ position: 'relative', width, height, opacity: frozen ? 0.6 : 1,
+          transform: `scale(${scale})`, transformOrigin: 'top left',
+          margin: scale === 1 ? '0 auto' : undefined }}>
+          {/* Acts, as bands. The structure was always in the data. */}
+          {bands.filter(b => b.title).map(b => (
+            <div key={b.index} style={{
+              position: 'absolute', left: 0, top: b.y, width, height: b.height,
+              borderTop: `1px solid ${b.planned ? 'rgba(148,163,184,0.16)' : `${accent}22`}`,
+              pointerEvents: 'none',
+            }}>
+              <span style={{ position: 'absolute', top: 4, left: 0, fontFamily: 'var(--font)',
+                fontSize: 11, fontWeight: 800, letterSpacing: '0.18em',
+                color: b.planned ? 'rgba(148,163,184,0.45)' : `${accent}85` }}>
+                {String(b.index + 1).padStart(2, '0')} {b.title.toUpperCase()}
+              </span>
+              {b.planned && (
+                <span style={{ position: 'absolute', top: BAND_HEAD + 8, left: 0,
+                  fontFamily: 'var(--font)', fontSize: 10.5, letterSpacing: '0.08em',
+                  color: 'rgba(148,163,184,0.4)' }}>
+                  ⊘ {tr('OPENS WHEN YOU REACH IT', 'ОТКРОЕТСЯ, КОГДА ДОЙДЁТЕ')}
+                </span>
+              )}
+            </div>
+          ))}
           {/* Connectors, drawn under the nodes */}
           <svg width={width} height={height} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
             {edges.map(({ from, to }, i) => {
@@ -60,6 +105,7 @@ export function SkillTree({ goal, tasks, accent, onInstall, onTrack }: {
               selected={selected === p.node.id}
               onSelect={() => setSelected(selected === p.node.id ? null : p.node.id)} />
           ))}
+        </div>
         </div>
       </div>
 

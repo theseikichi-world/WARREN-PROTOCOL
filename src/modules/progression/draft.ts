@@ -8,19 +8,25 @@
 // integration is the one thing in this app that cannot be re-earned:
 //
 //   · A node's KEY is permanent. Ids derive from it (`goal-actor:reading`) and
-//     the SCRAP-7 habit derives from the id, so renaming a routine's title must
+//     the ORBIT habit derives from the id, so renaming a routine's title must
 //     never touch its key — the accumulated score hangs off it.
 //   · Editing never deletes a habit. A routine dropped from the chain hands its
 //     habit back as UNBOUND, with its score and streak intact.
 
 import type { ChainNode, Chapter, Goal, NodeTier } from './types'
 import { DEFAULT_UNLOCKS_AT } from './types'
+import { anchorLabel, type RoutineAnchor } from './anchor'
 import { SEED_GOALS } from './seed'
 
 export interface DraftNode {
   key:    string        // permanent once created — see the header
   title:  string
-  cue:    string        // the anchor. A routine without one doesn't automate.
+  /** Legacy prose, and the fallback label when there is no structured anchor. */
+  cue:    string
+  /** When it happens, in a form ORBIT can schedule. See `anchor.ts`. */
+  anchor?: RoutineAnchor
+  /** How long a run takes, in minutes — what makes fitting it into free time real. */
+  minutes?: number
   tier:   NodeTier
   ladder: string[]      // thresholds, ascending
   after:  string[]      // prerequisite keys — empty means chain entry
@@ -30,8 +36,12 @@ export interface DraftNode {
 export interface DraftChapter {
   title: string
   keys:  string[]
+  /** The spine act this chapter is. Survives renaming — see `Chapter.key`. */
+  key?:  string
   /** A real, datable, external event, or nothing. Score states are not bosses. */
   boss:  string | null
+  /** Named but not yet filled — see `Chapter.planned`. Never true once it has keys. */
+  planned?: boolean
 }
 
 export interface ChainDraft {
@@ -112,15 +122,19 @@ export function goalToDraft(goal: Goal): ChainDraft {
       key:    keyOf(n.id),
       title:  n.title,
       cue:    n.cue,
+      ...(n.anchor ? { anchor: n.anchor } : {}),
+      ...(n.minutes ? { minutes: n.minutes } : {}),
       tier:   n.tier,
       ladder: [...n.thresholds],
       after:  n.prerequisiteIds.map(keyOf),
       toolId: n.toolId,
     })),
     chapters: goal.chapters.map(c => ({
-      title: c.title,
-      keys:  c.nodeIds.map(keyOf),
-      boss:  c.boss?.title ?? null,
+      title:   c.title,
+      keys:    c.nodeIds.map(keyOf),
+      boss:    c.boss?.title ?? null,
+      planned: c.planned === true,
+      ...(c.key ? { key: c.key } : {}),
     })),
   }
 }
@@ -189,14 +203,18 @@ export function validateDraft(draft: ChainDraft): DraftProblem[] {
   const chaptered = new Map<string, number>()
   draft.chapters.forEach((c, i) => {
     if (!c.title.trim()) problems.push({ kind: 'chapter.title', index: i })
-    if (c.keys.length === 0) problems.push({ kind: 'chapter.empty', index: i })
+    // A PLANNED act is empty on purpose — it is the part of the story that has
+    // not been reached yet. Only an act that was meant to be filled is a problem.
+    if (c.keys.length === 0 && c.planned !== true) problems.push({ kind: 'chapter.empty', index: i })
     for (const k of c.keys) if (!chaptered.has(k)) chaptered.set(k, i)
   })
 
   const cycles = findCycles(draft.nodes)
   for (const n of draft.nodes) {
     if (!n.title.trim()) problems.push({ kind: 'node.title', key: n.key })
-    if (!n.cue.trim())   problems.push({ kind: 'node.cue', key: n.key })
+    // A structured anchor is an anchor. Prose still counts, so a protocol
+    // written before anchors were structured stays committable untouched.
+    if (!n.anchor && !n.cue.trim()) problems.push({ kind: 'node.cue', key: n.key })
     if (n.ladder.filter(l => l.trim()).length === 0) problems.push({ kind: 'node.ladder', key: n.key })
     for (const dep of n.after) {
       if (dep === n.key) problems.push({ kind: 'node.self', key: n.key })
@@ -247,7 +265,8 @@ export function draftToNodes(draft: ChainDraft, goalId = draft.goalId ?? 'draft'
     id:              nodeId(goalId, n.key),
     goalId,
     title:           n.title.trim() || n.key,
-    cue:             n.cue,
+    cue:             n.anchor ? anchorLabel(n.anchor) : n.cue,
+    ...(n.anchor ? { anchor: n.anchor } : {}),
     tier:            n.tier,
     thresholds:      cleanLadder(n.ladder),
     thresholdIndex:  0,
@@ -266,6 +285,10 @@ function draftChapters(draft: ChainDraft, goalId: string, prior: Chapter[]): Cha
       index:   i + 1,
       title:   c.title.trim() || `Chapter ${i + 1}`,
       nodeIds: c.keys.map(k => nodeId(goalId, k)),
+      // Deepening an act is what ends its planned state, and holding a routine
+      // is what deepening means — so the flag is derived, never left to drift.
+      planned: c.planned === true && c.keys.length === 0,
+      ...(c.key ? { key: c.key } : {}),
       boss: c.boss?.trim()
         ? {
             title:       c.boss.trim(),
@@ -290,7 +313,13 @@ export interface ApplyResult {
  * matched by key keeps its unlock date, its habit and its threshold rung, so
  * renaming a routine or re-ordering the tree costs nothing.
  */
-export function applyDraft(goal: Goal, draft: ChainDraft, now = new Date()): ApplyResult {
+export function applyDraft(
+  goal: Goal,
+  draft: ChainDraft,
+  now = new Date(),
+  /** Resolves a habit id to its title, so "after X" reads as a name. */
+  nameOf: (taskId: string) => string | null = () => null,
+): ApplyResult {
   const prior = new Map(goal.nodes.map(n => [n.id, n]))
   const keys  = new Set(draft.nodes.map(n => n.key))
 
@@ -304,7 +333,12 @@ export function applyDraft(goal: Goal, draft: ChainDraft, now = new Date()): App
       id,
       goalId:         goal.id,
       title:          dn.title.trim() || dn.key,
-      cue:            dn.cue.trim(),
+      // The label follows the anchor, so renaming the habit you stacked onto
+      // renames the cue everywhere. Stored prose only survives where there is
+      // no anchor to derive from.
+      cue:            dn.anchor ? anchorLabel(dn.anchor, nameOf) : dn.cue.trim(),
+      ...(dn.anchor ? { anchor: dn.anchor } : {}),
+      ...(dn.minutes ? { minutes: dn.minutes } : {}),
       tier:           dn.tier,
       thresholds:     ladder,
       thresholdIndex: Math.min(was?.thresholdIndex ?? 0, ladder.length - 1),
@@ -337,7 +371,12 @@ export function applyDraft(goal: Goal, draft: ChainDraft, now = new Date()): App
 }
 
 /** Build a brand-new uplink from a draft. `takenIds` keeps goal ids unique. */
-export function draftToGoal(draft: ChainDraft, takenIds: Iterable<string>, now = new Date()): Goal {
+export function draftToGoal(
+  draft: ChainDraft,
+  takenIds: Iterable<string>,
+  now = new Date(),
+  nameOf: (taskId: string) => string | null = () => null,
+): Goal {
   const id = draft.goalId ?? newGoalId(draft.title, takenIds)
   const shell: Goal = {
     id,
@@ -348,5 +387,5 @@ export function draftToGoal(draft: ChainDraft, takenIds: Iterable<string>, now =
     createdAt:        now.toISOString(),
     lastSlotChangeAt: now.toISOString(),
   }
-  return applyDraft(shell, draft, now).goal
+  return applyDraft(shell, draft, now, nameOf).goal
 }

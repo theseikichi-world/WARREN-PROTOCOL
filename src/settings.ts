@@ -31,7 +31,7 @@ export interface AiTask {
 }
 
 export const AI_TASKS: AiTask[] = [
-  { id: 'scrap7.assistant', label: 'SCRAP-7 chat',     desc: 'Command parsing & quick replies',     defaultModel: 'claude-haiku-4-5'  },
+  { id: 'scrap7.assistant', label: 'ORBIT chat',     desc: 'Command parsing & quick replies',     defaultModel: 'claude-haiku-4-5'  },
   { id: 'solaris.delivery', label: 'SOLARIS dishes',   desc: 'What-to-eat / pantry dish ideas (JSON)', defaultModel: 'claude-sonnet-4-6' },
   { id: 'solaris.mealparse', label: 'SOLARIS meal log', desc: 'Parse "what I ate" (text/photo) → entries', defaultModel: 'claude-sonnet-4-6' },
   { id: 'solaris.pantry',    label: 'SOLARIS pantry',   desc: 'Read groceries from a photo → items',   defaultModel: 'claude-haiku-4-5' },
@@ -60,6 +60,11 @@ export interface Settings {
   startOnStartup: boolean
   showIntro:      boolean
   bootBigScreen:  boolean                   // desktop: launch straight into fullscreen Warren OS
+  /** Open every module regardless of level — for people who don't want to be levelled at, and for inspecting the app. */
+  unlockAll:      boolean
+  /** Quiet synthesised UI cues. See sound.ts — nothing is sampled. */
+  sounds:         boolean
+  soundVolume:    number                    // 0-100, scales the master gain
   // ── Operator profile, collected once on first run (see profile.ts) ──
   displayName:    string
   gender:         Gender
@@ -98,6 +103,9 @@ export const DEFAULT_SETTINGS: Settings = {
   startOnStartup: false,
   showIntro:      true,
   bootBigScreen:  true,
+  unlockAll:      false,
+  sounds:         true,
+  soundVolume:    60,
   displayName:    '',
   gender:         '',
   wakeTime:       '07:00',

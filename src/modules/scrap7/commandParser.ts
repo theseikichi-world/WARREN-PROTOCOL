@@ -1,5 +1,5 @@
 /**
- * SCRAP-7 Command Parser — Tier 1 (instant, no AI needed).
+ * ORBIT Command Parser — Tier 1 (instant, no AI needed).
  * Handles: greetings, complete/track, delete, list, count, next,
  *          and NATURAL LANGUAGE task creation — directly, no modal.
  * Supports EN + RU.
@@ -35,7 +35,7 @@ const THANKS_EN = /^(thanks|thank you|thx|ty|cheers|appreciated)\s*[!.?]*$/i
 const THANKS_RU = /^(спасибо|спс|благодарю|мерси)\s*[!.?]*$/i
 
 const GREET_REPLY_EN = ["Online. What's the mission?", "Running. Give me a task.", "Systems up. Ready."]
-const GREET_REPLY_RU = ["SCRAP-7 на связи. Задача?", "В сети. Что делаем?", "Работаю. Жду команды."]
+const GREET_REPLY_RU = ["ORBIT на связи. Задача?", "В сети. Что делаем?", "Работаю. Жду команды."]
 const THANKS_REPLY_EN = ["Acknowledged.", "That's what I'm here for.", "Proceed."]
 const THANKS_REPLY_RU = ["Принято.", "Это моя работа.", "Продолжай."]
 

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { suggestionsForGap, topSuggestion, assignToFreeBlocks, type Suggestion } from './suggestions'
+import {
+  suggestionsForGap, topSuggestion, assignToFreeBlocks, suggestionAllowed,
+  caughtUp, watchMinutes, TV_FALLBACK_MIN, COMEDY_FALLBACK_MIN, MOVIE_FALLBACK_MIN,
+  type Suggestion,
+} from './suggestions'
+import { MODULE_LEVEL } from '../../moduleAccess'
 
 const mk = (over: Partial<Suggestion>): Suggestion => ({
   id: 'x', module: 'pictures', icon: '★', label: 'L', minutes: 30,
@@ -13,6 +18,79 @@ const pool: Suggestion[] = [
   mk({ id: 'jrn', module: 'journal',  minutes: 15,  weight: 7, tone: 'care' }),
   mk({ id: 'mv',  module: 'pictures', minutes: 120, weight: 5, tone: 'play' }),
 ]
+
+// Rule 30: a locked door names what opens it — it does not knock from the other
+// side. The owl was inviting you to write tonight's page at level 1, while
+// CAPTAIN'S JOURNAL stays locked until level 3.
+describe('suggestionAllowed (no invitation from a shut door)', () => {
+  const journalLevel = MODULE_LEVEL.hoot ?? 1
+
+  it('keeps the journal quiet until its module opens', () => {
+    for (let lv = 1; lv < journalLevel; lv++)
+      expect(suggestionAllowed('journal', lv)).toBe(false)
+    expect(suggestionAllowed('journal', journalLevel)).toBe(true)
+  })
+
+  it('lets ungated utilities speak from level 1', () => {
+    expect(suggestionAllowed('pictures', 1)).toBe(true)
+    expect(suggestionAllowed('ardo', 1)).toBe(true)
+  })
+
+  it('opens every door under unlockAll', () => {
+    expect(suggestionAllowed('journal', 1, true)).toBe(true)
+  })
+
+  it('stays silent for a module that is not built', () => {
+    // PATHFINDER is retired — built:false — so it invites nobody, at any level
+    // and even with every door forced open.
+    expect(suggestionAllowed('log', 99)).toBe(false)
+    expect(suggestionAllowed('log', 99, true)).toBe(false)
+  })
+})
+
+// A show you are caught up on is not an invitation — the next episode is a date
+// in the future, so "pick up where you left off" is simply false. And a 22-min
+// comedy is not a 45-min drama: the timeline sizes free gaps off these numbers.
+describe('caughtUp', () => {
+  it('is caught up when every aired episode is watched', () => {
+    expect(caughtUp(3, 3)).toBe(true)     // S01 E03/10, 3 watched — waiting on E04
+    expect(caughtUp(3, 4)).toBe(true)     // ahead somehow; still nothing to offer
+  })
+
+  it('is not caught up with episodes still waiting', () => {
+    expect(caughtUp(5, 3)).toBe(false)
+  })
+
+  it('is not caught up when the release count is unknown', () => {
+    // No data is not the same as nothing to watch — keep the soft nudge.
+    expect(caughtUp(null, 3)).toBe(false)
+    expect(caughtUp(undefined, 3)).toBe(false)
+    expect(caughtUp(0, 0)).toBe(false)
+  })
+})
+
+describe('watchMinutes', () => {
+  it('uses the real runtime whenever we have one', () => {
+    expect(watchMinutes({ runtime: 22, genre: ['Drama'] }, TV_FALLBACK_MIN)).toBe(22)
+    expect(watchMinutes({ runtime: 96 }, MOVIE_FALLBACK_MIN)).toBe(96)
+  })
+
+  it('guesses a half-hour for comedies with no runtime stored', () => {
+    expect(watchMinutes({ genre: ['Comedy', 'Sci-Fi & Fantasy'] }, TV_FALLBACK_MIN))
+      .toBe(COMEDY_FALLBACK_MIN)
+  })
+
+  it('falls back to the type default otherwise', () => {
+    expect(watchMinutes({ genre: ['Drama'] }, TV_FALLBACK_MIN)).toBe(TV_FALLBACK_MIN)
+    expect(watchMinutes({}, MOVIE_FALLBACK_MIN)).toBe(MOVIE_FALLBACK_MIN)
+    // A zero or negative runtime is bad data, not a zero-minute episode.
+    expect(watchMinutes({ runtime: 0 }, TV_FALLBACK_MIN)).toBe(TV_FALLBACK_MIN)
+  })
+
+  it('does not shrink a movie just because it is a comedy', () => {
+    expect(watchMinutes({ genre: ['Comedy'] }, MOVIE_FALLBACK_MIN)).toBe(MOVIE_FALLBACK_MIN)
+  })
+})
 
 describe('suggestionsForGap', () => {
   it('drops anything that does not fit the gap (with small slack)', () => {

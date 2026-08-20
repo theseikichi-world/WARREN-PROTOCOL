@@ -1,10 +1,46 @@
 import { describe, it, expect } from 'vitest'
-import { createTask, pickableCategories, type NewTaskData } from './store'
+import { createTask, duplicateTask, pickableCategories, orbitTasks, taskSource, habitDoneToday, type NewTaskData } from './store'
+import { isOrphanHabit, todayKey, dateKey, parseDateKey, shiftDateKey, daysBetweenKeys, dayKeyAt, sleepCutoffMin } from './types'
 import type { Scrap7State, Task } from './types'
 
 const empty: Scrap7State = { tasks: [], categories: [], chatHistory: [], lastDailyReset: '2026-06-10' }
 const mk = (over: Partial<NewTaskData> = {}): NewTaskData =>
   ({ text: 'Test', category: 'Health', taskType: 'habit', ...over })
+
+describe('duplicateTask (creation guard)', () => {
+  const withTexts = (...texts: string[]): Task[] =>
+    texts.map((text, i) => ({ ...createTask(empty, mk({ text })).tasks[0], id: `t${i}` }))
+
+  it('does not match on a shared word stem or a stopword', () => {
+    // The bug: "workouts" contains "work", "diction" contains "on", so the old
+    // loose matcher scored this 0.67 and silently dropped the new task.
+    const tasks = withTexts('Diction/Breath/Tonguetwister Workouts', 'Stretch')
+    expect(duplicateTask(tasks, 'Work on Warren')).toBeNull()
+  })
+
+  it('matches the same task written differently', () => {
+    const tasks = withTexts('Drink water')
+    expect(duplicateTask(tasks, 'drink water!')?.text).toBe('Drink water')
+    expect(duplicateTask(tasks, 'Drink the water')?.text).toBe('Drink water')
+  })
+
+  it('folds plurals and verb endings so one thing is not added twice', () => {
+    expect(duplicateTask(withTexts('Morning workout'), 'Morning workouts')?.text).toBe('Morning workout')
+    expect(duplicateTask(withTexts('Stretch'), 'Stretching')?.text).toBe('Stretch')
+    expect(duplicateTask(withTexts('Stretching'), 'Stretch')?.text).toBe('Stretching')
+  })
+
+  it('keeps genuinely different tasks apart', () => {
+    const tasks = withTexts('Batch-film short clips')
+    expect(duplicateTask(tasks, 'Edit short clips')).toBeNull()
+    expect(duplicateTask(tasks, 'Stretch')).toBeNull()
+  })
+
+  it('is null on an empty or punctuation-only title', () => {
+    expect(duplicateTask(withTexts('Stretch'), '   ')).toBeNull()
+    expect(duplicateTask(withTexts('Stretch'), '!!!')).toBeNull()
+  })
+})
 
 // These tests pin the Task shape produced by the shared buildTask() —
 // the same builder used by createExternalTask for cross-module sync.
@@ -76,5 +112,167 @@ describe('the category picker', () => {
   it('never returns an empty list — the modal needs something to select', () => {
     expect(pickableCategories(st([], ['Life support']))).toEqual(['Personal'])
     expect(pickableCategories(st([], []))).toEqual(['Personal'])
+  })
+})
+
+describe('the day is the operator\'s, not the server\'s', () => {
+  it('reads a moment as its LOCAL calendar date', () => {
+    // The bug this pins: toISOString() gives the UTC date, so east of UTC a
+    // habit tracked after midnight was stamped with yesterday — the timeline
+    // showed it as still due and a late night could read as a miss.
+    const lateNight = new Date(2026, 7, 9, 1, 30)     // 09 Aug, 01:30 local
+    expect(dateKey(lateNight)).toBe('2026-08-09')
+  })
+
+  it('round-trips a key through parse and back', () => {
+    expect(dateKey(parseDateKey('2026-08-09'))).toBe('2026-08-09')
+  })
+
+  it('shifts by whole local days across a month boundary', () => {
+    expect(shiftDateKey('2026-08-31', 1)).toBe('2026-09-01')
+    expect(shiftDateKey('2026-09-01', -1)).toBe('2026-08-31')
+    expect(shiftDateKey('2026-01-01', -1)).toBe('2025-12-31')
+  })
+
+  it('counts whole days between two keys, signed', () => {
+    expect(daysBetweenKeys('2026-08-01', '2026-08-04')).toBe(3)
+    expect(daysBetweenKeys('2026-08-04', '2026-08-01')).toBe(-3)
+    expect(daysBetweenKeys('2026-08-04', '2026-08-04')).toBe(0)
+  })
+
+  it('agrees with todayKey when there is no late bedtime to shift it', () => {
+    expect(todayKey()).toBe(dayKeyAt(new Date(), 0))
+  })
+})
+
+describe('the day ends at bedtime, not at midnight', () => {
+  const at = (h: number, m = 0) => new Date(2026, 7, 9, h, m)   // 09 Aug 2026
+
+  it('keeps the small hours on the day that started yesterday', () => {
+    // Bedtime 02:00. Work done at 01:00 belongs to the day you woke into,
+    // not to the calendar date that just ticked over.
+    const cutoff = sleepCutoffMin('02:00')
+    expect(dayKeyAt(at(1, 0),  cutoff)).toBe('2026-08-08')
+    expect(dayKeyAt(at(1, 59), cutoff)).toBe('2026-08-08')
+  })
+
+  it('rolls the moment bedtime passes, and does not roll back', () => {
+    const cutoff = sleepCutoffMin('02:00')
+    expect(dayKeyAt(at(2, 0),  cutoff)).toBe('2026-08-09')
+    expect(dayKeyAt(at(9, 0),  cutoff)).toBe('2026-08-09')
+    expect(dayKeyAt(at(23, 0), cutoff)).toBe('2026-08-09')
+  })
+
+  it('leaves an early sleeper on midnight', () => {
+    // Rolling at 23:00 would close the day while they were still awake in it.
+    const cutoff = sleepCutoffMin('23:00')
+    expect(cutoff).toBe(0)
+    expect(dayKeyAt(at(23, 30), cutoff)).toBe('2026-08-09')
+    expect(dayKeyAt(at(0, 30),  cutoff)).toBe('2026-08-09')
+  })
+
+  it('ignores a missing or malformed bedtime', () => {
+    expect(sleepCutoffMin(undefined)).toBe(0)
+    expect(sleepCutoffMin('')).toBe(0)
+    expect(sleepCutoffMin('nonsense')).toBe(0)
+    expect(sleepCutoffMin('00:00')).toBe(0)      // midnight is already the default
+  })
+
+  it('carries the shift across a month boundary', () => {
+    const cutoff = sleepCutoffMin('03:00')
+    expect(dayKeyAt(new Date(2026, 8, 1, 2, 0), cutoff)).toBe('2026-08-31')
+  })
+})
+
+describe('ORBIT shows the whole day', () => {
+  const t = (over: Partial<Task>): Task => ({
+    id: over.id ?? 'x', text: over.text ?? 'Task', category: 'c',
+    taskType: 'todo', completed: false, createdAt: '', ...over,
+  } as Task)
+
+  const routine = (id: string, over: Partial<Task> = {}) =>
+    t({ id, text: id, taskType: 'habit', origin: 'chain', direction: 'positive', target: 1, ...over })
+  const basic = (id: string, over: Partial<Task> = {}) =>
+    t({ id, text: id, taskType: 'habit', origin: 'baseline', direction: 'positive', target: 1, ...over })
+
+  it('lists routines and basics beside todos and dailies', () => {
+    // Routines used to be excluded entirely, which made the day feel like two
+    // apps and left "did I finish today" unanswerable.
+    const ids = orbitTasks([
+      t({ id: 'todo' }),
+      t({ id: 'daily', taskType: 'daily' }),
+      routine('routine'),
+      basic('basic'),
+    ]).map(x => x.id)
+    expect(ids.sort()).toEqual(['basic', 'daily', 'routine', 'todo'])
+  })
+
+  it('leads with the scored work, then basics, then your own', () => {
+    const ids = orbitTasks([
+      t({ id: 'mine', taskType: 'daily', origin: 'manual' }),
+      basic('basic'),
+      routine('routine'),
+    ]).map(x => x.id)
+    expect(ids).toEqual(['routine', 'basic', 'mine'])
+  })
+
+  it('names the source of every row', () => {
+    expect(taskSource(routine('r'))).toBe('uplink')
+    expect(taskSource(basic('b'))).toBe('basic')
+    expect(taskSource(t({ origin: 'manual' }))).toBe('yours')
+    expect(taskSource(t({ origin: 'log' }))).toBe('yours')   // unscored either way
+  })
+
+  it('sinks anything already done, whichever way it is measured', () => {
+    const ids = orbitTasks([
+      t({ id: 'doneTodo', completed: true }),
+      routine('openRoutine'),
+    ]).map(x => x.id)
+    expect(ids).toEqual(['openRoutine', 'doneTodo'])
+  })
+
+  it('reads a habit as done from its dose, not from a checkbox', () => {
+    const today = todayKey()
+    expect(habitDoneToday(routine('r', { lastTrackedDate: today, todayCount: 1, target: 1 }))).toBe(true)
+    expect(habitDoneToday(routine('r', { lastTrackedDate: today, todayCount: 1, target: 3 }))).toBe(false)
+    expect(habitDoneToday(routine('r', { lastTrackedDate: '2020-01-01', todayCount: 9 }))).toBe(false)
+  })
+
+  it('keeps a negative habit out — the list is what to DO', () => {
+    expect(orbitTasks([routine('bad', { direction: 'negative' })])).toEqual([])
+  })
+
+  it('honours a habit\'s weekly schedule', () => {
+    const day = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()]
+    const other = day === 'mon' ? 'tue' : 'mon'
+    expect(orbitTasks([routine('on',  { schedule: { type: 'weekly', days: [day] } })])).toHaveLength(1)
+    expect(orbitTasks([routine('off', { schedule: { type: 'weekly', days: [other] } })])).toHaveLength(0)
+  })
+})
+
+describe('isOrphanHabit', () => {
+  const habit = (over: Partial<Task> = {}): Task =>
+    ({ taskType: 'habit', ...over } as Task)
+
+  it('leaves a routine and a basic alone — they have homes', () => {
+    expect(isOrphanHabit(habit({ origin: 'chain' }))).toBe(false)
+    expect(isOrphanHabit(habit({ origin: 'baseline' }))).toBe(false)
+  })
+
+  it('adopts a hand-made habit', () => {
+    expect(isOrphanHabit(habit({ origin: 'manual' }))).toBe(true)
+    expect(isOrphanHabit(habit())).toBe(true)          // no origin resolves to manual
+  })
+
+  it('adopts a habit that came in through the L.O.G sync', () => {
+    // The one this was missing: PATHFINDER's old analysis wrote habits with a
+    // logDream, which resolves to 'log'. They were in no system and on no screen.
+    expect(isOrphanHabit(habit({ logDream: 'Become an actor' }))).toBe(true)
+    expect(isOrphanHabit(habit({ origin: 'log' }))).toBe(true)
+  })
+
+  it('never touches anything that is not a habit', () => {
+    expect(isOrphanHabit({ taskType: 'todo',  origin: 'log' } as Task)).toBe(false)
+    expect(isOrphanHabit({ taskType: 'daily', origin: 'log' } as Task)).toBe(false)
   })
 })

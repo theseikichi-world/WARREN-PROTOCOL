@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeDepths, layoutTree, NODE_W, NODE_H, GAP_X, GAP_Y } from './layout'
+import { computeDepths, layoutTree, fitScale, NODE_W, NODE_H, GAP_X, GAP_Y } from './layout'
 import type { ChainNode } from './types'
 
 const node = (id: string, after: string[] = []): ChainNode => ({
@@ -35,13 +35,16 @@ describe('computeDepths', () => {
 
   it('does not hang on a cyclic or dangling graph', () => {
     expect(() => computeDepths([node('a', ['b']), node('b', ['a'])])).not.toThrow()
-    expect(computeDepths([node('a', ['ghost'])]).get('a')).toBe(1)
+    // A prerequisite that isn't in this set doesn't indent anything: it used to
+    // leave a phantom row above the node. Bands rely on this — a routine whose
+    // requirement sits in the act above starts at the top of its own act.
+    expect(computeDepths([node('a', ['ghost'])]).get('a')).toBe(0)
   })
 })
 
 describe('layoutTree', () => {
   it('is empty for an empty chain', () => {
-    expect(layoutTree([])).toEqual({ placed: [], edges: [], width: 0, height: 0 })
+    expect(layoutTree([])).toEqual({ placed: [], edges: [], bands: [], width: 0, height: 0 })
   })
 
   it('stacks rows by depth and centres them', () => {
@@ -66,5 +69,70 @@ describe('layoutTree', () => {
 
   it('drops edges whose prerequisite is missing from the chain', () => {
     expect(layoutTree([node('a', ['ghost'])]).edges).toHaveLength(0)
+  })
+})
+
+describe('layoutTree — acts as bands', () => {
+  const chapters = (planned = false) => [
+    { title: 'FLUENCY',  nodeIds: ['a', 'b'] },
+    { title: 'PIPELINE', nodeIds: planned ? [] : ['c'], planned },
+  ]
+
+  it('stacks each act below the one before it', () => {
+    const { placed, bands } = layoutTree([node('a'), node('b'), node('c')], chapters())
+    const a = placed.find(p => p.node.id === 'a')!
+    const c = placed.find(p => p.node.id === 'c')!
+
+    expect(bands.map(b => b.title)).toEqual(['FLUENCY', 'PIPELINE'])
+    expect(a.y).toBeLessThan(c.y)                    // act 1 sits above act 2
+    expect(bands[0].y).toBeLessThan(bands[1].y)
+  })
+
+  it('does not indent an act just because it needs the one above', () => {
+    // `c` requires `a`, but they are in different acts — c starts at the top of
+    // its own band. The edge between them is what shows the handover.
+    const { placed, edges } = layoutTree([node('a'), node('b'), node('c', ['a'])], chapters())
+    const b = placed.find(p => p.node.id === 'b')!
+    const c = placed.find(p => p.node.id === 'c')!
+
+    expect(c.depth).toBe(0)
+    expect(edges).toHaveLength(1)
+    expect(c.y).toBeGreaterThan(b.y)
+  })
+
+  it('gives a planned act a band of its own with nothing in it', () => {
+    const { placed, bands } = layoutTree([node('a'), node('b')], chapters(true))
+    expect(placed).toHaveLength(2)
+    expect(bands[1]).toMatchObject({ title: 'PIPELINE', planned: true })
+    expect(bands[1].height).toBeGreaterThan(0)
+  })
+
+  it('never loses a node that belongs to no act', () => {
+    const { placed } = layoutTree([node('a'), node('orphan')], [{ title: 'FLUENCY', nodeIds: ['a'] }])
+    expect(placed.map(p => p.node.id).sort()).toEqual(['a', 'orphan'])
+  })
+
+  it('claims each node once when two acts name it', () => {
+    const { placed } = layoutTree([node('a')], [
+      { title: 'ONE', nodeIds: ['a'] },
+      { title: 'TWO', nodeIds: ['a'] },
+    ])
+    expect(placed).toHaveLength(1)
+  })
+})
+
+describe('fitScale', () => {
+  it('shrinks to fit and never grows', () => {
+    expect(fitScale(1000, 800)).toBe(0.8)
+    expect(fitScale(200, 500)).toBe(1)
+  })
+
+  it('stops shrinking before the labels stop being readable', () => {
+    expect(fitScale(10000, 100)).toBe(0.6)
+  })
+
+  it('is 1 when there is nothing to measure', () => {
+    expect(fitScale(0, 500)).toBe(1)
+    expect(fitScale(500, 0)).toBe(1)
   })
 })

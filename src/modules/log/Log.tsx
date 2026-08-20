@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   type Dream, type Mission, type LogTask, type LogTaskType, type MissionPriority,
-  type DreamAnalysis, type AnalyzedMission, type AnalyzedTask, type Constellation, type PlanItem,
+  type Constellation, type PlanItem,
   PRIORITY_COLORS, PRIORITY_LABELS, TASK_TYPE_COLOR, TASK_TYPE_LABEL,
   calcMissionProgress, calcDreamProgress, daysUntil, formatEta, etaColor,
 } from './types'
@@ -11,10 +11,11 @@ import {
   addMission, completeMission, deleteMission, type NewMissionData,
   addTask, toggleTask, deleteTask, markTaskSynced,
   addSignal, deleteSignal, syncTaskToScrap7,
-  setDreamAnalysis, clearDreamAnalysis, setConstellation, clearConstellation,
+  migrateAnalyses,
+  setConstellation, clearConstellation,
   syncPlanItemToScrap7,
 } from './store'
-import { aiJson, loadSettings, modelForTask, type AiMessage } from '../../settings'
+import { aiJson, loadSettings, modelForTask } from '../../settings'
 import { NewUplink } from '../progression/NewUplink'
 import { loadProgression } from '../progression/store'
 import { t as tr } from '../../i18n'
@@ -27,38 +28,7 @@ const LOG_FROZEN = false
 
 const LOG_NEON  = '#c084fc'
 const LOG_DIM   = 'rgba(192,132,252,0.1)'
-const S7_NEON   = '#00b4ff'  // SCRAP-7 blue for sync badges
-
-const LOG_ANALYSIS_SYSTEM = `You are PATHFINDER, a cyberpunk beaver who finds the route from where someone is to what they want.
-Your mission: take ONE dream and generate a precise, actionable breakdown.
-
-Respond with ONLY a valid JSON object — no markdown, no explanation, no code fences.
-
-Format:
-{
-  "analysis": "1-2 sentence scientific read on this dream's trajectory",
-  "missions": [
-    {
-      "title": "MISSION TITLE (max 5 words, uppercase)",
-      "description": "What achieving this mission means",
-      "priority": "critical|high|medium|low",
-      "deadline_days": <integer days to complete>,
-      "tasks": [
-        { "text": "Buy a desk", "type": "todo" },
-        { "text": "Practice scales 20 min", "type": "daily" },
-        { "text": "Read before bed", "type": "habit" }
-      ]
-    }
-  ]
-}
-
-Rules:
-- 3-5 missions, ordered by importance
-- 3-5 tasks per mission — mix of todo, daily, habit
-- Be specific to the dream. Avoid vague tasks.
-- TASK NAMES must be SHORT, natural, imperative (2-5 words) — these go straight into a task tracker.
-  Good: "Record one audition tape". Bad: "I want to record one audition tape per week to improve".
-- todo = finite one-time action; daily = repeat every day; habit = behavior built over time (streak)`
+const S7_NEON   = '#00b4ff'  // ORBIT blue for sync badges
 
 // ─── Constellation (cross-dream synthesis) ────────────────────────────────────
 const CONSTELLATION_SYSTEM = `You are PATHFINDER, analysing a whole CONSTELLATION of dreams together.
@@ -80,46 +50,8 @@ Respond with ONLY a valid JSON object — no markdown, no code fences:
 Rules:
 - 2-4 links, only REAL connections (skip if dreams are unrelated).
 - 5-9 plan items total. Prefer actions that serve MULTIPLE dreams or the top-priority dream.
-- "text" must be SHORT, natural, imperative — it goes straight into the SCRAP-7 task tracker. Never paste a whole sentence.
+- "text" must be SHORT, natural, imperative — it goes straight into the ORBIT task tracker. Never paste a whole sentence.
 - type: habit = behavior to build (streak) · daily = repeat each day · todo = finite one-off.`
-
-// ─── Helper: apply suggested task in one state transaction ────────────────────
-function applySuggestedTask(
-  state: LogState, dreamId: string,
-  m: AnalyzedMission, t: AnalyzedTask,
-  existingMissionId: string | null,
-): { state: LogState; missionId: string; task: LogTask } {
-  let s = state
-  let missionId = existingMissionId
-
-  if (!missionId) {
-    missionId = crypto.randomUUID()
-    const deadline = m.deadline_days > 0
-      ? new Date(Date.now() + m.deadline_days * 86400000).toISOString().slice(0, 10)
-      : null
-    const nm: Mission = {
-      id: missionId, title: m.title, description: m.description,
-      priority: m.priority, status: 'active', deadline,
-      tasks: [], signals: [], createdAt: new Date().toISOString(), completedAt: null,
-    }
-    s = { ...s, dreams: s.dreams.map(d =>
-      d.id !== dreamId ? d : { ...d, missions: [...d.missions, nm] }
-    )}
-  }
-
-  const task: LogTask = {
-    id: crypto.randomUUID(), text: t.text, type: t.type,
-    done: false, createdAt: new Date().toISOString(),
-  }
-  s = { ...s, dreams: s.dreams.map(d => {
-    if (d.id !== dreamId) return d
-    return { ...d, missions: d.missions.map(mm =>
-      mm.id !== missionId ? mm : { ...mm, tasks: [...mm.tasks, task] }
-    )}
-  })}
-
-  return { state: s, missionId: missionId!, task }
-}
 
 // ─── Task row ────────────────────────────────────────────────────────────────
 function TaskRow({ task, onToggle, onDelete, onSync }: {
@@ -168,7 +100,7 @@ function TaskRow({ task, onToggle, onDelete, onSync }: {
 
       {/* S-7 synced badge */}
       {task.scrap7Id && (
-        <span title={tr('Synced to SCRAP-7', 'Синхронизировано со SCRAP-7')} style={{
+        <span title={tr('Synced to ORBIT', 'Синхронизировано со ORBIT')} style={{
           fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
           color: S7_NEON, letterSpacing: '0.1em', flexShrink: 0,
           padding: '1px 5px', borderRadius: 3,
@@ -178,7 +110,7 @@ function TaskRow({ task, onToggle, onDelete, onSync }: {
 
       {/* Sync button (hover, daily/habit only, not yet synced) */}
       {hov && canSync && (
-        <button onClick={e => { e.stopPropagation(); onSync() }} title={tr('Send to SCRAP-7', 'Отправить в SCRAP-7')} style={{
+        <button onClick={e => { e.stopPropagation(); onSync() }} title={tr('Send to ORBIT', 'Отправить в ORBIT')} style={{
           fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
           color: S7_NEON, letterSpacing: '0.08em', flexShrink: 0,
           padding: '2px 6px', borderRadius: 3, cursor: 'pointer',
@@ -199,221 +131,6 @@ function TaskRow({ task, onToggle, onDelete, onSync }: {
           onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
           onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,0,51,0.25)'}
         >×</button>
-      )}
-    </div>
-  )
-}
-
-// ─── Analysis panel ──────────────────────────────────────────────────────────
-function AnalysisPanel({ result, dream, state, onChange, onClose }: {
-  result:   DreamAnalysis
-  dream:    Dream
-  state:    LogState
-  onChange: (s: LogState) => void
-  onClose:  () => void
-}) {
-  // Idempotent: a suggestion counts as "added" if the dream already holds a
-  // mission with that title containing a task with that text. Survives remounts.
-  const isAdded = (m: AnalyzedMission, t: AnalyzedTask): boolean => {
-    const mm = dream.missions.find(x => x.title === m.title)
-    return !!mm && mm.tasks.some(x => x.text === t.text)
-  }
-  const missionIdFor = (m: AnalyzedMission): string | null =>
-    dream.missions.find(x => x.title === m.title)?.id ?? null
-
-  const addTask = (m: AnalyzedMission, t: AnalyzedTask) => {
-    if (isAdded(m, t)) return
-    const { state: ns, missionId, task } = applySuggestedTask(
-      state, dream.id, m, t, missionIdFor(m),
-    )
-    onChange(ns)
-    if (t.type === 'daily' || t.type === 'habit') {
-      syncTaskToScrap7(task, m.title, dream.title)
-    }
-  }
-
-  const addAll = () => {
-    let s = state
-    const ids = new Map<string, string>()
-    for (const m of result.missions) {
-      for (const t of m.tasks) {
-        const existing = ids.get(m.title) ?? missionIdFor(m)
-        // skip if this exact task already exists under that mission
-        const mm = s.dreams.find(d => d.id === dream.id)?.missions.find(x => x.title === m.title)
-        if (mm && mm.tasks.some(x => x.text === t.text)) { ids.set(m.title, mm.id); continue }
-        const { state: ns, missionId, task } = applySuggestedTask(s, dream.id, m, t, existing)
-        s = ns; ids.set(m.title, missionId)
-        if (t.type === 'daily' || t.type === 'habit') syncTaskToScrap7(task, m.title, dream.title)
-      }
-    }
-    onChange(s)
-  }
-
-  const allDone = result.missions.every(m => m.tasks.every(t => isAdded(m, t)))
-
-  return (
-    <div style={{
-      margin: '0 0 4px', borderRadius: 10, overflow: 'hidden',
-      background: 'rgba(6,2,16,0.92)',
-      border: `1px solid ${LOG_NEON}30`,
-      boxShadow: `0 0 24px rgba(192,132,252,0.12)`,
-    }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '9px 12px', borderBottom: `1px solid ${LOG_NEON}20`,
-        background: `${LOG_NEON}08`,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14.5, filter: `drop-shadow(0 0 5px ${LOG_NEON})` }}>⊹</span>
-          <div>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 900,
-              color: LOG_NEON, letterSpacing: '0.2em' }}>PATHFINDER ANALYSIS</p>
-            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5,
-              color: `${LOG_NEON}50`, letterSpacing: '0.1em' }}>{tr('TRAJECTORY COMPUTED', 'ТРАЕКТОРИЯ ГОТОВА')}</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {!allDone && (
-            <button onClick={addAll} style={{
-              fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800,
-              color: LOG_NEON, letterSpacing: '0.12em', cursor: 'pointer',
-              padding: '4px 10px', borderRadius: 4,
-              border: `1px solid ${LOG_NEON}40`, background: LOG_DIM,
-              transition: 'background 0.15s',
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(192,132,252,0.18)'}
-              onMouseLeave={e => e.currentTarget.style.background = LOG_DIM}
-            >{tr('DEPLOY ALL', 'СОЗДАТЬ ВСЁ')}</button>
-          )}
-          <button onClick={onClose} style={{ fontSize: 15.5, color: 'rgba(192,132,252,0.3)', cursor: 'pointer',
-            transition: 'color 0.12s' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#ff0033'}
-            onMouseLeave={e => e.currentTarget.style.color = 'rgba(192,132,252,0.3)'}
-          >×</button>
-        </div>
-      </div>
-
-      {/* Analysis text */}
-      <div style={{ padding: '10px 12px 6px',
-        borderBottom: `1px solid ${LOG_NEON}12`, background: `${LOG_NEON}04` }}>
-        <p style={{
-          fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
-          color: `${LOG_NEON}70`, lineHeight: 1.7, letterSpacing: '0.02em',
-          borderLeft: `2px solid ${LOG_NEON}30`, paddingLeft: 8,
-          fontStyle: 'italic',
-        }}>{result.analysis}</p>
-      </div>
-
-      {/* Mission proposals */}
-      <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {result.missions.map((m, mi) => {
-          const pColor    = PRIORITY_COLORS[m.priority] ?? LOG_NEON
-          const mAdded    = missionIdFor(m) !== null
-          const tasksDone = m.tasks.filter(t => isAdded(m, t)).length
-          return (
-            <div key={mi} style={{
-              borderRadius: 8, overflow: 'hidden',
-              background: 'rgba(192,132,252,0.03)',
-              border: `1px solid ${mAdded ? `${LOG_NEON}25` : 'rgba(192,132,252,0.12)'}`,
-              borderLeft: `2px solid ${pColor}`,
-            }}>
-              {/* Mission header */}
-              <div style={{ padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8,
-                borderBottom: '1px solid rgba(192,132,252,0.08)' }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: pColor,
-                  boxShadow: `0 0 5px ${pColor}`, flexShrink: 0 }} />
-                <p style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 700,
-                  color: 'rgba(220,210,255,0.88)', letterSpacing: '0.06em' }}>{m.title}</p>
-                <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: pColor,
-                  fontWeight: 700, letterSpacing: '0.1em', flexShrink: 0 }}>
-                  {PRIORITY_LABELS[m.priority]}
-                </span>
-                {m.deadline_days > 0 && (
-                  <span style={{ fontFamily: 'var(--font)', fontSize: 11.5,
-                    color: 'rgba(148,163,184,0.4)', letterSpacing: '0.08em', flexShrink: 0 }}>
-                    T-{m.deadline_days}d
-                  </span>
-                )}
-                <span style={{ fontFamily: 'var(--font)', fontSize: 11.5,
-                  color: `${LOG_NEON}50`, flexShrink: 0 }}>
-                  {tasksDone}/{m.tasks.length}
-                </span>
-              </div>
-
-              {/* Task rows */}
-              <div style={{ padding: '4px 10px 6px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {m.tasks.map((t, ti) => {
-                  const isDone  = isAdded(m, t)
-                  const tColor  = TASK_TYPE_COLOR[t.type]
-                  const toScrap = t.type === 'daily' || t.type === 'habit'
-                  return (
-                    <div key={ti} style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '5px 0', opacity: isDone ? 0.45 : 1, transition: 'opacity 0.2s',
-                    }}>
-                      {/* Add button */}
-                      <button
-                        onClick={() => addTask(m, t)}
-                        disabled={isDone}
-                        title={isDone ? tr('Added','Добавлено') : toScrap ? tr('Add to dream & sync to SCRAP-7','В мечту и в SCRAP-7') : tr('Add to dream','Добавить в мечту')}
-                        style={{
-                          width: 18, height: 18, borderRadius: 4, flexShrink: 0, cursor: isDone ? 'default' : 'pointer',
-                          border: `1.5px solid ${isDone ? `${LOG_NEON}30` : `${LOG_NEON}60`}`,
-                          background: isDone ? LOG_DIM : 'transparent',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 12.5, color: isDone ? LOG_NEON : `${LOG_NEON}80`,
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={e => { if (!isDone) e.currentTarget.style.background = LOG_DIM }}
-                        onMouseLeave={e => { if (!isDone) e.currentTarget.style.background = 'transparent' }}
-                      >
-                        {isDone ? '✓' : '+'}
-                      </button>
-
-                      {/* Task text */}
-                      <p style={{
-                        flex: 1, fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
-                        color: isDone ? 'rgba(148,163,184,0.3)' : 'rgba(210,200,255,0.8)',
-                        letterSpacing: '0.02em', minWidth: 0,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        textDecoration: isDone ? 'line-through' : 'none',
-                      }}>{t.text}</p>
-
-                      {/* Type chip */}
-                      <span style={{
-                        fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
-                        color: tColor, letterSpacing: '0.1em', flexShrink: 0,
-                        padding: '1px 5px', borderRadius: 3,
-                        border: `1px solid ${tColor}30`, background: `${tColor}08`,
-                      }}>{TASK_TYPE_LABEL[t.type]}</span>
-
-                      {/* SCRAP-7 indicator */}
-                      {toScrap && (
-                        <span style={{
-                          fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700,
-                          color: isDone ? `${S7_NEON}50` : `${S7_NEON}80`,
-                          letterSpacing: '0.08em', flexShrink: 0,
-                          padding: '1px 5px', borderRadius: 3,
-                          border: `1px solid ${S7_NEON}${isDone ? '20' : '40'}`,
-                          background: `${S7_NEON}08`,
-                        }}>{isDone ? 'S-7 ✦' : '→ S7'}</span>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {allDone && (
-        <div style={{ padding: '8px 12px', borderTop: `1px solid ${LOG_NEON}15`,
-          textAlign: 'center' }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${LOG_NEON}60`,
-            letterSpacing: '0.15em' }}>✦ ALL NODES CONNECTED · CHECK SCRAP-7 FOR YOUR NEW TASKS</p>
-        </div>
       )}
     </div>
   )
@@ -662,31 +379,12 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
   promoted:       boolean
   onPromote:      () => void
 }) {
+  // PATHFINDER is the inbox: you write dreams here and choose one. There is
+  // exactly one button on a dream, and it is PROMOTE — the read, the acts, the
+  // shelf and the protocol all happen on the other side of it, in UPLINKS.
+  // Two buttons for one intention was three presses to plan a goal.
   const [missionModal,  setMissionModal]    = useState(false)
   const [hovHeader,     setHovHeader]       = useState(false)
-  const [analyzing,     setAnalyzing]       = useState(false)
-  const [analyzeError,  setAnalyzeError]    = useState('')
-
-  const analyze = async () => {
-    setAnalyzing(true); setAnalyzeError('')
-    try {
-      const settings = loadSettings()
-      const msgs: AiMessage[] = [
-        { role: 'system', content: LOG_ANALYSIS_SYSTEM },
-        { role: 'user',   content: `Dream: ${dream.title}\n\n${dream.description || 'No description provided.'}` },
-      ]
-      const parsed = await aiJson<Record<string, unknown>>(msgs, settings, { model: modelForTask(settings, 'log.analysis'), maxTokens: 2048 })
-      const result: DreamAnalysis = {
-        analysis: typeof parsed.analysis === 'string' ? parsed.analysis : '',
-        missions: Array.isArray(parsed.missions) ? parsed.missions : [],
-        generatedAt: new Date().toISOString(),
-      }
-      onChange(setDreamAnalysis(state, dream.id, result))   // persisted — survives tab switch
-    } catch (e) {
-      setAnalyzeError(e instanceof Error ? e.message : tr('Analysis failed. Check AI settings.', 'Анализ не удался. Проверьте настройки ИИ.'))
-    }
-    setAnalyzing(false)
-  }
 
   const progress = calcDreamProgress(dream)
   const active   = dream.missions.filter(m => m.status === 'active').length
@@ -849,84 +547,14 @@ function DreamCard({ dream, rank, total, expanded, onToggleExpand, state, onChan
                 color: 'rgba(0,245,255,0.5)', letterSpacing: '0.06em', marginTop: 1 }}>
                 {promoted
                   ? tr('Its protocol lives in UPLINKS', 'Его протокол — в UPLINKS')
-                  : tr('The guide proposes a chain of routines — you edit every node', 'Гид предложит цепь рутин — вы правите каждый узел')}
+                  : tr('The acts become a protocol; the first one is filled — you edit every routine',
+                       'Акты станут протоколом; первый заполняется — вы правите каждую рутину')}
               </p>
             </div>
           </button>
 
-          {/* Analyze button */}
-          {!dream.analysis && !analyzing && (
-            <button onClick={analyze} style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              width: '100%', marginBottom: 10, padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
-              background: `${LOG_NEON}07`, border: `1px solid ${LOG_NEON}30`,
-              transition: 'all 0.18s',
-            }}
-              onMouseEnter={e => { e.currentTarget.style.background = `${LOG_NEON}12`; e.currentTarget.style.borderColor = `${LOG_NEON}55` }}
-              onMouseLeave={e => { e.currentTarget.style.background = `${LOG_NEON}07`; e.currentTarget.style.borderColor = `${LOG_NEON}30` }}
-            >
-              <span style={{ fontSize: 16.5, filter: `drop-shadow(0 0 4px ${LOG_NEON})` }}>⊹</span>
-              <div style={{ flex: 1, textAlign: 'left' }}>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
-                  color: LOG_NEON, letterSpacing: '0.15em' }}>{tr('ANALYZE WITH PATHFINDER', 'АНАЛИЗ С PATHFINDER')}</p>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 11.5,
-                  color: `${LOG_NEON}50`, letterSpacing: '0.08em', marginTop: 1 }}>
-                  AI will plot missions, tasks, dailies & habits
-                </p>
-              </div>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${LOG_NEON}50` }}>↯</span>
-            </button>
-          )}
-
-          {/* Loading state */}
-          {analyzing && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10,
-              padding: '10px 12px', marginBottom: 10, borderRadius: 8,
-              background: `${LOG_NEON}06`, border: `1px solid ${LOG_NEON}20` }}>
-              <span style={{ fontSize: 16.5, animation: 'pulse 1.5s ease-in-out infinite',
-                filter: `drop-shadow(0 0 6px ${LOG_NEON})` }}>⊹</span>
-              <div>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
-                  color: LOG_NEON, letterSpacing: '0.15em' }}>{tr('COMPUTING TRAJECTORY...', 'ВЫЧИСЛЯЮ ТРАЕКТОРИЮ...')}</p>
-                <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${LOG_NEON}45`,
-                  letterSpacing: '0.08em', marginTop: 1 }}>{tr('Connecting all the dots', 'Соединяю все точки')}</p>
-              </div>
-              <div style={{ display: 'flex', gap: 3, marginLeft: 'auto' }}>
-                {[0,1,2].map(i => (
-                  <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: LOG_NEON,
-                    animation: 'pulse 1.2s ease-in-out infinite', animationDelay: `${i*0.2}s` }} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Error state */}
-          {analyzeError && (
-            <div style={{ padding: '8px 10px', marginBottom: 10, borderRadius: 7,
-              background: 'rgba(255,0,51,0.05)', border: '1px solid rgba(255,0,51,0.2)' }}>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: '#ff4444' }}>
-                {analyzeError}
-              </p>
-              <button onClick={analyze} style={{ fontFamily: 'var(--font)', fontSize: 10.5,
-                color: LOG_NEON, letterSpacing: '0.1em', cursor: 'pointer', marginTop: 4 }}>
-                RETRY ↺
-              </button>
-            </div>
-          )}
-
-          {/* Analysis panel (persisted on the dream) */}
-          {dream.analysis && (
-            <AnalysisPanel
-              result={dream.analysis}
-              dream={dream}
-              state={state}
-              onChange={onChange}
-              onClose={() => onChange(clearDreamAnalysis(state, dream.id))}
-            />
-          )}
-
           {/* Mission tree */}
-          {dream.missions.length === 0 && !dream.analysis && !analyzing && (
+          {dream.missions.length === 0 && (
             <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
               color: 'rgba(192,132,252,0.15)', letterSpacing: '0.1em',
               textAlign: 'center', padding: '4px 0 4px' }}>
@@ -1055,15 +683,23 @@ function MissionModal({ initial, onSave, onCancel }: {
 }
 
 // ─── Dream modal (bottom sheet) ────────────────────────────────────────────────
-function DreamModal({ categories, initial, onSave, onCancel }: {
-  categories: string[]
+/**
+ * Writing a dream asks for two things: what it is, and why it matters.
+ *
+ * It used to ask for a third — a category, picked from a dropdown. Nobody knows
+ * better than the read does whether a dream is acting or health or work, and
+ * asking made the operator do the machine's filing. The field still exists and
+ * still groups the list; it is filled by `readDream` and never typed. The dream
+ * keeps whatever it already had until the first read replaces it.
+ */
+function DreamModal({ initial, onSave, onCancel }: {
   initial?:   Dream
   onSave:     (title: string, desc: string, cat: string) => void
   onCancel:   () => void
 }) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [desc,  setDesc]  = useState(initial?.description ?? '')
-  const [cat,   setCat]   = useState(initial?.category ?? (categories[0] ?? 'Personal'))
+  const cat = initial?.category ?? ''
   const ref = useRef<HTMLInputElement>(null)
   useEffect(() => { setTimeout(() => ref.current?.focus(), 50) }, [])
 
@@ -1102,10 +738,11 @@ function DreamModal({ categories, initial, onSave, onCancel }: {
           onFocus={e => e.target.style.borderColor = `${LOG_NEON}55`}
           onBlur={e => e.target.style.borderColor = 'rgba(192,132,252,0.15)'}
         />
-        <select value={cat} onChange={e => setCat(e.target.value)}
-          style={{ ...inp, appearance: 'none' }}>
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(148,163,184,0.4)',
+          letterSpacing: '0.04em', lineHeight: 1.5 }}>
+          {tr('PATHFINDER works out the area when it reads this dream.',
+              'PATHFINDER сам определит область, когда прочитает мечту.')}
+        </p>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => { if (title.trim()) onSave(title.trim(), desc.trim(), cat) }} style={{
             flex: 1, padding: '9px', borderRadius: 5, cursor: 'pointer',
@@ -1207,10 +844,10 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
         </div>
       )}
 
-      {/* Unified plan → SCRAP-7 */}
+      {/* Unified plan → ORBIT */}
       <div style={{ padding: '8px 12px 10px' }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: `${LOG_NEON}45`,
-          letterSpacing: '0.18em', marginBottom: 6 }}>UNIFIED PLAN → SCRAP-7</p>
+          letterSpacing: '0.18em', marginBottom: 6 }}>UNIFIED PLAN → ORBIT</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {c.plan.map((p, i) => {
             const tColor = TASK_TYPE_COLOR[p.type]
@@ -1218,7 +855,7 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0',
                 opacity: p.deployed ? 0.5 : 1, transition: 'opacity 0.2s' }}>
                 <button onClick={() => deploy(i)} disabled={p.deployed}
-                  title={p.deployed ? 'On SCRAP-7' : 'Send to SCRAP-7'}
+                  title={p.deployed ? 'On ORBIT' : 'Send to ORBIT'}
                   style={{
                     width: 18, height: 18, borderRadius: 4, flexShrink: 0, cursor: p.deployed ? 'default' : 'pointer',
                     border: `1.5px solid ${p.deployed ? `${S7_NEON}40` : `${S7_NEON}70`}`,
@@ -1254,7 +891,7 @@ function ConstellationPanel({ c, state, onChange, onDismiss }: {
         {remaining === 0 && (
           <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${S7_NEON}70`,
             letterSpacing: '0.12em', textAlign: 'center', marginTop: 8 }}>
-            ✦ ALL ACTIONS DEPLOYED · CHECK SCRAP-7
+            ✦ ALL ACTIONS DEPLOYED · CHECK ORBIT
           </p>
         )}
       </div>
@@ -1271,7 +908,17 @@ function promotedDreamIds(): Set<string> {
 
 // ─── Main Log component ────────────────────────────────────────────────────────
 export default function Log() {
-  const [state,         setState]         = useState<LogState>(() => loadLogState())
+  // A pre-spine analysis is converted on the way in, once. Nothing it produced
+  // is thrown away: its missions become acts and its tasks become candidates,
+  // sitting on the shelf waiting to be chosen rather than silently deployed.
+  // `migrateAnalyses` returns the same state when there is nothing to convert,
+  // so the write happens exactly once and never on a later mount.
+  const [state,         setState]         = useState<LogState>(() => {
+    const loaded   = loadLogState()
+    const migrated = migrateAnalyses(loaded)
+    if (migrated !== loaded) saveLogState(migrated)
+    return migrated
+  })
   const [expandedDreams,setExpandedDreams]= useState<Set<string>>(() => new Set())
   const [dreamModal,    setDreamModal]    = useState<Dream | 'new' | null>(null)
   const [synthesizing,  setSynthesizing]  = useState(false)
@@ -1328,7 +975,7 @@ export default function Log() {
     prevCountRef.current = state.dreams.length
   }, [state.dreams.length])
 
-  // Listen for SCRAP-7 sync completions (tasks marked done in SCRAP-7)
+  // Listen for ORBIT sync completions (tasks marked done in ORBIT)
   useEffect(() => {
     const handler = () => { setState(loadLogState()); setPromotedIds(promotedDreamIds()) }
     window.addEventListener('warren:sync', handler)
@@ -1479,7 +1126,6 @@ export default function Log() {
       {/* Dream modal */}
       {dreamModal !== null && (
         <DreamModal
-          categories={state.categories}
           initial={dreamModal === 'new' ? undefined : dreamModal}
           onSave={(title, desc, cat) => {
             if (dreamModal === 'new') persist(createDream(state, title, desc, cat))

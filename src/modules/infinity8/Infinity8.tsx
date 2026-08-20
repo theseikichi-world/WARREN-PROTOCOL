@@ -38,7 +38,7 @@ const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 const DAY_SHORT: Record<string, string> = { mon: 'M', tue: 'T', wed: 'W', thu: 'T', fri: 'F', sat: 'S', sun: 'S' }
 const daysLabel = (d: string[] | 'everyday') => d === 'everyday' ? tr('Every day', 'Каждый день') : d.map(k => DAY_SHORT[k] ?? k).join(' ')
 
-// Localized labels for AI-returned periods and SCRAP-7 task kinds
+// Localized labels for AI-returned periods and ORBIT task kinds
 const periodLabel = (p: Period) =>
   ({ morning: tr('morning', 'утро'), midday: tr('midday', 'полдень'),
      afternoon: tr('afternoon', 'день'), evening: tr('evening', 'вечер') }[p] ?? p)
@@ -235,7 +235,7 @@ export default function Infinity8() {
   const today = todayKey()
   const eff = effectiveAnchors(state, today)
 
-  // Refresh when SCRAP-7 changes elsewhere, and tick the "now" line each minute
+  // Refresh when ORBIT changes elsewhere, and tick the "now" line each minute
   useEffect(() => {
     const onSync = () => setRefresh(r => r + 1)
     window.addEventListener('warren:sync', onSync)
@@ -266,7 +266,7 @@ export default function Infinity8() {
     return assignToFreeBlocks(free, suggestions)
   }, [plan, suggestions, nowAdj])
 
-  // ── Smart weekly optimize (AI rewrites SCRAP-7 schedules) ──
+  // ── Smart weekly optimize (AI rewrites ORBIT schedules) ──
   const runOptimize = async () => {
     setOptimizing(true); setOptError(''); setOptResult(null)
     try {
@@ -334,7 +334,7 @@ Recurring commitments:\n${list || '(none)'}\n\nRebalance the week so no single d
     setOptResult(prev => prev ? { ...prev, additions: prev.additions.filter((_, i) => i !== idx) } : prev)
   }
 
-  // INFINITY-8 is a tracking VIEW — completion is owned by SCRAP-7 (and shown here
+  // INFINITY-8 is a tracking VIEW — completion is owned by ORBIT (and shown here
   // read-only), so you never mark the same thing done in two places.
 
   const pct = plan.committedCount > 0 ? Math.round(plan.doneCount / plan.committedCount * 100) : 100
@@ -507,7 +507,7 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
         {result.changes.length > 0 && (
           <>
             <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: `${NEON}45`,
-              letterSpacing: '0.18em', marginBottom: 6 }}>{tr('RESCHEDULE IN SCRAP-7', 'ПЕРЕНЕСТИ В SCRAP-7')}</p>
+              letterSpacing: '0.18em', marginBottom: 6 }}>{tr('RESCHEDULE IN ORBIT', 'ПЕРЕНЕСТИ В ORBIT')}</p>
             {result.changes.map(c => (
               <div key={c.id} style={{ marginBottom: 7, padding: '8px 10px', borderRadius: 8,
                 background: `${NEON}06`, border: `1px solid ${NEON}1f` }}>
@@ -549,7 +549,7 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
                   marginTop: 6, width: '100%', padding: '5px', borderRadius: 5, cursor: 'pointer',
                   fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.1em',
                   color: '#39ff14', border: '1px solid rgba(57,255,20,0.35)', background: 'rgba(57,255,20,0.06)',
-                }}>{tr('+ ADD TO SCRAP-7', '+ ДОБАВИТЬ В SCRAP-7')}</button>
+                }}>{tr('+ ADD TO ORBIT', '+ ДОБАВИТЬ В ORBIT')}</button>
               </div>
             ))}
           </>
@@ -725,8 +725,8 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
         zIndex: isNow ? 6 : 1,
       }}>
       {isCommit ? (
-        /* Read-only status DOT (not a checkbox) — completion is owned by SCRAP-7; shown here just for tracking */
-        <span title={b.done ? tr('Done (marked in SCRAP-7)', 'Готово (отмечено в SCRAP-7)') : tr('Still open — mark it in SCRAP-7', 'Ещё не сделано — отметьте в SCRAP-7')} style={{
+        /* Read-only status DOT (not a checkbox) — completion is owned by ORBIT; shown here just for tracking */
+        <span title={b.done ? tr('Done (marked in ORBIT)', 'Готово (отмечено в ORBIT)') : tr('Still open — mark it in ORBIT', 'Ещё не сделано — отметьте в ORBIT')} style={{
           width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
           border: `1.5px solid ${b.done ? color : `${color}55`}`,
           background: b.done ? color : 'transparent',

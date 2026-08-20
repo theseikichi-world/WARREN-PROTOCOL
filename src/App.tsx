@@ -15,14 +15,15 @@ import { loadProgression, saveProgression, adoptOrphanHabits } from './modules/p
 import { autoSync } from './sync'
 import { moduleLevel, moduleUnlocked } from './moduleAccess'
 import { bootLines } from './boot'
+import { play as playCue } from './sound'
 import { QuestHintBanner } from './modules/progression/QuestHint'
 import Scrap7    from './modules/scrap7/Scrap7'
-import Log       from './modules/log/Log'
 import Ardo      from './modules/ardo/Ardo'
 import Solaris   from './modules/solaris/Solaris'
 import Infinity8 from './modules/infinity8/Infinity8'
 import Pictures  from './modules/pictures/Pictures'
 import Journal   from './modules/journal/Journal'
+import Vigilante from './modules/vigilante/Vigilante'
 import BigScreen from './modules/bigscreen/BigScreen'
 import { getNowSnapshot, fmtClock, fmtDur } from './modules/infinity8/store'
 import { gatherSuggestions, topSuggestion, type Suggestion } from './modules/infinity8/suggestions'
@@ -46,9 +47,12 @@ import { CyberIcon } from './components/CyberIcon'
 const WARREN_OS_ENABLED = false
 
 // ─── Sidebar order ────────────────────────────────────────────────────────────
-// Hand-ordered rather than array-ordered: the kitchen comes first because the
-// body is what everything else runs on, then goals, then the day's tasks.
-const INSTRUMENT_ORDER: ModuleId[] = ['pomu', 'log', 'scrap7', 'hoot']
+// Hand-ordered rather than array-ordered, and ordered by how often a thing is
+// actually opened rather than by how important it is. The kitchen, the day and
+// the log are daily; PATHFINDER is opened once or twice in the life of a goal,
+// so it sits last among the instruments — directly above the utilities — even
+// though everything downstream begins there.
+const INSTRUMENT_ORDER: ModuleId[] = ['pomu', 'scrap7', 'hoot', 'log']
 
 const built = GUILD.filter(m => m.built)
 const NAV_ORDER = INSTRUMENT_ORDER
@@ -458,7 +462,11 @@ function Dashboard({ displayName }: { displayName: string }) {
   // Icons come from the app's own set, keyed by module, so a tile and its
   // sidebar button are visibly the same thing. The animal emoji these replaced
   // were left over from the guild-of-mascots era and no longer matched anything.
-  const orbitOpen = moduleUnlocked('scrap7', gatedLevel(loadProgression().xp, loadProgression().quests).level)
+  const orbitOpen = moduleUnlocked(
+    'scrap7',
+    gatedLevel(loadProgression().xp, loadProgression().quests).level,
+    loadSettings().unlockAll,
+  )
 
   const tiles = [
     { label: t('Tasks due', 'Задачи на сегодня'),   value: String(stats.tasksDue),
@@ -555,7 +563,7 @@ export default function App() {
   // Apply settings on mount and whenever they change
   useEffect(() => { applySettings(settings) }, [settings])
 
-  // A habit belonging to no system has nowhere to be seen now that SCRAP-7
+  // A habit belonging to no system has nowhere to be seen now that ORBIT
   // keeps only the day. Adopt them into life support before anything renders.
   useEffect(() => { adoptOrphanHabits() }, [])
 
@@ -621,6 +629,7 @@ export default function App() {
   /** A locked module says what opens it rather than doing nothing at all. */
   const flashLocked = (id: ModuleId) => {
     const m = GUILD.find(g => g.id === id)
+    playCue('deny')
     setLockNote(`${m?.name ?? ''} · ${t('LEVEL', 'УРОВЕНЬ')} ${moduleLevel(id)}`)
     window.setTimeout(() => setLockNote(''), 2600)
   }
@@ -637,7 +646,7 @@ export default function App() {
   const showLevelUp    = levelUp !== null && !showIntro && !showOnboarding && !showInitiation
   // Reached by URL, back button, or a level that dropped — never a dead render
   const lockedRoute = GUILD.some(m =>
-    m.built && location.pathname.startsWith(m.path) && !moduleUnlocked(m.id, level))
+    m.built && location.pathname.startsWith(m.path) && !moduleUnlocked(m.id, level, settings.unlockAll))
   const tourEnabled    = !showIntro && !showOnboarding && !showInitiation && !showLevelUp && !settingsOpen
 
   const bgColor = `rgba(6, 11, 22, ${settings.opacity})`
@@ -729,12 +738,17 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Dashboard displayName={settings.displayName} />} />
             <Route path="/scrap7/*"    element={<Scrap7 />} />
-            <Route path="/log/*"       element={<Log />} />
+            {/* PATHFINDER folded into UPLINKS as the DREAMS tab — a door is not
+                a room (rule 17). The route redirects rather than 404s, because
+                old links, quest destinations and muscle memory all still say
+                /log. `Log.tsx` stays on disk, unrouted, per rule 12. */}
+            <Route path="/log/*"       element={<Navigate to="/uplinks" replace />} />
             <Route path="/ardo/*"      element={<Ardo />} />
             <Route path="/solaris/*"   element={<Solaris />} />
             <Route path="/infinity8/*" element={<Infinity8 />} />
             <Route path="/pictures/*"  element={<Pictures />} />
             <Route path="/journal/*"   element={<Journal />} />
+            <Route path="/vigilante/*" element={<Vigilante />} />
             <Route path="/uplinks/*"  element={<Uplinks />} />
             {/* Unbuilt modules are hidden; any stray URL falls back to the Hub */}
             <Route path="*" element={<Navigate to="/" replace />} />
@@ -761,7 +775,7 @@ export default function App() {
           {/* INSTRUMENTS, then a divider, then UTILITIES. The split is the whole
               point: instruments build the character, utilities serve the day. */}
           {NAV_ORDER.map(member => {
-            const open = moduleUnlocked(member.id, level)
+            const open = moduleUnlocked(member.id, level, settings.unlockAll)
             return (
               <SidebarBtn
                 key={member.id}
@@ -781,7 +795,7 @@ export default function App() {
               style={{ width: 20, height: 1, background: 'rgba(255,255,255,0.14)', margin: '5px 0' }} />
           )}
           {NAV_UTILITIES.map(member => {
-            const open = moduleUnlocked(member.id, level)
+            const open = moduleUnlocked(member.id, level, settings.unlockAll)
             return (
               <SidebarBtn
                 key={member.id}

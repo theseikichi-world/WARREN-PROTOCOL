@@ -93,7 +93,7 @@ const habit = (id: string, score: number, streak = 0): Task =>
      origin: 'chain', score, streak } as Task)
 
 const EMPTY: ModuleSummaries = {
-  scrap7: null, log: null, ardo: null, solaris: null, pictures: null, journal: null,
+  scrap7: null, log: null, ardo: null, solaris: null, pictures: null, journal: null, vigilante: null,
 }
 
 describe('character stats', () => {

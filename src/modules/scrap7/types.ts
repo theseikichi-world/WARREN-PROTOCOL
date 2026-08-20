@@ -1,5 +1,7 @@
 // ─── Task types ───────────────────────────────────────────────────────────────
 
+import { loadSettings } from '../../settings'
+
 /**
  * ORBIT presents ONE kind of thing: a task, which may repeat. `taskType` is the
  * storage-level spelling of that — `'daily'` means "repeats", `'todo'` means
@@ -119,9 +121,19 @@ export function isUnbound(t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): 
 /**
  * A habit with no home. There is exactly one place for a habit that isn't a
  * goal routine — LIFE SUPPORT — so this should always be empty after a load.
+ *
+ * This used to test for `'manual'` specifically, which missed the worst case.
+ * PATHFINDER's old analysis panel created habits through the L.O.G sync, so they
+ * carried `logDream` and resolved to `'log'`: not adopted here, not listed by
+ * `orbitTasks` (which keeps only todos and due dailies), and not in any chain.
+ * They existed in storage, decayed on every daily reset, and were drawn on no
+ * screen at all. Anything that is not a routine and not a basic is an orphan.
  */
-export const isOrphanHabit = (t: Task): boolean =>
-  t.taskType === 'habit' && taskOrigin(t) === 'manual'
+export const isOrphanHabit = (t: Task): boolean => {
+  if (t.taskType !== 'habit') return false
+  const o = taskOrigin(t)
+  return o !== 'chain' && o !== 'baseline'
+}
 
 // ─── Milestone labels (cyberpunk-flavoured) ───────────────────────────────────
 export const MILESTONE_LABELS: Record<number, { label: string; icon: string }> = {
@@ -195,12 +207,11 @@ export function calcStreak(tasks: Task[]): number {
     }
   }
   let streak = 0
-  const today = new Date()
+  const today = todayKey()
   for (let i = 0; i < 365; i++) {
-    const d = new Date(today)
-    d.setDate(today.getDate() - i)
-    const key = d.toISOString().slice(0, 10)
-    if (allDates.has(key)) streak++
+    // Local keys throughout: the histories are written with local dates, so
+    // counting back with UTC ones skipped or double-counted a day near midnight.
+    if (allDates.has(shiftDateKey(today, -i))) streak++
     else if (i > 0) break   // allow today to be not-yet-done
   }
   return streak
@@ -262,6 +273,65 @@ export const WEEKDAYS = [
   { value: 'sun', label: 'S' },
 ]
 
-export function todayKey(): string {
-  return new Date().toISOString().slice(0, 10)
+/**
+ * TODAY — the operator's day, which ends when they go to bed.
+ *
+ * Two wrong answers came before this one. It was the UTC date, while INFINITY-8
+ * used the local date, so the two disagreed for hours at a time. Then it was the
+ * local calendar date, which is right for most people and still wrong for this
+ * one: with a bedtime of 02:00, work done at 01:00 belongs to the day that
+ * started yesterday morning, not to the calendar date that just ticked over.
+ *
+ * So the day rolls at BEDTIME, not at midnight. Everything before the cutoff is
+ * still yesterday. The deadline is real and it does not extend: miss it and the
+ * day closed, which is the point — a day you can still repair at 4am is not a
+ * day, it's an accordion.
+ */
+export function todayKey(now = new Date()): string {
+  let cutoff = 0
+  try { cutoff = sleepCutoffMin(loadSettings().sleepTime) } catch { /* no profile yet */ }
+  return dayKeyAt(now, cutoff)
+}
+
+/**
+ * Minutes past midnight at which the day rolls over.
+ *
+ * Only a bedtime in the small hours moves the boundary. Someone who sleeps at
+ * 23:00 keeps midnight — pushing their rollover to 23:00 would close the day
+ * while they were still awake in it.
+ */
+export function sleepCutoffMin(sleepTime: string | undefined): number {
+  const m = /^(\d{1,2}):(\d{2})$/.exec((sleepTime ?? '').trim())
+  if (!m) return 0
+  const mins = Number(m[1]) * 60 + Number(m[2])
+  return mins > 0 && mins < 12 * 60 ? mins : 0
+}
+
+/** The day `now` belongs to, given a rollover `cutoff` in minutes past midnight. */
+export function dayKeyAt(now: Date, cutoffMin: number): string {
+  const minsToday = now.getHours() * 60 + now.getMinutes()
+  return minsToday < cutoffMin ? shiftDateKey(dateKey(now), -1) : dateKey(now)
+}
+
+/** The local calendar date of a moment, as YYYY-MM-DD. Never UTC. */
+export function dateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** A YYYY-MM-DD key parsed back as LOCAL midnight, so day arithmetic is symmetric. */
+export function parseDateKey(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, (m ?? 1) - 1, d ?? 1)
+}
+
+/** `key` shifted by `days`, staying in local time across DST. */
+export function shiftDateKey(key: string, days: number): string {
+  const d = parseDateKey(key)
+  d.setDate(d.getDate() + days)
+  return dateKey(d)
+}
+
+/** Whole days from `from` to `to`, both YYYY-MM-DD. Negative when `to` is earlier. */
+export function daysBetweenKeys(from: string, to: string): number {
+  return Math.round((parseDateKey(to).getTime() - parseDateKey(from).getTime()) / 86400000)
 }

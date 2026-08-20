@@ -3,6 +3,7 @@
 // derive* functions are pure (state in → summary out) so they're unit-testable;
 // the get* wrappers read localStorage and never throw.
 
+import { loadState as loadVigilante, deriveVigilante, type VigilanteSummary } from '../vigilante/store'
 import { loadState as loadScrap7 } from '../scrap7/store'
 import {
   todayKey as scrapToday, thisWeekDates, weeklyDoneSet, calcStreak,
@@ -29,7 +30,7 @@ export function dueToday(s: Schedule | undefined, dayKey: string): boolean {
   return !s || s.type === 'everyday' || (s.type === 'weekly' && !!s.days?.includes(dayKey))
 }
 
-// ─── SCRAP-7 ──────────────────────────────────────────────────────────────────
+// ─── ORBIT ──────────────────────────────────────────────────────────────────
 export interface Scrap7Summary {
   due:      number
   streak:   number
@@ -202,6 +203,7 @@ export function deriveJournal(state: JournalState, today: string): JournalSummar
 
 // ─── Roll-up ──────────────────────────────────────────────────────────────────
 export interface ModuleSummaries {
+  vigilante: VigilanteSummary | null
   scrap7:   Scrap7Summary | null
   log:      LogSummary | null
   ardo:     ArdoSummary | null
@@ -221,5 +223,6 @@ export function getModuleSummaries(): ModuleSummaries {
     solaris:  safe(() => deriveSolaris(loadSolarisState(), solarisToday())),
     pictures: safe(() => derivePictures(loadLib())),
     journal:  safe(() => deriveJournal(loadJournal(), journalToday())),
+    vigilante: safe(() => deriveVigilante(loadVigilante())),
   }
 }

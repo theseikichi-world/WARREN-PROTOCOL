@@ -172,10 +172,20 @@ describe('no habit is left homeless', () => {
   it('leaves habits that already belong somewhere', () => {
     expect(isOrphanHabit(habit('h', 'baseline'))).toBe(false)
     expect(isOrphanHabit(habit('h', 'chain'))).toBe(false)
-    expect(isOrphanHabit(habit('h', 'log'))).toBe(false)
   })
 
-  it('never touches a todo or a daily — those still belong to SCRAP-7', () => {
+  it('adopts a habit synced from L.O.G, which only looked like it had a home', () => {
+    // This assertion used to read `false`, on the reasoning that a task carrying
+    // a dream belonged to the dream. It didn't: PATHFINDER holds its own LogTask
+    // copy, while the ORBIT habit — the object that actually carries the score,
+    // the streak and the daily decay — was listed by nothing. ORBIT keeps only
+    // todos and due dailies, UPLINKS keeps chain routines, LIFE SUPPORT keeps
+    // baselines. Two of the three systems agreed it wasn't theirs and the third
+    // was never asked. Only 'chain' and 'baseline' are real homes.
+    expect(isOrphanHabit(habit('h', 'log'))).toBe(true)
+  })
+
+  it('never touches a todo or a daily — those still belong to ORBIT', () => {
     expect(isOrphanHabit(habit('t', 'manual', 'todo'))).toBe(false)
     expect(isOrphanHabit(habit('d', 'manual', 'daily'))).toBe(false)
   })

@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { t as tr } from '../../i18n'
 import { loadSettings } from '../../settings'
-import { loadLogState } from '../log/store'
+import { loadLogState, saveLogState, setDreamRead, setDreamInterview } from '../log/store'
 import type { Dream } from '../log/types'
 import { loadProgression, saveProgression, syncChain, commitDraft } from './store'
 import { blankDraft, type ChainDraft } from './draft'
-import { proposeChain } from './guide'
+import { askInterview, readDream, readToDraft, type Interview } from './spine'
+import { operatorRecord, recordBrief } from './record'
+import { loadState as loadScrap7 } from '../scrap7/store'
 import { ChainForge } from './ChainForge'
+import { InterviewPanel } from './InterviewPanel'
 
 // ─── Where an uplink comes from ───────────────────────────────────────────────
 // Dreams are unlimited; bandwidth is two. This is the narrowing, and it is a
@@ -23,6 +26,8 @@ const WARN = '#ff6b00'
 
 type Stage =
   | { kind: 'picker' }
+  | { kind: 'asking';    dream: Dream }
+  | { kind: 'interview'; dream: Dream; interview: Interview }
   | { kind: 'proposing'; dream: Dream }
   | { kind: 'forge';     draft: ChainDraft }
 
@@ -36,19 +41,72 @@ export function NewUplink({ accent, dream, onClose, onCommitted }: {
   const [stage, setStage] = useState<Stage>(() => dream ? { kind: 'proposing', dream } : { kind: 'picker' })
   const [error, setError] = useState('')
 
-  const propose = useCallback(async (d: Dream) => {
+  /** Real tracking, not self-report — what stuck, what is being dragged, what stopped. */
+  const record = useCallback(() => recordBrief(operatorRecord(loadScrap7().tasks)), [])
+
+  /** Stage two: the spine, written with everything the guide now knows. */
+  const propose = useCallback(async (d: Dream, interview: Interview | null) => {
     setError('')
     setStage({ kind: 'proposing', dream: d })
     try {
-      setStage({ kind: 'forge', draft: await proposeChain(d) })
+      const read = await readDream(d, { interview, record: record() })
+      // One read, both surfaces. The spine goes to the forge and the same read
+      // is persisted on the dream, so the shelf in UPLINKS holds the tasks,
+      // basics and proofs the protocol has no room for. They used to be separate
+      // calls that never met, and only one was connected to anything.
+      saveLogState(setDreamRead(loadLogState(), d.id, read))
+      window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'uplinks' } }))
+      // Habits already running, so a proposed "straight after reading aloud"
+      // resolves to that actual routine rather than staying as prose.
+      const habits = loadScrap7().tasks
+        .filter(t => t.taskType === 'habit')
+        .map(t => ({ id: t.id, text: t.text }))
+      setStage({ kind: 'forge', draft: readToDraft(read, d, habits) })
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setStage({ kind: 'picker' })
     }
-  }, [])
+  }, [record])
 
-  // Entering with a dream starts the call itself — the picker never renders
-  useEffect(() => { if (dream) void propose(dream) }, [dream, propose])
+  /**
+   * Stage one: the guide asks. It reads the dream and the record first, so the
+   * questions are about this dream specifically and can name a routine that
+   * already died rather than asking in general.
+   *
+   * A failure here is not fatal — the interview is what makes the spine sharper,
+   * not what makes it possible, so the plan is still written without it.
+   */
+  const begin = useCallback(async (d: Dream) => {
+    setError('')
+    setStage({ kind: 'asking', dream: d })
+    try {
+      const interview = await askInterview(d, record())
+      if (interview.questions.length === 0) { void propose(d, null); return }
+      saveLogState(setDreamInterview(loadLogState(), d.id, interview))
+      setStage({ kind: 'interview', dream: d, interview })
+    } catch {
+      void propose(d, null)
+    }
+  }, [propose, record])
+
+  /** Answers are kept before the spine is written, so a re-read never re-asks. */
+  const answered = useCallback((d: Dream, interview: Interview, answers: Record<string, string>) => {
+    const filled: Interview = { ...interview, answers, answeredAt: new Date().toISOString() }
+    saveLogState(setDreamInterview(loadLogState(), d.id, filled))
+    void propose(d, filled)
+  }, [propose])
+
+  // Entering with a dream starts the call itself — the picker never renders.
+  //
+  // Guarded by dream id rather than a bare effect: StrictMode double-invokes
+  // effects in development, and this one spends money. Same family as rule 37 —
+  // an effect that starts real work must not start it twice.
+  const started = useRef<string | null>(null)
+  useEffect(() => {
+    if (!dream || started.current === dream.id) return
+    started.current = dream.id
+    void begin(dream)
+  }, [dream, begin])
 
   const commit = (draft: ChainDraft) => {
     const res = commitDraft(loadProgression(), draft)
@@ -62,12 +120,18 @@ export function NewUplink({ accent, dream, onClose, onCommitted }: {
       onCommit={commit} onCancel={dream ? onClose : () => setStage({ kind: 'picker' })} />
   }
 
-  if (stage.kind === 'proposing') {
-    return <Working accent={accent} title={stage.dream.title} onCancel={onClose} />
+  if (stage.kind === 'interview') {
+    return <InterviewPanel interview={stage.interview} accent={accent} dreamTitle={stage.dream.title}
+      onDone={answers => answered(stage.dream, stage.interview, answers)}
+      onCancel={onClose} />
+  }
+
+  if (stage.kind === 'asking' || stage.kind === 'proposing') {
+    return <Working accent={accent} title={stage.dream.title} phase={stage.kind} onCancel={onClose} />
   }
 
   return <Picker accent={accent} error={error} onClose={onClose}
-    onDream={propose}
+    onDream={begin}
     onDraft={draft => setStage({ kind: 'forge', draft })} />
 }
 
@@ -121,8 +185,8 @@ function Picker({ accent, error, onClose, onDream, onDraft }: {
         <p style={section}>{tr('FROM A DREAM', 'ИЗ МЕЧТЫ')}</p>
         {dreams.length === 0 && (
           <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: DIM, lineHeight: 1.6 }}>
-            {tr('No dreams in PATHFINDER yet. Write one there first — the guide reads it to propose a chain.',
-                'В PATHFINDER пока нет мечт. Запишите одну там — гид прочтёт её и предложит цепь.')}
+            {tr('No dreams yet. Write one on the DREAMS tab first — the guide reads it to propose a protocol.',
+                'Мечт пока нет. Запишите одну во вкладке МЕЧТЫ — гид прочтёт её и предложит протокол.')}
           </p>
         )}
         {dreams.map(d => {
@@ -182,22 +246,32 @@ function Picker({ accent, error, onClose, onDream, onDraft }: {
 
 // ─── Waiting on the guide ─────────────────────────────────────────────────────
 
-function Working({ accent, title, onCancel }: { accent: string; title: string; onCancel: () => void }) {
+function Working({ accent, title, phase, onCancel }: {
+  accent: string
+  title:  string
+  /** Two calls happen before the forge, and they are waiting for different things. */
+  phase:  'asking' | 'proposing'
+  onCancel: () => void
+}) {
+  const asking = phase === 'asking'
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24,
       background: 'rgba(2,6,12,0.97)', backdropFilter: 'blur(6px)' }}>
       <p style={{ fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900, color: accent,
         letterSpacing: '0.2em', textShadow: `0 0 12px ${accent}`, animation: 'pulse 1.8s ease-in-out infinite' }}>
-        {tr('THE GUIDE IS READING', 'ГИД ЧИТАЕТ')}
+        {asking ? tr('THE GUIDE IS READING', 'ГИД ЧИТАЕТ') : tr('THE GUIDE IS PLANNING', 'ГИД СОСТАВЛЯЕТ ПЛАН')}
       </p>
       <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(230,242,255,0.8)', textAlign: 'center' }}>
         {title}
       </p>
       <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: DIM, textAlign: 'center', maxWidth: 280,
         lineHeight: 1.7 }}>
-        {tr('It proposes a chain. Nothing is created until you have read every node and committed it yourself.',
-            'Он предложит цепь. Ничего не создаётся, пока вы не прочтёте каждый узел и не подтвердите сами.')}
+        {asking
+          ? tr('It reads the dream and your record first, then asks for what it still needs. A plan written on guesses is a plan you cannot run.',
+               'Он читает мечту и вашу историю, затем спросит недостающее. План на догадках — план, который не выполнить.')
+          : tr('It lays out the acts, and fills the first one. Nothing is created until you have read every routine and committed it yourself.',
+               'Он разложит акты и заполнит первый. Ничего не создаётся, пока вы не прочтёте каждую рутину и не подтвердите сами.')}
       </p>
       <button onClick={onCancel} style={{ marginTop: 6, padding: '6px 14px', borderRadius: 6, cursor: 'pointer',
         background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', fontFamily: 'var(--font)',

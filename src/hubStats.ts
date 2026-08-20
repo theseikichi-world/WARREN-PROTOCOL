@@ -17,7 +17,7 @@ export interface HubStats {
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
-/** SCRAP-7: open todos + due dailies + due positive habits not yet done today. */
+/** ORBIT: open todos + due dailies + due positive habits not yet done today. */
 function scrap7TasksDue(): number {
   const tasks = loadScrap7().tasks
   const today = scrapToday()
@@ -58,7 +58,7 @@ function solarisCaloriesLeft(): number | null {
   return Math.max(0, target - consumed)
 }
 
-/** Best current streak across SCRAP-7 habits & dailies. */
+/** Best current streak across ORBIT habits & dailies. */
 function bestStreak(): number {
   return loadScrap7().tasks.reduce((m, t) => Math.max(m, t.streak ?? 0), 0)
 }

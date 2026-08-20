@@ -1,5 +1,5 @@
 // ─── XP, levels, and what a level opens ───────────────────────────────────────
-// One economy. SCRAP-7 shipped XP constants that were never wired to anything,
+// One economy. ORBIT shipped XP constants that were never wired to anything,
 // so this is the first and only progression layer — nothing to merge, nothing
 // running in parallel.
 //

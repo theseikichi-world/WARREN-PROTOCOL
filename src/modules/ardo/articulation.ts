@@ -14,9 +14,11 @@ export interface Twister {
 }
 
 export interface Exercise {
-  name:        string
-  instruction: string
-  seconds:     number
+  name:          string
+  nameRu:        string
+  instruction:   string
+  instructionRu: string
+  seconds:       number
 }
 
 // ─── Tongue twisters ──────────────────────────────────────────────────────────
@@ -60,13 +62,34 @@ export function warmupLang(lang: Language): 'RU' | 'EN' {
 }
 
 // ─── Articulation exercises (language-neutral, do them first) ──────────────────
+// The Russian is written the way a speech coach would say it, not word-for-word:
+// the vowel siren drills the Russian vowel row А–Э–И–О–У rather than a
+// transliterated A–E–I–O–U, because those are the shapes a Russian mouth makes.
 export const EXERCISES: Exercise[] = [
-  { name: 'Lip trills',      instruction: 'Blow air through loosely closed lips — a steady “brrrr”. Relaxes the lips and breath.', seconds: 15 },
-  { name: 'Tongue reaches',  instruction: 'Tongue out — reach for your nose, then your chin, then each corner. Slow and full.', seconds: 20 },
-  { name: 'Jaw circles',     instruction: 'Drop the jaw open and circle it slowly — five one way, five the other. Unclench.', seconds: 20 },
-  { name: 'Cheek puffs',     instruction: 'Puff both cheeks full, hold, then roll the air left ↔ right. Wakes the face.', seconds: 15 },
-  { name: 'Vowel sirens',    instruction: 'One breath, glide A–E–I–O–U, exaggerating each mouth shape to the max.', seconds: 20 },
-  { name: 'Pa-ta-ka ladder', instruction: 'Crisp and even: “pa-ta-ka, pa-ta-ka” — a little faster each round without slurring.', seconds: 20 },
+  { name: 'Lip trills',      nameRu: 'Вибрация губ',
+    instruction:   'Blow air through loosely closed lips — a steady “brrrr”. Relaxes the lips and breath.',
+    instructionRu: 'Продувайте воздух через расслабленно сомкнутые губы — ровное «бррр». Снимает зажим с губ и дыхания.',
+    seconds: 15 },
+  { name: 'Tongue reaches',  nameRu: 'Растяжка языка',
+    instruction:   'Tongue out — reach for your nose, then your chin, then each corner. Slow and full.',
+    instructionRu: 'Высуньте язык — тянитесь к носу, потом к подбородку, потом в каждый уголок рта. Медленно и до предела.',
+    seconds: 20 },
+  { name: 'Jaw circles',     nameRu: 'Круги челюстью',
+    instruction:   'Drop the jaw open and circle it slowly — five one way, five the other. Unclench.',
+    instructionRu: 'Опустите челюсть и медленно вращайте — пять кругов в одну сторону, пять в другую. Разожмите зажим.',
+    seconds: 20 },
+  { name: 'Cheek puffs',     nameRu: 'Надувание щёк',
+    instruction:   'Puff both cheeks full, hold, then roll the air left ↔ right. Wakes the face.',
+    instructionRu: 'Надуйте обе щёки, задержите, затем перекатывайте воздух слева ↔ направо. Будит лицо.',
+    seconds: 15 },
+  { name: 'Vowel sirens',    nameRu: 'Сирена на гласных',
+    instruction:   'One breath, glide A–E–I–O–U, exaggerating each mouth shape to the max.',
+    instructionRu: 'На одном выдохе тяните А–Э–И–О–У, доводя каждую артикуляцию до предела.',
+    seconds: 20 },
+  { name: 'Pa-ta-ka ladder', nameRu: 'Лесенка «па-та-ка»',
+    instruction:   'Crisp and even: “pa-ta-ka, pa-ta-ka” — a little faster each round without slurring.',
+    instructionRu: 'Чётко и ровно: «па-та-ка, па-та-ка» — с каждым кругом чуть быстрее, не смазывая.',
+    seconds: 20 },
 ]
 
 // ─── The wine-cork drill ──────────────────────────────────────────────────────
@@ -74,3 +97,7 @@ export const CORK_DRILL =
   'Place a wine cork (or a clean pen cap) between your front teeth and read the line aloud, ' +
   'over-articulating every sound. Then take it out and say the same line — your speech will ' +
   'feel instantly clearer and more precise.'
+
+export const CORK_DRILL_RU =
+  'Зажмите винную пробку (или чистый колпачок ручки) между передними зубами и прочитайте строку вслух, ' +
+  'утрируя каждый звук. Потом выньте её и произнесите ту же строку — речь сразу станет чище и точнее.'

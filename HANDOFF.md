@@ -3,7 +3,8 @@
 Pick-up document for a fresh session. Read this, then `WARREN_VISION.md` for the
 long-range plan. Together they should mean nothing has to be re-derived.
 
-**State as of the last commit:** `e80358e` · 366 tests · tsc/build/lint clean.
+**State as of the last commit:** `381e03e` + the SPINE rework and the INTERVIEW ·
+447 tests · tsc/lint clean. **Uncommitted.**
 
 ---
 
@@ -71,7 +72,12 @@ Flavour belongs on what you read once. (Internal identifiers still say
 | `layout.ts` | tech-tree geometry — depth from the graph, fixed grid, connector edges |
 | `seed.ts` | the ACTOR + CAPOEIRA chains — now the source of `TEMPLATES`, not installed |
 | `draft.ts` | `ChainDraft`, validation, `applyDraft`/`draftToGoal`, `TEMPLATES` |
-| `guide.ts` | dream → proposed chain: prompt + `normalizeProposal` (paranoid, pure) |
+| `spine.ts` | **the one read** — verdict + acts + typed shelf, `normalizeRead`, `readToDraft`, `deepenAct`, and `readFromAnalysis` for the migration |
+| `shelf.ts` | where a candidate is allowed to land: `deployState`, `applyToGoal` (pure), `deployToDay` |
+| `ShelfPanel.tsx` | the shelf, rendered under the tree in UPLINKS — reads the spine through `goal.sourceDreamId` |
+| `record.ts` | what actually happened last time: HOLDING / STRUGGLING / ABANDONED, and the brief built from them |
+| `anchor.ts` | when a routine happens — `after` / `at` / `period`, the derived label, and the parser for legacy prose |
+| `InterviewPanel.tsx` | the guide's dialogue — one question at a time, every one skippable |
 | `ChainForge.tsx` | the editor + live layout preview; nothing commits from anywhere else |
 | `NewUplink.tsx` | dream → guide call → forge. Reached from PATHFINDER only |
 | `lifeSupport.ts` | LIFE SUPPORT templates — the basics, no tree, no gating |
@@ -217,6 +223,101 @@ These were each decided deliberately; breaking one silently breaks the product.
     transform-based entrance can leave a residual translate and paint the
     element over its neighbour — exactly how the quest banner ended up on the
     module's header. Use `fadeInPlace` for anything in the flow.
+64. **PATHFINDER IS A TAB, NOT A MODULE.** Its entire job was to be the door an
+    uplink comes through (rule 17), and a door is not a room. Writing a dream and
+    planning the goal is one intention; splitting it across two modules meant
+    leaving the goal screen to write the thing the goal screen is about.
+    UPLINKS is now `DREAMS | CHARACTER | PRIMARY | SECONDARY`, and `DreamsPanel`
+    holds the list, the editor and PROMOTE. `guild.ts` has `log: built: false`,
+    `/log` REDIRECTS to `/uplinks` (old links, quest destinations and muscle
+    memory all still say /log), and `Log.tsx` stays on disk unrouted per rule 12.
+65. **A dream is title, description, PROMOTE. Nothing else.** The mission/task
+    hierarchy under a dream is retired: ACTS do that job, ordered, carrying
+    pressure, with a shelf wired to progression — which missions never were. Two
+    ways to break down the same dream was one too many.
+63. **Sound is synthesised, quiet, and never load-bearing.** `sound.ts` builds
+    every cue from oscillators at play time — no samples, because the CSP is
+    strict, a bundle this size should not carry audio, and a filtered blip IS
+    the sound. `MASTER_GAIN` is 0.12 and a test pins it low: if a cue is ever the
+    loudest thing in the room it is wrong. Rule 10 holds — a level-up is three
+    notes, not a fanfare; nothing applauds.
+    Every failure path degrades to SILENCE, never to an error: no Web Audio, a
+    refused context, a tab with no gesture yet. The context is created lazily on
+    the first cue, because browsers refuse one before a user gesture. Seven cues
+    (`tick check xp level quest deny open`) cover everything, so no call site
+    invents its own and the app cannot develop an accent it did not mean to.
+61. **ORBIT's list shows the WHOLE day, and every row says where it came from.**
+    Routines were excluded on the reasoning that BUILDS YOU lives in UPLINKS.
+    That line is right about *ownership* and wrong for a LIST: a day is not two
+    days, and being unable to see all of it made "did I finish today"
+    unanswerable — which is exactly the question PERFECT DAYS will be built on.
+    `taskSource` returns `uplink | basic | yours`, scored work sorts first, and
+    the badge names it. A row that looks scored and isn't would make the whole
+    day-state model a lie, so YOURS is labelled rather than left blank.
+62. **Tracking works from anywhere, through one path.** Rule 31 forbade tracking
+    outside UPLINKS because it would move a score without paying its XP. That was
+    a symptom of there being no shared path — UPLINKS knew to call `recordRun`
+    for a routine and `recordBaselineRun` for a basic and nothing else did.
+    `trackFromList` is that path: score, streak and XP move together wherever the
+    tap happened. A habit is done when today's DOSE is met (`habitDoneToday`),
+    never when a checkbox is ticked — it has no `completed` flag to read.
+58. **THE DAY ENDS AT BEDTIME.** `todayKey` has been wrong twice: it was the UTC
+    date while INFINITY-8 used the local one (they disagreed for hours a day),
+    and then the local calendar date, which still splits a night owl's evening in
+    half. With a bedtime of 02:00, work at 01:00 belongs to the day that started
+    yesterday morning. `sleepCutoffMin` only moves the boundary for a bedtime in
+    the small hours — rolling an 23:00 sleeper at 23:00 would close the day while
+    they were still awake in it. The deadline does not extend: miss it and the
+    day closed, which is the point.
+    Everything now goes through `todayKey` / `dateKey` / `shiftDateKey` /
+    `daysBetweenKeys` in `scrap7/types.ts`. No `toISOString().slice(0,10)`.
+59. **`unlockAll` opens every door and withholds nothing else.** Not everyone
+    wants to be levelled at, and the gates made the app hard to inspect. Quests,
+    XP and levels all still run — the switch is about doors. Settings → "Open
+    every module".
+60. **ORBIT is the module's only name in the UI.** The rename left ~57 visible
+    "SCRAP-7" strings behind. The lowercase `scrap7` ids, routes and storage keys
+    stay — renaming `scrap7_v4` would migrate the one thing that cannot be
+    re-earned.
+56. **An anchor is structured, and the scheduler obeys it.** The cue was one text
+    box carrying an event, a weekday set and a clock time — and *nothing read
+    it*. The timeline decided when to run a routine with `classifyPeriod`, which
+    regex-matches keywords in the **title**; the sentence you typed was drawn and
+    thrown away. `RoutineAnchor` is now `after` a habit / `at` a clock time /
+    `period` for ORBIT to place, plus `minutes`. All three produce a concrete
+    placement, so rule 18 is intact — "3x a week" is still unsayable. What went
+    is the typing.
+    `buildDay` lays an `at` routine as a fixed block before the gaps are cut, and
+    runs an `after` routine immediately with no break, beating circadian order —
+    that is what "straight after" means.
+57. **The cue is derived, never stored twice.** `anchorLabel` builds it at commit
+    from the anchor and the live habit name, so renaming a routine renames every
+    cue anchored to it. Prose survives only where there is no anchor: a protocol
+    written before this keeps its sentence untouched and stays committable
+    (`validateDraft` accepts an anchor OR prose), until it is edited.
+    `parseAnchor` reads the guide's prose — it still writes "straight after
+    morning coffee", because that is what a person says — and only anchors to a
+    habit that actually exists. A dangling anchor is worse than none.
+29b. **The panel never shows a stage ahead of your level.** Stage N is worked at
+    level N and every module it points at opens at level N or earlier — so a
+    stage shown early is an objective behind a locked door. `stageState` takes
+    the level and clamps to it. This is the mirror of the `moduleAccess` test:
+    there, no quest may point past its stage; here, no stage may be shown past
+    the level.
+    The two diverge when the quest ledger runs ahead of the XP bank, which a
+    **retune of quest rewards does to every existing save** — rewards bank once,
+    at the moment a quest clears. `questFloorXp` repairs it on load: banked XP is
+    raised to what the cleared quests actually pay. It is a floor and never a
+    deduction, because routine and baseline XP live in the same total.
+29a. **A UTILITY IS NEVER GATED.** A.R.D.O and PICTURES answer to no goal, feed
+    no gate and cost no bandwidth, so a level lock on them withheld a toy rather
+    than pacing anything — rule 8 in its own words. Their depth is still earned:
+    A.R.D.O's firmware tiers come from use. `moduleAccess.test.ts` pins it for
+    every built module whose `group` is `utility`.
+    The journal moved the other way — to **level 3**, with FIRST LIGHT moved to
+    stage 3 to match, because on day one there is nothing to write about yet.
+    Moving a quest between stages changes what its level costs (rule 21): setup
+    is two quests now, so they pay 80 and 40 against a flat level-1 cost of 120.
 29. **A module opens with a level, and never after the quest that needs it.**
     `moduleAccess.ts` holds the table; `moduleAccess.test.ts` pins the invariant
     that every quest destination is unlocked at or before that quest's stage.
@@ -280,6 +381,72 @@ These were each decided deliberately; breaking one silently breaks the product.
 43. **Vercel Blob caches for a year by default and the room's URL never
     changes.** `cacheControlMaxAge: 0` on the `put` is load-bearing — without it
     the other device reads a months-old record and the whole feature lies.
+44. **One read of a dream, and ONE BUTTON.** PATHFINDER's analysis and the guide
+    were separate AI calls over the same dream with separate schemas, and only
+    one was wired to progression: analysis output went to SCRAP-7 with origin
+    `'log'`, which `feedsProgression` says earns nothing. `spine.ts` is the
+    merge — one call returns the VERDICT, the ACTS and the SHELF.
+    **A dream card has exactly one button and it is PROMOTE.** PATHFINDER is the
+    inbox: you write there and choose there. The read, the forge, the tree and
+    the shelf are all on the far side of that one press, in UPLINKS. Writing a
+    dream and planning a goal is one intention, and it was split across two
+    screens and three presses.
+45. **A candidate's KIND is its destination.** `routine` → a chain node, `task` →
+    ORBIT as `'manual'`, `basic` → LIFE SUPPORT as `'baseline'`, `proof` → the
+    act's boss. Every card says where it lands before it is pressed, and the
+    origin is written explicitly rather than inferred. Nothing auto-deploys —
+    rule 1 still holds, and adding a routine to the tree is not installing it.
+46. **Routines are asked for ONE act at a time.** The slot cap is
+    `PRIMARY_MAX_NODES`, so a fifteen-node proposal was always ten things that
+    could not be started, drawn as though they were available — and it was both
+    the hardest shape for a model to get right and the hardest for a person to
+    review. Later acts are `planned`: they carry title, pressure and boss with
+    no routines until `deepenAct` fills them against real scores.
+47. **Exactly one act is CRITICAL.** `normalizeRead` demotes the rest to `high`.
+    A spine where everything is urgent has told you nothing; the critical act is
+    the bottleneck the verdict named, and it is where the goal is actually won.
+48. **Acts are BANDS in the diagram.** `layoutTree` used to know only about
+    prerequisite depth, so a multi-act protocol drew as one undifferentiated
+    grid — the structure was in the data and invisible, which is what made a
+    proposal read as shapeless. A cross-band prerequisite does not indent the
+    band below it; the edge between them is what shows the handover.
+49. **The diagram fits the panel; the panel is never resized to fit it.**
+    `fitScale` shrinks to the measured width, never grows, and stops at 0.6 —
+    past that the labels break rule 38, so the rare too-wide act scrolls instead.
+    Both the forge and the live tree use it, and they must keep matching: the
+    preview teaches nothing if it doesn't look like what it commits.
+50. **Nobody types a category.** The read infers it. Asking the operator to file
+    their own dream was making them do the machine's work; the field still
+    exists and still groups the list (rule 12).
+51. **The guide asks before it plans.** It used to know two things about the
+    person it was writing a life plan for — wake time and sleep time — and
+    invented everything else. `askInterview` generates 3-5 questions for THIS
+    dream, each carrying its own reason, and the answers are constraints in the
+    spine prompt. Every question is skippable and a skipped one contributes
+    nothing: an interview you cannot leave is a form in a costume. Answers
+    persist on the dream so a re-read never re-asks.
+52. **Ask for facts, never for identity.** Money, free hours, geography,
+    equipment, deadlines, what already failed. No class, no alignment, no "are
+    you structured or chaotic" — same reason chronotype comes from mid-sleep
+    rather than from asking (rule 18), and the same reason stats are derived
+    rather than allocated. People answer identity questions aspirationally.
+    A character-creation screen was considered and rejected: it is the most fun
+    thing to build here and the least load-bearing.
+53. **The record goes into every call.** `record.ts` sorts habits into HOLDING,
+    STRUGGLING and ABANDONED off score, streak, tracking history and last-tracked
+    date, and the brief tells the guide to anchor to what holds, avoid stacking on
+    what struggles, and never re-propose an abandoned routine in the same shape.
+    Without it the guide proposes a fourth morning routine after three have died.
+    Frozen routines are excluded — they stopped by decision, not by failure
+    (rule 3), and a never-tracked habit proves nothing either way.
+54. **An effect that spends money fires once.** StrictMode double-invokes effects
+    in development, so promoting a dream billed two interview calls. Guarded by
+    dream id in `NewUplink`. Same family as rule 37.
+55. **A habit is an orphan unless it is `chain` or `baseline`.** `isOrphanHabit`
+    tested for `'manual'` and so missed the worst case: a habit synced from
+    L.O.G carried `'log'`, was not adopted, was not in `orbitTasks` (todos and
+    due dailies only) and was in no chain. It decayed on every reset and was
+    drawn on no screen at all.
 
 ---
 
@@ -314,9 +481,12 @@ both and confirm it asks instead of picking.
 **1. The three streak defects** (asked about, not yet decided — see §6).
 Small fixes, but each changes what a number *means*, so pick before building.
 
-**2. Gamified PATHFINDER.** The user finds it messy — dream cards, the star-map
-framing and the mission/task hierarchy need a readable, game-like pass. It is
-the one module that has not had one.
+**2. Gamified PATHFINDER — the SPINE landed; the rest of the module has not.**
+The read, the shelf and the act bands are built (rules 44-51). Still messy and
+untouched: the dream cards themselves, the star-map framing, and the old
+mission/task hierarchy, which now sits *underneath* the shelf doing much the
+same job. Deciding whether missions survive at all is the next real question —
+an act with a shelf is very close to what a mission was for.
 
 **3. SOLARIS levels.** Surface the firmware tier as a visible level with the
 next unlock and its condition stated ("v1 Calories — 5 hydration days, you have
@@ -363,11 +533,30 @@ My read: (1) and (3) are plainly bugs; (2) is a judgement call about whether
 means, so decide before building.
 
 ### Real caveats
-- **The guide's proposal has never been read back against a real key.** The
-  prompt asks for 12-18 nodes with parallel branches and a capstone per chapter;
-  nothing has verified the model produces that shape. The normaliser guarantees
-  a proposal *opens*, not that it's a good tree. One real run on the desktop app
-  would settle it.
+- **No real model has answered `SPINE_SYSTEM` or `INTERVIEW_SYSTEM` yet.** The
+  code is thoroughly exercised: 35 spine tests, 16 shelf tests, 15 record tests,
+  and the whole promote flow was driven end to end in the browser against a
+  stubbed Anthropic endpoint — interview → answers → spine → forge, with the
+  request bodies read back to confirm the profile, the answers and the record all
+  arrive in the prompt. What is unproven is the *model's* behaviour on these
+  prompts. The one real data point is the OLD prompt, which asked for 3-5
+  chapters and returned 2; the new one asks for far less, which is the bet.
+- **Prompt quality is now the main open risk, not plumbing.** Two things to watch
+  on the first real run: whether the interview asks about a genuinely abandoned
+  routine by name when the record contains one, and whether the spine visibly
+  obeys a hard constraint (say "no budget") rather than proposing a coach anyway.
+  Both are prompt-instructed and neither can be unit-tested.
+- **`deepenAct` is written and wired to nothing.** The scoped per-act call and
+  its normaliser are tested, but no button calls it — a planned act is filled by
+  hand in the forge today. That is the next piece of the spine to land.
+- **`guide.ts` and `guide.test.ts` are dead** and still on disk; deleting them
+  was blocked by a permission prompt. Nothing imports either. `dreamBrief` and
+  `GRANTABLE_TOOLS` now live in `spine.ts`.
+- **The old mission/task hierarchy still exists under the shelf** and its
+  hand-added tasks still sync through `syncTaskToScrap7` with origin `'log'`,
+  so they still earn nothing. Habits made that way are now adopted into life
+  support on load (rule 51) rather than being invisible, but the overlap between
+  a MISSION and an ACT is unresolved — see the queue.
 - **The boot-log fix is verified by inspection, not by eye.** The duplicate-line
   bug (a timer chain restarting on every re-render) is fixed by a ref + stable
   deps + cleanup, and `boot.test.ts` pins the script's uniqueness — but the intro

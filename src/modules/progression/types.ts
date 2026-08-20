@@ -1,10 +1,12 @@
 // ─── PROGRESSION — uplinks, protocols, routines ───────────────────────────────
 // One goal drives everything. A goal (UPLINK) holds a chain (PROTOCOL) of
 // habit nodes (ROUTINES); each routine carries its automatism through a
-// SCRAP-7 habit, and unlocks the next once it's integrated enough.
+// ORBIT habit, and unlocks the next once it's integrated enough.
 //
 // Step 2 owns the goals and the two slots. The node graph below is already
 // modelled and seeded so the shape is fixed, but gating goes live in step 3.
+
+import type { RoutineAnchor } from './anchor'
 
 export type NodeTier = 1 | 2 | 3 | 4
 
@@ -28,7 +30,19 @@ export interface ChainNode {
   id:              string
   goalId:          string
   title:           string
-  cue:             string        // "after morning coffee" — anchor, required
+  /**
+   * The human-readable anchor. DERIVED from `anchor` when one is set — see
+   * `anchorLabel` — and kept as stored prose on protocols written before the
+   * anchor was structured, so nothing already running loses its cue.
+   */
+  cue:             string
+  /**
+   * When this routine actually happens, in a form the timeline can obey.
+   * Absent on legacy nodes; `parseAnchor` reads their prose on first edit.
+   */
+  anchor?:         RoutineAnchor
+  /** How long one run takes, in minutes. What lets ORBIT fit it into real free time. */
+  minutes?:        number
   tier:            NodeTier
   thresholds:      string[]      // ordered, ascending
   thresholdIndex:  number
@@ -36,7 +50,7 @@ export interface ChainNode {
   prerequisiteIds: string[]      // empty = chain entry point
   unlockedAt:      string | null
   toolId:          string | null // module this routine grants, if any
-  scrapTaskId:     string        // the SCRAP-7 habit carrying score/streak
+  scrapTaskId:     string        // the ORBIT habit carrying score/streak
 }
 
 /**
@@ -57,8 +71,25 @@ export interface Chapter {
   index:   number
   title:   string
   nodeIds: string[]
+  /**
+   * The act key from the spine that produced it. Titles are editable, so a
+   * shelf candidate that pointed at "Act 2" by name would follow the wrong act
+   * the moment one was renamed. Absent on chapters authored before the spine.
+   */
+  key?:    string
   /** null when no genuine external event exists — the chapter advances on gating alone. */
   boss:    Milestone | null
+  /**
+   * PLANNED — the act exists in the story but has no routines yet.
+   *
+   * The spine names every act up front so the shape of the goal is visible from
+   * day one, but only the opening act is filled: routines for act 4 are work
+   * that cannot be started, and drawing them as available is a lie the tree used
+   * to tell. A planned act is deepened when it is reached, with the operator's
+   * real automatism scores as context. It stops being planned the moment it
+   * holds a routine — see `draftChapters`.
+   */
+  planned?: boolean
 }
 
 /**

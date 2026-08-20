@@ -5,6 +5,7 @@ import {
   DEFAULT_CATEGORIES,
 } from './types'
 import { createExternalTask } from '../scrap7/store'
+import { readFromAnalysis, type DreamRead, type Interview } from '../progression/spine'
 
 export type { LogState }
 
@@ -56,7 +57,39 @@ export function moveDream(state: LogState, id: string, dir: -1 | 1): LogState {
   return { ...state, dreams: arr }
 }
 
-// ─── Persisted AI analysis ────────────────────────────────────────────────────
+// ─── The persisted read ───────────────────────────────────────────────────────
+
+export function setDreamRead(state: LogState, dreamId: string, read: DreamRead): LogState {
+  return { ...state, dreams: state.dreams.map(d => d.id === dreamId ? { ...d, read } : d) }
+}
+
+export function setDreamInterview(state: LogState, dreamId: string, interview: Interview): LogState {
+  return { ...state, dreams: state.dreams.map(d => d.id === dreamId ? { ...d, interview } : d) }
+}
+
+export function clearDreamRead(state: LogState, dreamId: string): LogState {
+  return { ...state, dreams: state.dreams.map(d => {
+    if (d.id !== dreamId) return d
+    const { read: _drop, ...rest } = d
+    return rest
+  })}
+}
+
+/**
+ * Convert a pre-spine analysis into a read, once, the first time the dream is
+ * opened. The old breakdown is dropped only after the new one is in hand, so a
+ * failure here costs nothing.
+ */
+export function migrateAnalyses(state: LogState): LogState {
+  if (!state.dreams.some(d => d.analysis && !d.read)) return state
+  return { ...state, dreams: state.dreams.map(d => {
+    if (!d.analysis || d.read) return d
+    const { analysis: _drop, ...rest } = d
+    return { ...rest, read: readFromAnalysis(d.analysis, d) }
+  })}
+}
+
+// ─── Persisted AI analysis (pre-spine) ────────────────────────────────────────
 
 export function setDreamAnalysis(state: LogState, dreamId: string, analysis: DreamAnalysis): LogState {
   return { ...state, dreams: state.dreams.map(d => d.id === dreamId ? { ...d, analysis } : d) }
@@ -191,7 +224,7 @@ export function addCategory(state: LogState, name: string): LogState {
   return { ...state, categories: [...state.categories, name] }
 }
 
-/** Push a constellation plan item straight into SCRAP-7 with its clean name. */
+/** Push a constellation plan item straight into ORBIT with its clean name. */
 export function syncPlanItemToScrap7(item: PlanItem): string {
   const pseudo: LogTask = {
     id: crypto.randomUUID(), text: item.text, type: item.type,
@@ -201,8 +234,8 @@ export function syncPlanItemToScrap7(item: PlanItem): string {
   return pseudo.id
 }
 
-// ─── SCRAP-7 sync ─────────────────────────────────────────────────────────────
-// All cross-module task creation goes through SCRAP-7's own createExternalTask,
+// ─── ORBIT sync ─────────────────────────────────────────────────────────────
+// All cross-module task creation goes through ORBIT's own createExternalTask,
 // so the Task shape (and its migrations) live in exactly one place.
 // Same ID is reused so completion state can be cross-referenced.
 

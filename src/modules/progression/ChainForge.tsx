@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { t as tr } from '../../i18n'
 import { TIER_META, type NodeTier } from './types'
-import { layoutTree, NODE_W, NODE_H } from './layout'
+import { layoutTree, fitScale, NODE_W, NODE_H, BAND_HEAD } from './layout'
 import {
-  draftToNodes, validateDraft, problemText, blankNode,
+  draftToNodes, validateDraft, problemText, blankNode, nodeId,
   type ChainDraft, type DraftNode,
 } from './draft'
-import { GRANTABLE_TOOLS } from './guide'
+import { GRANTABLE_TOOLS } from './spine'
+import { PERIODS, PERIOD_LABEL } from './anchor'
+import { loadState as loadScrap7 } from '../scrap7/store'
 
 // ─── THE FORGE — nothing commits until you've read every node ─────────────────
 // The guide proposes; this is where the proposal is argued with. A chain leaves
@@ -36,7 +38,7 @@ const label: React.CSSProperties = {
 
 export function ChainForge({ draft: initial, installedKeys, accent, busy, onCommit, onCancel }: {
   draft:         ChainDraft
-  /** Node keys already carrying a SCRAP-7 habit — they can be released, not erased. */
+  /** Node keys already carrying an ORBIT habit — they can be released, not erased. */
   installedKeys: Set<string>
   accent:        string
   busy?:         boolean
@@ -45,10 +47,37 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
 }) {
   const [draft, setDraft] = useState<ChainDraft>(initial)
   const [open, setOpen]   = useState<string | null>(null)
+  // What is already running, for stacking a new routine onto. Read once: the
+  // forge is a modal and nothing installs a habit while it is open.
+  const [habits] = useState<{ id: string; text: string }[]>(() => {
+    try {
+      return loadScrap7().tasks.filter(t => t.taskType === 'habit').map(t => ({ id: t.id, text: t.text }))
+    } catch { return [] }
+  })
 
   const problems = useMemo(() => validateDraft(draft), [draft])
-  const nodes    = useMemo(() => draftToNodes(draft), [draft])
-  const tree     = useMemo(() => layoutTree(nodes), [nodes])
+  // The preview graph and the band grouping must agree on ids, so both derive
+  // from the same goal id — 'draft' for a new uplink, the real one when editing.
+  const previewId = draft.goalId ?? 'draft'
+  const nodes     = useMemo(() => draftToNodes(draft, previewId), [draft, previewId])
+  // Acts are bands. Passing the chapters through is what turns a flat depth grid
+  // — the thing that made a proposal read as shapeless — into the story's shape.
+  const tree      = useMemo(() => layoutTree(nodes, draft.chapters.map(c => ({
+    title: c.title, planned: c.planned === true, nodeIds: c.keys.map(k => nodeId(previewId, k)),
+  }))), [nodes, draft.chapters, previewId])
+
+  // Fit the diagram to the panel instead of asking for a wider window.
+  const frame = useRef<HTMLDivElement>(null)
+  const [avail, setAvail] = useState(0)
+  useLayoutEffect(() => { setAvail(frame.current?.clientWidth ?? 0) }, [])
+  useEffect(() => {
+    const el = frame.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => setAvail(el.clientWidth))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const scale = fitScale(tree.width, avail)
   // Layout reorders nodes by depth, so map the laid-out ids back to draft keys
   const keyOfId  = useMemo(
     () => new Map(nodes.map((n, i) => [n.id, draft.nodes[i].key])), [nodes, draft.nodes])
@@ -160,9 +189,33 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
       {/* Body */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px' }}>
         {/* The graph as it stands — the same layout the live tree uses */}
+        <div ref={frame} style={{ marginBottom: 14 }}>
         {nodes.length > 0 && (
-          <div style={{ overflowX: 'auto', marginBottom: 14 }}>
-            <div style={{ position: 'relative', width: tree.width, height: tree.height, margin: '0 auto' }}>
+          <div style={{ height: tree.height * scale, marginBottom: 4,
+            overflowX: 'auto', overflowY: 'hidden' }}>
+            <div style={{ position: 'relative', width: tree.width, height: tree.height,
+              transform: `scale(${scale})`, transformOrigin: 'top left',
+              margin: scale === 1 ? '0 auto' : undefined }}>
+              {/* Act bands — the structure that was in the data and never drawn */}
+              {tree.bands.filter(b => b.title).map(b => (
+                <div key={b.index} style={{
+                  position: 'absolute', left: 0, top: b.y, width: tree.width, height: b.height,
+                  borderTop: `1px solid ${b.planned ? 'rgba(148,163,184,0.18)' : `${accent}22`}`,
+                  pointerEvents: 'none',
+                }}>
+                  <span style={{ position: 'absolute', top: 4, left: 0, fontFamily: 'var(--font)',
+                    fontSize: 11, fontWeight: 800, letterSpacing: '0.18em',
+                    color: b.planned ? 'rgba(148,163,184,0.5)' : `${accent}85` }}>
+                    {String(b.index + 1).padStart(2, '0')} {b.title.toUpperCase()}
+                  </span>
+                  {b.planned && (
+                    <span style={{ position: 'absolute', top: BAND_HEAD + 8, left: 0, fontFamily: 'var(--font)',
+                      fontSize: 10.5, color: 'rgba(148,163,184,0.4)', letterSpacing: '0.08em' }}>
+                      ⊘ {tr('PLANNED — filled when you reach it', 'ЗАПЛАНИРОВАН — заполнится, когда дойдёте')}
+                    </span>
+                  )}
+                </div>
+              ))}
               <svg width={tree.width} height={tree.height} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
                 {tree.edges.map(({ from, to }, i) => {
                   const midY = (from.y + NODE_H / 2 + to.y - NODE_H / 2) / 2
@@ -207,11 +260,13 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
             </div>
           </div>
         )}
+        </div>
 
         {/* Chapters and their routines */}
         {draft.chapters.map((chapter, ci) => (
           <div key={ci} style={{ marginBottom: 12, padding: '9px 10px', borderRadius: 9,
-            background: 'rgba(8,16,28,0.5)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            background: chapter.planned ? 'rgba(8,16,28,0.28)' : 'rgba(8,16,28,0.5)',
+            border: `1px solid ${chapter.planned ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.07)'}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, color: `${accent}80`,
                 letterSpacing: '0.16em', flexShrink: 0 }}>{String(ci + 1).padStart(2, '0')}</span>
@@ -233,11 +288,23 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
             </div>
 
             <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {/* A planned act is empty on purpose. It says so rather than
+                  looking like a chapter someone forgot to fill in — and the
+                  ROUTINE button below still works, because refusing to let you
+                  write it yourself would be worse than the wall it replaces. */}
+              {chapter.planned && chapter.keys.length === 0 && (
+                <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, lineHeight: 1.6,
+                  color: 'rgba(148,163,184,0.5)', padding: '2px 0 4px' }}>
+                  ⊘ {tr('PLANNED — its routines are written when you reach this act, against the scores you actually have by then.',
+                        'ЗАПЛАНИРОВАН — рутины пишутся, когда вы дойдёте до акта, с учётом реальных показателей.')}
+                </p>
+              )}
               {chapter.keys.map(key => {
                 const node = draft.nodes.find(n => n.key === key)
                 if (!node) return null
                 return (
                   <NodeEditor key={key} node={node} draft={draft} accent={accent}
+                    habits={habits}
                     chapterIndex={ci}
                     live={installedKeys.has(key)}
                     flagged={badKeys.has(key)}
@@ -318,13 +385,116 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
 
 // ─── One routine ──────────────────────────────────────────────────────────────
 
+// ─── The anchor ───────────────────────────────────────────────────────────────
+// Three taps, no typing. It used to be one text box carrying an event, a weekday
+// set and a clock time at once — and nothing read it: the timeline guessed when
+// to schedule a routine by regex-matching keywords in its title, so the sentence
+// you wrote was displayed and then thrown away.
+//
+// Each of the three produces a placement ORBIT can actually obey, which is why
+// rule 18 survives intact: "3x a week" is still unsayable here.
+
+function AnchorPicker({ node, accent, habits, onPatch }: {
+  node:   DraftNode
+  accent: string
+  /** Habits already running, for stacking onto. */
+  habits: { id: string; text: string }[]
+  onPatch: (patch: Partial<DraftNode>) => void
+}) {
+  const kind = node.anchor?.kind ?? (node.cue.trim() ? 'legacy' : 'none')
+
+  const tab = (on: boolean): React.CSSProperties => ({
+    flex: 1, padding: '6px 4px', borderRadius: 6, cursor: 'pointer',
+    fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.1em',
+    color: on ? '#02121a' : DIM,
+    background: on ? accent : 'transparent',
+    border: `1px solid ${on ? accent : 'rgba(255,255,255,0.12)'}`,
+  })
+
+  return (
+    <div>
+      <p style={label}>{tr('ANCHOR — when it happens', 'ЯКОРЬ — когда происходит')}</p>
+
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button style={tab(kind === 'after')} disabled={habits.length === 0}
+          title={habits.length === 0 ? tr('nothing running to stack onto yet', 'пока не на что опереться') : ''}
+          onClick={() => onPatch({ anchor: { kind: 'after', taskId: habits[0]?.id ?? '' } })}>
+          {tr('AFTER', 'ПОСЛЕ')}
+        </button>
+        <button style={tab(kind === 'at')}
+          onClick={() => onPatch({ anchor: { kind: 'at', time: '19:00' } })}>
+          {tr('AT', 'В')}
+        </button>
+        <button style={tab(kind === 'period')}
+          onClick={() => onPatch({ anchor: { kind: 'period', period: 'morning' } })}>
+          {tr('ORBIT PLACES IT', 'ORBIT РЕШИТ')}
+        </button>
+      </div>
+
+      {node.anchor?.kind === 'after' && (
+        <select value={node.anchor.taskId} style={{ ...field, marginTop: 5, appearance: 'none' }}
+          onChange={e => onPatch({ anchor: { kind: 'after', taskId: e.target.value } })}>
+          {habits.map(h => <option key={h.id} value={h.id}>{h.text}</option>)}
+        </select>
+      )}
+
+      {node.anchor?.kind === 'at' && (
+        <input type="time" value={node.anchor.time} style={{ ...field, marginTop: 5 }}
+          onChange={e => onPatch({ anchor: { kind: 'at', time: e.target.value } })} />
+      )}
+
+      {node.anchor?.kind === 'period' && (
+        <>
+          <div style={{ display: 'flex', gap: 4, marginTop: 5, flexWrap: 'wrap' }}>
+            {PERIODS.map(p => {
+              const on = node.anchor?.kind === 'period' && node.anchor.period === p
+              return (
+                <button key={p} onClick={() => onPatch({ anchor: { kind: 'period', period: p } })}
+                  title={PERIOD_LABEL[p].hint}
+                  style={{ ...tab(on), flex: 'none', padding: '5px 9px', fontSize: 10 }}>
+                  {tr(PERIOD_LABEL[p].en, PERIOD_LABEL[p].ru)}
+                </button>
+              )
+            })}
+          </div>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: DIM, marginTop: 4, lineHeight: 1.5 }}>
+            {tr('ORBIT finds the slot in your real free time, around meals and work.',
+                'ORBIT найдёт место в реальном свободном времени, вокруг еды и работы.')}
+          </p>
+        </>
+      )}
+
+      {/* A protocol written before anchors were structured keeps its sentence
+          until it is replaced — nothing already running loses its cue. */}
+      {kind === 'legacy' && (
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: DIM, marginTop: 5, lineHeight: 1.5 }}>
+          ▸ {node.cue} — {tr('pick one above to let ORBIT schedule it', 'выберите выше, чтобы ORBIT его расставил')}
+        </p>
+      )}
+      {kind === 'none' && (
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${WARN}c0`, marginTop: 5 }}>
+          ⊘ {tr('a routine without an anchor does not automate', 'рутина без якоря не автоматизируется')}
+        </p>
+      )}
+
+      <div style={{ marginTop: 7 }}>
+        <p style={label}>{tr('HOW LONG — minutes', 'СКОЛЬКО — минут')}</p>
+        <input type="number" min={5} max={240} step={5} value={node.minutes ?? 20}
+          onChange={e => onPatch({ minutes: Math.max(5, Math.min(240, Number(e.target.value) || 20)) })}
+          style={{ ...field, width: 90 }} />
+      </div>
+    </div>
+  )
+}
+
 function NodeEditor({
-  node, draft, accent, chapterIndex, live, flagged, expanded,
+  node, draft, accent, habits, chapterIndex, live, flagged, expanded,
   onToggle, onPatch, onRemove, onMoveChapter, onTogglePrereq, onRung, onAddRung, onRemoveRung,
 }: {
   node:           DraftNode
   draft:          ChainDraft
   accent:         string
+  habits:         { id: string; text: string }[]
   chapterIndex:   number
   live:           boolean
   flagged:        boolean
@@ -375,12 +545,7 @@ function NodeEditor({
               placeholder={tr('Reading aloud', 'Чтение вслух')} style={field} />
           </div>
 
-          <div>
-            <p style={label}>{tr('ANCHOR — what it comes after', 'ЯКОРЬ — после чего')}</p>
-            <input value={node.cue} onChange={e => onPatch({ cue: e.target.value })}
-              placeholder={tr('after morning coffee · Mon/Wed/Fri 19:00', 'после утреннего кофе · Пн/Ср/Пт 19:00')}
-              style={{ ...field, borderColor: node.cue.trim() ? 'rgba(255,255,255,0.09)' : `${WARN}50` }} />
-          </div>
+          <AnchorPicker node={node} accent={accent} habits={habits} onPatch={onPatch} />
 
           <div>
             <p style={label}>{tr('COMPLEXITY', 'СЛОЖНОСТЬ')}</p>

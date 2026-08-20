@@ -10,25 +10,39 @@
 // holds back is a whole instrument you have no use for yet, never a feature of
 // something you're already using — SOLARIS still opens complete at v0.
 //
-// The starting three are never locked: you need somewhere to put a dream,
-// somewhere to see your character, and somewhere to write.
+// What you start with is the goal loop and nothing else: somewhere to put a
+// dream, and the character sheet it hangs off.
+//
+// UTILITIES ARE NEVER GATED. A.R.D.O and PICTURES answer to no goal, feed no
+// gate and cost no slot — locking them was withholding a toy, not pacing a
+// system, and rule 8 says gate complexity rather than utility. Their own depth
+// still comes from use: A.R.D.O's tiers are earned, not opened by a level.
 
 import type { ModuleId } from './guild'
 
 export const MODULE_LEVEL: Partial<Record<ModuleId, number>> = {
   log:    1,   // PATHFINDER — stage 1 sends you here for CHOOSE ONE DREAM
-  hoot:   1,   // JOURNAL    — stage 1 sends you here for FIRST LIGHT
   pomu:   2,   // SOLARIS    — stage 2 sends you here for WATER DISCIPLINE
   scrap7: 2,   // ORBIT      — the day's obligations, once the character exists
-  foxy:   3,   // PICTURES   — a utility, and the first thing that is purely yours
-  ardo:   4,   // A.R.D.O    — stage 4 sends you here for COMMIT TO MEMORY
+  hoot:   3,   // JOURNAL    — stage 3, once there is something worth recording
 }
 
 /** The level a module opens at. Anything unlisted is open from the start. */
 export const moduleLevel = (id: ModuleId): number => MODULE_LEVEL[id] ?? 1
 
-export const moduleUnlocked = (id: ModuleId, level: number): boolean =>
-  level >= moduleLevel(id)
+/**
+ * `unlockAll` opens every door regardless of level.
+ *
+ * Two reasons it exists. Not everyone wants to be levelled at — someone who
+ * came for a habit tracker should not have to earn the kitchen. And the gates
+ * make the app hard to inspect: checking a change in A.R.D.O should not require
+ * playing to level 4 first.
+ *
+ * It withholds nothing else. Quests still run, XP still accrues, the character
+ * still levels — the switch is about doors, not about progress.
+ */
+export const moduleUnlocked = (id: ModuleId, level: number, unlockAll = false): boolean =>
+  unlockAll || level >= moduleLevel(id)
 
 /** Modules this level just opened — for the level-up screen to name them. */
 export const modulesOpenedAt = (level: number): ModuleId[] =>

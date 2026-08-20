@@ -118,6 +118,19 @@ likely, or does it just decorate it?
   - **my recommendation:** treat it as a *side quest you accept*, cap it hard,
     and never make it competitive with routine work. If it pays more than a
     month of showing up, the incentive is wrong.
+- **[PLANNED] SYSTEM CHIPS — the first thing you spend.** A chip is earned, held,
+  and used once. The opening one is granted at **level 5**, which is also how the
+  feature introduces itself; after that they come from sustained work — seven
+  PERFECT DAYS buys a PROCRASTINATION CHIP, following the kitchen's plan buys a
+  CHEAT MEAL.
+  - A chip buys a **guilt-free** day: the streak survives, the record still says
+    plainly that you took one. Rule 9 already draws this line — an item may
+    protect a streak, never advance integration.
+  - What a chip must never do is **fake a green day**. The moment a chip can
+    manufacture a perfect day, every number downstream of perfect days becomes a
+    number about chips.
+  - Earning them from perfect days is what makes the day-state model pay off
+    twice: it defines the streak AND it is the currency.
 - **[OPEN QUESTION] Character class at onboarding.** Fun, but risks boxing you
   in. Better as a *title you earn* from what you actually did — "you have been
   drilling and journaling; the guild calls that a Method Actor."

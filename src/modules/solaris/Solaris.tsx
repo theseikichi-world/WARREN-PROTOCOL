@@ -1499,7 +1499,7 @@ Analyse coverage and suggest a shopping list.`
                             marginTop: 2 }}>{s.why}</p>}
                         </div>
                         <button disabled={on} onClick={() => { onAddItem(s.item); setAdded(p => new Set(p).add(s.item)) }}
-                          title="Add to pantry" style={{
+                          title={tr('Add to pantry', 'Добавить в кладовую')} style={{
                           fontFamily: 'var(--font)', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
                           padding: '4px 8px', borderRadius: 5, flexShrink: 0, cursor: on ? 'default' : 'pointer',
                           color: on ? '#4ade80' : `${NEON}b0`,

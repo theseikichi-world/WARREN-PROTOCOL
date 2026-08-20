@@ -74,7 +74,7 @@ export const QUEST_DESTINATIONS: Record<QuestTarget, QuestDestination> = {
   journal:  { path: '/journal', label: 'OPEN THE JOURNAL',   ru: 'ОТКРЫТЬ ЖУРНАЛ' },
   solaris:  { path: '/solaris', label: 'OPEN THE KITCHEN',   ru: 'ОТКРЫТЬ КУХНЮ' },
   ardo:     { path: '/ardo',    label: 'OPEN A.R.D.O',       ru: 'ОТКРЫТЬ A.R.D.O' },
-  log:      { path: '/log',     label: 'OPEN PATHFINDER',    ru: 'ОТКРЫТЬ PATHFINDER' },
+  log:      { path: '/uplinks', label: 'OPEN YOUR DREAMS',   ru: 'ОТКРЫТЬ МЕЧТЫ' },
   // Both land on UPLINKS, but they want different tabs and different advice
   character:{ path: '/uplinks', label: 'OPEN YOUR CHARACTER',ru: 'ОТКРЫТЬ ПЕРСОНАЖА' },
   uplink:   { path: '/uplinks', label: 'OPEN YOUR PROTOCOL', ru: 'ОТКРЫТЬ ПРОТОКОЛ' },
@@ -95,32 +95,29 @@ export function questCta(quest: Quest, hasUplink: boolean): { en: string; ru: st
 /**
  * The line, in stages.
  *
- * STAGE 1 is setup, and it is a checklist rather than a sequence: four things
- * that together mean the app has a person in it. Until all four are done there
+ * STAGE 1 is setup, and it is a checklist rather than a sequence: the things
+ * that together mean the app has a person in it. Until they are all done there
  * is no level 2, however much XP has been banked — the character isn't finished.
  */
 export const QUEST_LINE: Quest[] = [
   // ── Stage 1 — SETUP ─────────────────────────────────────────────────────────
-  // Order matters even though the stage is a checklist: the dream comes first
-  // because everything else is in service of it, then the floor it stands on,
-  // then somewhere to put what you notice along the way.
+  // Two things, and only two: the dream everything else serves, and the floor it
+  // stands on. Writing a journal entry used to live here and was moved to stage 3
+  // — on day one there is nothing to write about yet.
   {
     id: 's1-first-uplink', stage: 1, title: 'CHOOSE ONE DREAM', ru: 'ВЫБЕРИТЕ ОДНУ МЕЧТУ',
-    brief:   'Write a dream in PATHFINDER, then promote it to an uplink. Dreams are unlimited; bandwidth is two. That choice is the whole game.',
-    briefRu: 'Запишите мечту в PATHFINDER и продвиньте её в канал. Мечты бесконечны, каналов — два. Этот выбор и есть вся игра.',
-    objective: { kind: 'uplink.created', need: 1 }, target: 'log', xp: 60,
+    brief:   'Write a dream on the DREAMS tab, then promote it. Dreams are unlimited; bandwidth is two. That choice is the whole game.',
+    briefRu: 'Запишите мечту во вкладке МЕЧТЫ и продвиньте её. Мечты бесконечны, каналов — два. Этот выбор и есть вся игра.',
+    // Setup is two quests now rather than three, so each carries more. Level 1
+    // costs a flat 120 and rule 21 says a stage pays exactly what its level
+    // costs — finish setup, fill the bar, level up, one motion.
+    objective: { kind: 'uplink.created', need: 1 }, target: 'log', spotlight: 'new-uplink', xp: 80,
   },
   {
     id: 's1-life-support', stage: 1, title: 'KEEP YOURSELF RUNNING', ru: 'ОБЕСПЕЧЬТЕ СЕБЯ',
     brief:   'Add one life support habit on the character tab. The floor first — goals built on no sleep do not hold.',
     briefRu: 'Добавьте одну привычку жизнеобеспечения во вкладке персонажа. Сначала основа — цели на бессоннице не держатся.',
-    objective: { kind: 'baseline.installed', need: 1 }, target: 'character', spotlight: 'life-support', xp: 30,
-  },
-  {
-    id: 's1-first-light', stage: 1, title: 'FIRST LIGHT', ru: 'ПЕРВЫЙ СВЕТ',
-    brief:   'Open the log and write one entry. Any length. The owl reads everything and judges none of it.',
-    briefRu: 'Откройте журнал и напишите одну запись. Любой длины. Сова читает всё и не судит.',
-    objective: { kind: 'journal.entries', need: 1 }, target: 'journal', xp: 40, grants: 'journal',
+    objective: { kind: 'baseline.installed', need: 1 }, target: 'character', spotlight: 'life-support', xp: 40,
   },
 
   // ── Stage 2 — THE FIRST ROUTINE ─────────────────────────────────────────────
@@ -143,6 +140,16 @@ export const QUEST_LINE: Quest[] = [
     brief:   'Run your routines seven times. Not seven days — seven runs. Missing one is allowed.',
     briefRu: 'Выполните рутины семь раз. Не семь дней — семь выполнений. Пропуск допустим.',
     objective: { kind: 'routine.runs', need: 7 }, target: 'uplink', xp: 100,
+  },
+  // The journal arrives here rather than in setup. Asked to write on day one you
+  // have nothing to write about yet; by stage 3 there are routines behind you and
+  // an entry has something to be about. Its module opens at this level to match —
+  // a quest may never point at a locked door (rule 29).
+  {
+    id: 's1-first-light', stage: 3, title: 'FIRST LIGHT', ru: 'ПЕРВЫЙ СВЕТ',
+    brief:   'Open the log and write one entry. Any length. The owl reads everything and judges none of it.',
+    briefRu: 'Откройте журнал и напишите одну запись. Любой длины. Сова читает всё и не судит.',
+    objective: { kind: 'journal.entries', need: 1 }, target: 'journal', xp: 40, grants: 'journal',
   },
   {
     id: 'q5-record', stage: 3, title: 'THE RECORD', ru: 'ЛЕТОПИСЬ',
@@ -217,6 +224,20 @@ export function questProgress(quest: Quest, ctx: QuestContext): QuestProgress {
 const ledger = (completed: Record<string, string> | undefined): Record<string, string> => completed ?? {}
 
 /** Every quest in the stage is cleared. An empty stage counts as cleared. */
+/**
+ * The XP the completed stages have already paid for — a floor under the bank.
+ *
+ * Quest rewards are banked once, at the moment the quest clears. Retune a
+ * quest's XP afterwards and every existing save is short by the difference,
+ * which is how a finished stage 1 ended up 20 short of the level it is supposed
+ * to pay for exactly (rule 21). Routine and baseline XP land in the same total,
+ * so this can only ever be a floor: it is never a reason to take XP away.
+ */
+export function questFloorXp(completed: Record<string, string> | undefined): number {
+  const done = ledger(completed)
+  return QUEST_LINE.filter(q => !!done[q.id]).reduce((sum, q) => sum + q.xp, 0)
+}
+
 export function stageComplete(stage: number, completed: Record<string, string> | undefined): boolean {
   const done = ledger(completed)
   return stageQuests(stage).every(q => !!done[q.id])
@@ -239,16 +260,35 @@ export function activeQuest(completed: Record<string, string> | undefined): Ques
   return stageQuests(stage).find(q => !done[q.id]) ?? null
 }
 
-/** What the current stage still wants, and how far through it you are. */
-export function stageState(completed: Record<string, string> | undefined, ctx: QuestContext): {
+/**
+ * What the current stage still wants, and how far through it you are.
+ *
+ * `level` caps which stage may be shown, and that cap is load-bearing rather
+ * than cosmetic. Stage N's quests are meant to be worked at level N, and every
+ * module they point at opens at level N or earlier (rule 29) — so showing
+ * stage N to someone still at level N-1 hands them an objective behind a locked
+ * door. That is exactly what happened when the quest ledger ran ahead of the XP
+ * bank: setup was complete, so the active stage was 2, but the bank was short of
+ * level 2, and WATER DISCIPLINE pointed at a kitchen that had not opened.
+ *
+ * The two can only diverge when banked XP no longer matches what the stages pay
+ * — a retune of quest rewards does that to an existing save. `questFloorXp`
+ * repairs the bank; this makes the panel safe even before it does.
+ */
+export function stageState(
+  completed: Record<string, string> | undefined,
+  ctx: QuestContext,
+  level = Infinity,
+): {
   stage:     number | null
   quests:    QuestProgress[]
   cleared:   number
   total:     number
   remaining: Quest[]
 } {
-  const stage = activeStage(completed)
-  const done  = ledger(completed)
+  const active = activeStage(completed)
+  const stage  = active === null ? null : Math.min(active, Math.max(1, level))
+  const done   = ledger(completed)
   if (stage === null) return { stage: null, quests: [], cleared: 0, total: 0, remaining: [] }
 
   const quests = stageQuests(stage).map(q => questProgress(q, ctx))

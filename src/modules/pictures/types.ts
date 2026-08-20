@@ -33,6 +33,8 @@ export interface MediaItem {
   air_schedule: string | null
   episodes_in_season: number | null
   episodes_released: number | null
+  /** Minutes: one episode for a series, the whole film for a movie. Null = unknown. */
+  runtime: number | null
   imdb_id: string | null
   rating: number                              // 0–5 stars
   progress: { season: number; episode: number }

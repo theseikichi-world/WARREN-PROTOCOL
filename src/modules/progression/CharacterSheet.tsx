@@ -1,4 +1,4 @@
-import { t as tr } from '../../i18n'
+import { t as tr, plural } from '../../i18n'
 import type { Task } from '../scrap7/types'
 import type { Goal } from './types'
 import { gatedLevel, nextGate, GATES, isUnlockedAt } from './xp'
@@ -83,7 +83,7 @@ export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life }: {
           <p style={{ fontFamily: 'var(--font)', fontSize: 10, lineHeight: 1.6, marginTop: 7,
             color: `${GOLD}c0` }}>
             ⊘ {tr(`LEVEL ${lvl.level + 1} HELD — ${lvl.blocking.length} objective${lvl.blocking.length === 1 ? '' : 's'} left on the hub`,
-                  `УРОВЕНЬ ${lvl.level + 1} ЗАКРЫТ — осталось задач: ${lvl.blocking.length}, они на хабе`)}
+                  `УРОВЕНЬ ${lvl.level + 1} ЗАКРЫТ — на хабе ${lvl.blocking.length} ${plural(lvl.blocking.length, 'задача', 'задачи', 'задач')}`)}
           </p>
         )}
       </div>

@@ -4,6 +4,8 @@
  * to a Windows reset or uninstall. This gives the user a one-file lifeboat.
  */
 
+import { t as tr } from './i18n'
+
 export interface BackupFile {
   app:        'warren'
   version:    number
@@ -131,11 +133,14 @@ export function resetProgress(): number {
 /** Validate + restore a backup. Returns the number of keys restored. Throws on bad input. */
 export function importBackup(json: string): number {
   let parsed: unknown
-  try { parsed = JSON.parse(json) } catch { throw new Error('Not valid JSON.') }
+  try { parsed = JSON.parse(json) } catch {
+    throw new Error(tr('Not valid JSON.', 'Это не JSON.'))
+  }
 
   const b = parsed as Partial<BackupFile>
   if (b.app !== 'warren' || typeof b.data !== 'object' || b.data === null) {
-    throw new Error('Not a Warren backup file (missing app/data fields).')
+    throw new Error(tr('Not a Warren backup file (missing app/data fields).',
+                       'Это не резервная копия Warren — нет полей app/data.'))
   }
 
   // Each value must be a string that itself parses as JSON (our stores all are)

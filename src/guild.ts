@@ -1,6 +1,6 @@
 export type ModuleId =
   | 'scrap7' | 'ravi' | 'log' | 'ardo' | 'hoot' | 'otty'
-  | 'pomu' | 'kana' | 'maggi' | 'pavi' | 'ferri' | 'foxy'
+  | 'pomu' | 'kana' | 'maggi' | 'pavi' | 'ferri' | 'foxy' | 'vigil'
 
 /**
  * INSTRUMENTS are granted by routines, deepen by use and feed the character
@@ -39,7 +39,7 @@ export const GUILD: GuildMember[] = [
   {
     id: 'log', group: 'instrument' as GuildGroup,   name: 'PATHFINDER',    unit: 'PTH', animal: 'Beaver',
     role: 'Dreams & Routes',
-    neon: '#c084fc', path: '/log', free: false, built: true,
+    neon: '#c084fc', path: '/log', free: false, built: false,
     desc: 'Finds the route from where you are to what you want. Every dream mapped, every dot connected.',
   },
   {
@@ -95,5 +95,11 @@ export const GUILD: GuildMember[] = [
     role: 'Casting Bot',
     neon: '#ff0033', path: '/ferri', free: false, built: false,
     desc: 'Never sleeps. Finds the casting call before anyone else.',
+  },
+  {
+    id: 'vigil', group: 'utility' as GuildGroup, name: 'VIGILANTE',     unit: 'VGL', animal: 'Bat',
+    role: 'Static Protocol',
+    neon: '#6366f1', path: '/vigilante', free: false, built: true,
+    desc: 'Time under tension. Holds a position and counts the seconds — the training runs here, the habit lives in UPLINKS.',
   },
 ]

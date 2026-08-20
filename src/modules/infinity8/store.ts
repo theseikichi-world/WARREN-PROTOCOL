@@ -1,11 +1,13 @@
 // ─── INFINITY-8 PROTOCOL — the day that flows endlessly ───────────────────────
 // A conductor module: it owns no tasks. It reads commitments from the other
-// modules (SCRAP-7 today), lays them on a timeline around fixed life-anchors,
+// modules (ORBIT today), lays them on a timeline around fixed life-anchors,
 // and surfaces the FREE TIME that's left — so you can relax without guilt.
 
 import { loadState as loadScrap7, todayScheduledDailies } from '../scrap7/store'
+import { loadProgression } from '../progression/store'
+import { anchorPeriod, type RoutineAnchor } from '../progression/anchor'
 import { loadSettings } from '../../settings'
-import type { Task } from '../scrap7/types'
+import { todayKey, type Task } from '../scrap7/types'
 import { t as tr } from '../../i18n'
 
 // ─── State ──────────────────────────────────────────────────────────────────
@@ -119,10 +121,12 @@ export function saveInf8State(s: Inf8State): void {
   localStorage.setItem(KEY, JSON.stringify(s))
 }
 
-export function todayKey(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+/**
+ * Re-exported rather than redefined. This module had its own local-time version
+ * while ORBIT stamped its records in UTC, and the two silently disagreed for
+ * several hours a day — see `todayKey` in scrap7/types.ts.
+ */
+export { todayKey } from '../scrap7/types'
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 
@@ -140,7 +144,7 @@ export const fmtDur = (min: number): string => {
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
-// ─── Commitments (read from SCRAP-7) ──────────────────────────────────────────
+// ─── Commitments (read from ORBIT) ──────────────────────────────────────────
 
 export type CommitKind = 'daily' | 'habit'
 
@@ -151,11 +155,37 @@ export interface Commitment {
   done:     boolean
   duration: number   // minutes
   period:   Period
+  /** Pinned to a clock time — laid out as a fixed block, like an event. */
+  at?:      string
+  /** Runs immediately after this task id — habit stacking, with no break between. */
+  after?:   string
 }
 
 const DEFAULT_DURATION = 20
 
-/** Today's schedulable commitments from SCRAP-7: due dailies + positive habits. */
+/**
+ * Every installed routine's anchor, keyed by the habit id it carries.
+ *
+ * This is the join the timeline never had: a protocol says when its routines
+ * happen, and until now the day-planner could not see it and guessed from the
+ * title instead. Defensive because it reads another module's storage — a
+ * malformed protocol must not take the day plan down with it.
+ */
+function routineAnchors(): Map<string, { anchor?: RoutineAnchor; minutes?: number }> {
+  const out = new Map<string, { anchor?: RoutineAnchor; minutes?: number }>()
+  try {
+    for (const goal of loadProgression().goals) {
+      if (goal.slot === 'archived') continue
+      for (const n of goal.nodes) {
+        if (!n.scrapTaskId) continue
+        out.set(n.scrapTaskId, { anchor: n.anchor, minutes: n.minutes })
+      }
+    }
+  } catch { /* a broken protocol still gets a day */ }
+  return out
+}
+
+/** Today's schedulable commitments from ORBIT: due dailies + positive habits. */
 export function getTodayCommitments(durations: Record<string, number>, prefTime: Record<string, Period> = {}): Commitment[] {
   let tasks: Task[] = []
   try { tasks = loadScrap7().tasks } catch { tasks = [] }
@@ -176,14 +206,24 @@ export function getTodayCommitments(durations: Record<string, number>, prefTime:
     return s.type === 'weekly' && !!s.days?.includes(dayKey)
   }
 
+  // A routine's own anchor beats every guess. `classifyPeriod` reads keywords
+  // out of the title, which is what the timeline did when nothing else told it
+  // when a routine should happen — see `progression/anchor.ts`.
+  const anchors = routineAnchors()
+
   const habits = tasks
     .filter(t => t.taskType === 'habit' && (t.direction ?? 'positive') === 'positive' && dueToday(t))
-    .map<Commitment>(t => ({
-      id: t.id, label: t.text, kind: 'habit',
-      done: t.lastTrackedDate === today && (t.todayCount ?? 0) >= (t.target ?? 1),
-      duration: durations[t.id] ?? DEFAULT_DURATION,
-      period: period(t.id, t.text),
-    }))
+    .map<Commitment>(t => {
+      const a = anchors.get(t.id)
+      return {
+        id: t.id, label: t.text, kind: 'habit',
+        done: t.lastTrackedDate === today && (t.todayCount ?? 0) >= (t.target ?? 1),
+        duration: durations[t.id] ?? a?.minutes ?? DEFAULT_DURATION,
+        period: prefTime[t.id] ?? anchorPeriod(a?.anchor) ?? classifyPeriod(t.text),
+        ...(a?.anchor?.kind === 'at'    ? { at: a.anchor.time } : {}),
+        ...(a?.anchor?.kind === 'after' ? { after: a.anchor.taskId } : {}),
+      }
+    })
 
   return [...dailies, ...habits]
 }
@@ -254,6 +294,16 @@ export function buildDay(anchors: Anchors, commitments: Commitment[], events: Da
   if (anchors.workEnabled) addFixed('work', tr('Work', 'Работа'), toMin(anchors.workStart), toMin(anchors.workEnd))
   for (const ev of events) addFixed('event', ev.title, toMin(ev.start), toMin(ev.end), { id: ev.id })
 
+  // A routine pinned to a clock time is as fixed as a meeting — that is what
+  // choosing AT means. Laying it down before the gaps are cut is what stops the
+  // filler from putting something else there.
+  const pinned = commitments.filter(c => c.at && !(nowMin != null && c.done))
+  for (const c of pinned) {
+    const start = toMin(c.at!)
+    addFixed('commitment', c.label, start, start + c.duration,
+      { taskId: c.id, commitKind: c.kind, done: c.done })
+  }
+
   fixed.sort((a, b) => a.start - b.start)
 
   // Free gaps between fixed blocks within [wake, sleep]
@@ -269,9 +319,21 @@ export function buildDay(anchors: Anchors, commitments: Commitment[], events: Da
   const live     = nowMin != null
   const planFrom = live ? Math.max(wake, within(nowMin)) : wake
 
-  // Circadian order: morning-suited first → they land in earlier gaps
+  // Circadian order: morning-suited first → they land in earlier gaps.
+  // Pinned ones are already laid down above and must not be queued twice.
+  const pinnedIds = new Set(pinned.map(c => c.id))
   const queue = (live ? commitments.filter(c => !c.done) : [...commitments])
+    .filter(c => !pinnedIds.has(c.id))
     .sort((a, b) => PERIOD_RANK[a.period] - PERIOD_RANK[b.period])
+
+  /** Anything stacked onto `id`, in order — habit stacking, no break between. */
+  const followersOf = (id: string): Commitment[] => {
+    const out: Commitment[] = []
+    for (let i = queue.length - 1; i >= 0; i--) {
+      if (queue[i].after === id) out.unshift(...queue.splice(i, 1))
+    }
+    return out
+  }
 
   const placed: Block[] = []
   for (const g of gaps) {
@@ -297,6 +359,19 @@ export function buildDay(anchors: Anchors, commitments: Commitment[], events: Da
       })
       c += cm.duration
       placedInGap++
+
+      // Whatever is stacked onto it runs immediately, with no break — that is
+      // the whole point of "straight after". Anything that will not fit in this
+      // gap goes back to the queue and is placed normally later.
+      for (const f of followersOf(cm.id)) {
+        if (c + f.duration > g.end) { queue.unshift(f); continue }
+        placed.push({
+          id: `c-${f.id}`, kind: 'commitment', label: f.label,
+          start: c, end: c + f.duration, done: f.done, taskId: f.id, commitKind: f.kind,
+        })
+        c += f.duration
+        placedInGap++
+      }
     }
     if (c < g.end) placed.push({ id: `free-${g.start}`, kind: 'free', label: tr('Free', 'Свободно'), start: c, end: g.end })
   }

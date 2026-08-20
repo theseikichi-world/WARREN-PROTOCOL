@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Language } from './types'
-import { suggestTwisters, warmupLang, EXERCISES, CORK_DRILL, type Twister } from './articulation'
+import { suggestTwisters, warmupLang, EXERCISES, CORK_DRILL, CORK_DRILL_RU, type Twister } from './articulation'
 import { t as tr } from '../../i18n'
 
 const NEON     = '#00e4a0'
@@ -82,10 +82,10 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11.5, color: NEON }}>{on ? '✓' : ''}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 700,
-                      color: 'rgba(225,255,245,0.9)' }}>{ex.name}
+                      color: 'rgba(225,255,245,0.9)' }}>{tr(ex.name, ex.nameRu)}
                       <span style={{ fontSize: 11.5, color: `${NEON}60`, marginLeft: 6 }}>~{ex.seconds}{tr('s', 'с')}</span></span>
                     <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: 'rgba(148,163,184,0.6)',
-                      lineHeight: 1.5, marginTop: 2 }}>{ex.instruction}</p>
+                      lineHeight: 1.5, marginTop: 2 }}>{tr(ex.instruction, ex.instructionRu)}</p>
                   </div>
                 </button>
               )
@@ -127,7 +127,7 @@ export default function ArticulationWorkout({ initialLang, onStartLearn, onClose
                   background: 'rgba(192,57,43,0.1)', border: `1px solid ${WINE}55` }}>
                   <span style={{ fontSize: 15.5 }}>🍷</span>
                   <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(255,225,220,0.85)',
-                    lineHeight: 1.5 }}>{CORK_DRILL}</p>
+                    lineHeight: 1.5 }}>{tr(CORK_DRILL, CORK_DRILL_RU)}</p>
                 </div>
               )}
 

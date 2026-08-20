@@ -1,17 +1,21 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   HABIT_MILESTONES, MILESTONE_LABELS, WEEKDAYS,
+  todayKey, dateKey,
   type Task, type TaskType, type Priority, type Direction,
 } from './types'
 import {
   loadState, saveState, applyDailyReset, createTask,
   completeTask, uncompleteTask, deleteTask, updateTask, addMessage, addCategory,
-  fuzzyMatchTask, pickableCategories, orbitTasks, type NewTaskData,
+  duplicateTask, pickableCategories, orbitTasks, habitDoneToday, taskSource, SOURCE_LABEL,
+  type NewTaskData,
 } from './store'
 import { parseCommand } from './commandParser'
 import Infinity8 from '../infinity8/Infinity8'
 import { t as tr } from '../../i18n'
 import { loadSettings, aiJson, modelForTask, type AiMessage } from '../../settings'
+import { trackFromList } from '../progression/store'
+import { play as playCue } from '../../sound'
 
 const NEON = '#00b4ff'
 
@@ -77,16 +81,16 @@ function StreakCalendar({ tasks }: { tasks: Task[] }) {
   for (const t of tasks) {
     for (const d of [...(t.completionHistory ?? []), ...(t.trackingHistory ?? [])]) allDone.add(d)
   }
-  const todayStr = today.toISOString().slice(0, 10)
+  const todayStr = todayKey()
 
   return (
     <div style={{ display: 'flex', gap: 3, padding: '8px 14px 6px', alignItems: 'center',
       borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
       {days.map((d, i) => {
-        const key     = d.toISOString().slice(0, 10)
+        const key     = dateKey(d)
         const done    = allDone.has(key)
         const isToday = key === todayStr
-        const prevKey = i > 0 ? days[i - 1].toISOString().slice(0, 10) : null
+        const prevKey = i > 0 ? dateKey(days[i - 1]) : null
         const connected = done && prevKey && allDone.has(prevKey)
         return (
           <div key={key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
@@ -195,7 +199,11 @@ function TaskRow({ task, onCheck, onDelete, onEdit, onPomo }: {
   const editRef = useRef<HTMLInputElement>(null)
   useEffect(() => { if (editing) editRef.current?.focus() }, [editing])
 
-  const done = task.completed
+  // A habit is done when today's dose is met, not when a checkbox is ticked —
+  // it has no `completed` flag to read.
+  const done   = task.taskType === 'habit' ? habitDoneToday(task) : task.completed
+  const source = taskSource(task)
+  const src    = SOURCE_LABEL[source]
   const PC: Record<string, string> = { trivial: '#6b7280', easy: '#22c55e', medium: '#f59e0b', hard: '#ef4444' }
   const priorityColor = task.priority ? (PC[task.priority] ?? '#6b7280') : undefined
 
@@ -242,6 +250,23 @@ function TaskRow({ task, onCheck, onDelete, onEdit, onPomo }: {
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 3 }}>
+          {/* Where this row came from, and therefore whether it counts. A task
+              you added yourself is listed with everything else and says plainly
+              that it is yours — a row that looks scored and isn't would make
+              "did I finish today" a lie. */}
+          <span title={source === 'yours'
+            ? tr('Yours — does not affect scores or streaks', 'Ваше — не влияет на счёт и серии')
+            : source === 'uplink'
+              ? tr('A routine from your protocol — scored and streaked', 'Рутина протокола — со счётом и серией')
+              : tr('Life support — a basic', 'Жизнеобеспечение — базовое')}
+            style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+              letterSpacing: '0.1em', color: src.color, flexShrink: 0,
+              padding: '1px 5px', borderRadius: 3,
+              border: `1px solid ${source === 'yours' ? 'rgba(148,163,184,0.22)' : `${src.color}35`}`,
+              background: source === 'yours' ? 'transparent' : `${src.color}0e`,
+              opacity: done ? 0.4 : 1 }}>
+            {tr(src.en, src.ru)}
+          </span>
           {task.taskType === 'daily' && (schedWeekly
             ? <span title={tr('Scheduled days', 'Дни по расписанию')} style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
                 fontWeight: 700, color: '#22d3ee', letterSpacing: '0.06em',
@@ -510,7 +535,9 @@ type ViewKey = 'tasks' | 'chat'
 export default function Scrap7() {
   const [state, setState]   = useState(() => applyDailyReset(loadState()))
   const [view, setView]     = useState<ViewKey>('tasks')
-  const [timeline, setTimeline] = useState(false)
+  // The day on a line is the first thing you should see — the list is the same
+  // day with the shape taken out of it.
+  const [timeline, setTimeline] = useState(true)
   const [input, setInput]   = useState('')
   const [thinking, setThinking] = useState(false)
   const [lastReply, setLastReply] = useState<string | null>(null)
@@ -518,6 +545,13 @@ export default function Scrap7() {
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [milestone, setMilestone] = useState<typeof HABIT_MILESTONES[0] | null>(null)
   const [pomo, setPomo]     = useState<PomoState | null>(null)
+  /** Rule 27: real work gets a visible beat. Tracking a routine here pays XP. */
+  const [flashMsg, setFlashMsg] = useState<string | null>(null)
+  useEffect(() => {
+    if (!flashMsg) return
+    const id = setTimeout(() => setFlashMsg(null), 2200)
+    return () => clearTimeout(id)        // rule 37: an effect with a timer cancels it
+  }, [flashMsg])
   const pomoRef             = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const chatEndRef = useRef<HTMLDivElement>(null)
@@ -640,9 +674,11 @@ export default function Scrap7() {
           ? (t.type as TaskType) : 'todo'
         if (text.length < 2) continue
 
-        // Client-side dedup safety net (model is also told, but double-check)
-        const dup = fuzzyMatchTask(s.tasks, text)
-        if (dup) { skipped.push(dup.text); continue }
+        // Client-side dedup safety net (model is also told, but double-check).
+        // Strict on purpose — see duplicateTask. A loose match here throws the
+        // task away after the model has already said it added it.
+        const dup = duplicateTask(s.tasks, text)
+        if (dup) { skipped.push(`"${text}" — already here as "${dup.text}"`); continue }
 
         const isWeekly = type !== 'todo' && t.schedule === 'weekly' && (t.days?.length ?? 0) > 0
         s = createTask(s, {
@@ -657,10 +693,17 @@ export default function Scrap7() {
         created.push(`${text} → ${type}`)
       }
 
-      let reply = parsedAI.reply?.trim() || (created.length || deleted.length ? 'Done.' : 'Standing by.')
+      // The model writes its reply before we run dedup, so it says "Added X"
+      // whether or not X survived. When nothing was created, that sentence is
+      // false — drop it and report what actually happened instead. The screen
+      // never claims work it did not do.
+      const nothingLanded = parsedAI.tasks.length > 0 && created.length === 0 && deleted.length === 0
+      let reply = nothingLanded
+        ? tr('Nothing added.', 'Ничего не добавлено.')
+        : (parsedAI.reply?.trim() || (created.length || deleted.length ? 'Done.' : 'Standing by.'))
       const notes: string[] = []
       if (deleted.length) notes.push(`Removed: ${deleted.join(', ')}.`)
-      if (skipped.length) notes.push(`Already had: ${skipped.join(', ')}.`)
+      if (skipped.length) notes.push(`${skipped.join('; ')}.`)
       if (notes.length) reply += `\n(${notes.join(' ')})`
       s = addMessage(s, { text: reply, sender: 'scrap7' })
       persist(s)
@@ -681,8 +724,30 @@ export default function Scrap7() {
   // all: the line is BUILDS YOU vs JUST HAS TO HAPPEN, and the first half lives
   // in UPLINKS where it is scored, streaked and capped.
   const shownTasks  = orbitTasks(state.tasks)
-  const activeTasks = shownTasks.filter(t => !t.completed)
-  const doneTasks   = shownTasks.filter(t => t.completed)
+  const isDone      = (t: Task) => t.taskType === 'habit' ? habitDoneToday(t) : t.completed
+  const activeTasks = shownTasks.filter(t => !isDone(t))
+  const doneTasks   = shownTasks.filter(t => isDone(t))
+
+  /**
+   * Checking a row off. A habit is TRACKED rather than completed, and it goes
+   * through the shared path so the score, the streak and the XP move together —
+   * tracking that moved a score without paying its XP is the reason this was
+   * once forbidden outside UPLINKS.
+   */
+  const checkOff = (t: Task) => {
+    if (t.taskType === 'habit') {
+      if (isDone(t)) return                     // a dose already met is not undone here
+      const { gained, levelUp } = trackFromList(t.id)
+      setState(loadState())
+      if (levelUp)      { setFlashMsg(tr(`LEVEL ${levelUp}`, `УРОВЕНЬ ${levelUp}`)); playCue('level') }
+      else if (gained)  { setFlashMsg(`+${gained} XP`); playCue('xp') }
+      else              playCue('check')
+      return
+    }
+    // Un-checking is the same gesture undone, so it gets the lighter cue.
+    playCue(t.completed ? 'tick' : 'check')
+    persist(t.completed ? uncompleteTask(state, t.id) : completeTask(state, t.id))
+  }
 
   return (
     <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
@@ -690,6 +755,17 @@ export default function Scrap7() {
       {/* The week strip moved to the hub. Showing "on track" above the list of
           things you have not done yet was the wrong room for it — this screen is
           for working, the hub is for seeing where you stand. */}
+
+      {/* What the last tap was worth. Informational, per rule 10 — it reports
+          the delta, it does not congratulate. Timer cleaned up on unmount. */}
+      {flashMsg && (
+        <div style={{ position: 'absolute', top: 10, right: 14, zIndex: 40,
+          padding: '5px 11px', borderRadius: 7, animation: 'fadeInPlace 0.18s ease',
+          background: 'rgba(4,10,18,0.96)', border: `1px solid ${NEON}45` }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800,
+            letterSpacing: '0.12em', color: NEON }}>{flashMsg}</p>
+        </div>
+      )}
 
       {/* Pomodoro bar */}
       {pomo && (
@@ -719,7 +795,7 @@ export default function Scrap7() {
             a second module, only the other half of this one. */}
         {view === 'tasks' && (
           <div style={{ display: 'flex', flex: 1 }}>
-            {([false, true] as const).map(tl => {
+            {([true, false] as const).map(tl => {
               const on = timeline === tl
               return (
                 <button key={String(tl)} onClick={() => setTimeline(tl)} style={{
@@ -786,7 +862,7 @@ export default function Scrap7() {
 
           {activeTasks.map(t => (
             <TaskRow key={t.id} task={t}
-              onCheck={() => t.completed ? persist(uncompleteTask(state, t.id)) : persist(completeTask(state, t.id))}
+              onCheck={() => checkOff(t)}
               onDelete={() => persist(deleteTask(state, t.id))}
               onEdit={() => setEditingTask(t)}
               onPomo={() => setPomo({ taskId: t.id, taskName: t.text, minutes: 25, remaining: 25*60, running: true, phase: 'work', sessions: 0 })}
@@ -803,7 +879,7 @@ export default function Scrap7() {
               </div>
               {doneTasks.map(t => (
                 <TaskRow key={t.id} task={t}
-                  onCheck={() => persist(uncompleteTask(state, t.id))}
+                  onCheck={() => checkOff(t)}
                   onDelete={() => persist(deleteTask(state, t.id))}
                   onEdit={() => setEditingTask(t)}
                   onPomo={() => setPomo({ taskId: t.id, taskName: t.text, minutes: 25, remaining: 25*60, running: true, phase: 'work', sessions: 0 })}

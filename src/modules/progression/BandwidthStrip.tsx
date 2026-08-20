@@ -65,7 +65,7 @@ export function BandwidthStrip() {
                 `Сейчас один слот, второй — на уровне ${SECOND_SLOT_LEVEL}. Цель начинается с мечты — запишите её в PATHFINDER и продвиньте.`)}
         </p>
         <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: CYAN, marginTop: 8 }}>
-          {t('OPEN PATHFINDER', 'ОТКРЫТЬ PATHFINDER')} →
+          {t('OPEN YOUR DREAMS', 'ОТКРЫТЬ МЕЧТЫ')} →
         </p>
       </button>
     )

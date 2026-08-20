@@ -50,6 +50,72 @@ const anchors: Anchors = {
 const mk = (id: string, label: string, duration: number, period: Commitment['period'] = 'midday'): Commitment =>
   ({ id, label, kind: 'daily', done: false, duration, period })
 
+describe('buildDay honours a routine anchor', () => {
+  // The timeline used to decide when a routine happened by regex-matching
+  // keywords in its title. These are the three answers a protocol can now give
+  // it instead — see progression/anchor.ts.
+
+  it('pins an AT routine to its clock time, not to the first free gap', () => {
+    const plan = buildDay(anchors, [
+      { ...mk('early', 'Filler', 60) },
+      { ...mk('pinned', 'Evening lines', 30), at: '21:00' },
+    ], [])
+    const pinned = plan.blocks.find(b => b.taskId === 'pinned')!
+    expect(pinned.start).toBe(toMin('21:00'))
+    expect(pinned.end).toBe(toMin('21:00') + 30)
+  })
+
+  it('never schedules anything else over a pinned routine', () => {
+    const plan = buildDay(anchors, [
+      { ...mk('pinned', 'Evening lines', 30), at: '21:00' },
+      ...Array.from({ length: 6 }, (_, i) => mk(`f${i}`, 'Filler', 120)),
+    ], [])
+    const pinned = plan.blocks.find(b => b.taskId === 'pinned')!
+    const clash = plan.blocks.filter(b =>
+      b.taskId && b.taskId !== 'pinned' && b.start < pinned.end && b.end > pinned.start)
+    expect(clash).toEqual([])
+  })
+
+  it('places it exactly once', () => {
+    const plan = buildDay(anchors, [{ ...mk('pinned', 'Lines', 30), at: '21:00' }], [])
+    expect(plan.blocks.filter(b => b.taskId === 'pinned')).toHaveLength(1)
+  })
+
+  it('runs an AFTER routine immediately, with no break between', () => {
+    const plan = buildDay({ ...anchors, breakMin: 15 }, [
+      mk('base', 'Reading aloud', 30),
+      { ...mk('stacked', 'Record a take', 20), after: 'base' },
+    ], [])
+    const base    = plan.blocks.find(b => b.taskId === 'base')!
+    const stacked = plan.blocks.find(b => b.taskId === 'stacked')!
+    expect(stacked.start).toBe(base.end)     // touching, no rest block between
+  })
+
+  it('stacks onto its anchor even when the circadian order disagrees', () => {
+    // The follower says "evening", which would normally sort it to the very end.
+    // Stacking wins: that is what "straight after" means.
+    const plan = buildDay(anchors, [
+      mk('base', 'Reading aloud', 30, 'morning'),
+      { ...mk('stacked', 'Record a take', 20, 'evening'), after: 'base' },
+      mk('other', 'Something midday', 30, 'midday'),
+    ], [])
+    const base    = plan.blocks.find(b => b.taskId === 'base')!
+    const stacked = plan.blocks.find(b => b.taskId === 'stacked')!
+    expect(stacked.start).toBe(base.end)
+  })
+
+  it('still places a follower whose anchor is nowhere', () => {
+    // A dangling anchor must not make the routine vanish from the day.
+    const plan = buildDay(anchors, [{ ...mk('orphan', 'Stacked on a ghost', 20), after: 'gone' }], [])
+    expect(plan.blocks.find(b => b.taskId === 'orphan')).toBeDefined()
+  })
+
+  it('leaves a plain commitment exactly where it was', () => {
+    const plan = buildDay(anchors, [mk('a', 'Task', 30)], [])
+    expect(plan.blocks.find(b => b.taskId === 'a')!.start).toBe(toMin('08:00'))
+  })
+})
+
 describe('buildDay scheduler', () => {
   it('places a single commitment at wake, fills the rest as free', () => {
     const plan = buildDay(anchors, [mk('a', 'Task', 30)], [])

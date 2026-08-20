@@ -1,0 +1,473 @@
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { t as tr, plural } from '../../i18n'
+import { play as playCue } from '../../sound'
+import {
+  HOLD_BY_ID, buildPhases, specHoldSeconds, clock, type Phase,
+} from './types'
+import {
+  loadState, saveState, setSpec, setMusicName, logSession,
+  clampSec, clampRounds, clampLeadIn, deriveVigilante,
+} from './store'
+import { LocalAudio } from './music'
+import { saveTrack, loadTrack } from './musicStore'
+
+const NEON = '#6366f1'
+const WORK = '#ff3b6b'   // the hold — the colour you learn to dread
+const REST = '#4ade80'
+const READY = '#facc15'
+
+/** Running clock. Driven off wall time, never off a decrementing counter. */
+interface Running {
+  index:     number      // which phase
+  endsAt:    number      // epoch ms this phase ends
+  remaining: number      // seconds left, for display
+  paused:    boolean
+  startedAt: string
+  heldSec:   number      // time under tension banked so far
+  doneWork:  number
+}
+
+export default function Vigilante() {
+  const [state, setState] = useState(() => loadState())
+  const [run, setRun]     = useState<Running | null>(null)
+  const [music, setMusic] = useState<LocalAudio | null>(null)
+  const [flash, setFlash] = useState('')
+
+  const tick = useRef<ReturnType<typeof setInterval> | null>(null)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  /** Mirrors `run` so the interval can check expiry without a state updater. */
+  const runRef = useRef<Running | null>(null)
+
+  const phases = useMemo(() => buildPhases(state.spec), [state.spec])
+  const summary = useMemo(() => deriveVigilante(state), [state])
+
+  const persist = useCallback((s: typeof state) => { saveState(s); setState(s) }, [])
+
+  // The one fact both the soundtrack and the clock care about. Depending on
+  // `run` directly would re-fire these effects on every tick — tearing down and
+  // rebuilding the interval four times a second — so the boolean is the dep.
+  const ticking = run !== null && !run.paused
+  useEffect(() => { runRef.current = run }, [run])
+
+  // The track you picked last time. Kept in IndexedDB because it is binary and
+  // localStorage is shared with every other module's data.
+  useEffect(() => {
+    let alive = true
+    void loadTrack().then(t => {
+      if (alive && t) setMusic(new LocalAudio(t.blob, t.name))
+    })
+    return () => { alive = false }
+  }, [])
+
+  /**
+   * Hold the screen awake while a session runs.
+   *
+   * Without this the module does not work on a phone at all: nothing touches the
+   * screen during a 30-second wall sit, so it locks, and a locked screen
+   * suspends both the interval and the audio. Desktop benefits too — a
+   * screensaver mid-plank is the same bug.
+   */
+  useEffect(() => {
+    if (!ticking) return
+    let sentinel: WakeLockSentinel | null = null
+    let released = false
+    void navigator.wakeLock?.request('screen')
+      .then(s => { if (released) void s.release(); else sentinel = s })
+      .catch(() => { /* unsupported or denied — the timer still runs */ })
+    return () => { released = true; void sentinel?.release().catch(() => {}) }
+  }, [ticking])
+
+  /**
+   * Leaving the app pauses the session.
+   *
+   * A backgrounded page has its timers throttled and its audio suspended, so
+   * letting the clock "keep running" would credit you with a hold you were not
+   * in. Pausing is the honest reading: you stopped training when you switched
+   * away. Rule 10 — the record reports, it does not flatter.
+   */
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState !== 'hidden') return
+      const cur = runRef.current
+      if (!cur || cur.paused) return
+      const next = { ...cur, paused: true, remaining: (cur.endsAt - Date.now()) / 1000 }
+      runRef.current = next
+      setRun(next)
+    }
+    document.addEventListener('visibilitychange', onHide)
+    return () => document.removeEventListener('visibilitychange', onHide)
+  }, [])
+
+  // Music follows the clock. One effect, so there is exactly one place that can
+  // ever get the "is it playing?" question wrong.
+  useEffect(() => {
+    if (!music) return
+    if (ticking) void music.play()
+    else void music.pause()
+  }, [music, ticking])
+
+  useEffect(() => () => { music?.dispose() }, [music])
+
+  const endSession = useCallback((finished: boolean) => {
+    const cur = runRef.current
+    if (!cur) return
+    runRef.current = null
+    setRun(null)
+    persist(logSession(loadState(), {
+      holdIds:   state.spec.holdIds,
+      workSec:   state.spec.workSec,
+      restSec:   state.spec.restSec,
+      rounds:    state.spec.rounds,
+      doneWork:  cur.doneWork,
+      totalWork: state.spec.holdIds.length * state.spec.rounds,
+      heldSec:   Math.round(cur.heldSec),
+      finished,
+      startedAt: cur.startedAt,
+    }))
+    void music?.stop()
+    setFlash(finished
+      ? tr('SESSION COMPLETE', 'СЕССИЯ ЗАВЕРШЕНА')
+      : tr('SESSION ENDED', 'СЕССИЯ ПРЕРВАНА'))
+    setTimeout(() => setFlash(''), 2600)
+    playCue(finished ? 'level' : 'deny')
+  }, [music, persist, state.spec])
+
+  /**
+   * Step off the phase at `fromIndex`.
+   *
+   * Takes the index it is leaving and ignores the call if the session has
+   * already moved on. The timer can observe an expired phase on two consecutive
+   * ticks, and React may invoke an updater more than once — without this guard
+   * a single expiry advanced twice, which silently skipped every REST and ended
+   * the session early.
+   */
+  const advance = useCallback((fromIndex: number) => {
+    const cur = runRef.current
+    if (!cur || cur.paused || cur.index !== fromIndex) return
+
+    const done     = phases[fromIndex]
+    const heldSec  = cur.heldSec  + (done.kind === 'work' ? done.seconds : 0)
+    const doneWork = cur.doneWork + (done.kind === 'work' ? 1 : 0)
+    const next     = fromIndex + 1
+
+    if (next >= phases.length) {
+      runRef.current = null
+      setRun(null)
+      persist(logSession(loadState(), {
+        holdIds:   state.spec.holdIds,
+        workSec:   state.spec.workSec,
+        restSec:   state.spec.restSec,
+        rounds:    state.spec.rounds,
+        doneWork,
+        totalWork: state.spec.holdIds.length * state.spec.rounds,
+        heldSec:   Math.round(heldSec),
+        finished:  true,
+        startedAt: cur.startedAt,
+      }))
+      void music?.stop()
+      setFlash(tr('SESSION COMPLETE', 'СЕССИЯ ЗАВЕРШЕНА'))
+      setTimeout(() => setFlash(''), 2600)
+      playCue('level')
+      return
+    }
+
+    playCue(phases[next].kind === 'work' ? 'check' : 'tick')
+    const stepped: Running = {
+      ...cur,
+      index: next,
+      endsAt: Date.now() + phases[next].seconds * 1000,
+      remaining: phases[next].seconds,
+      heldSec,
+      doneWork,
+    }
+    runRef.current = stepped
+    setRun(stepped)
+  }, [phases, music, persist, state.spec])
+
+  // The clock. Remaining is recomputed from wall time every tick, so a
+  // backgrounded window or a throttled interval cannot make a 30-second hold
+  // quietly become 40.
+  useEffect(() => {
+    if (!ticking) {
+      if (tick.current) { clearInterval(tick.current); tick.current = null }
+      return
+    }
+    tick.current = setInterval(() => {
+      const cur = runRef.current
+      if (!cur || cur.paused) return
+      const left = (cur.endsAt - Date.now()) / 1000
+      if (left <= 0) { advance(cur.index); return }
+      runRef.current = { ...cur, remaining: left }
+      setRun(prev => (prev ? { ...prev, remaining: left } : prev))
+    }, 200)
+    return () => { if (tick.current) clearInterval(tick.current) }
+  }, [ticking, advance])
+
+  const start = () => {
+    if (!phases.length) return
+    playCue('open')
+    const first: Running = {
+      index: 0,
+      endsAt: Date.now() + phases[0].seconds * 1000,
+      remaining: phases[0].seconds,
+      paused: false,
+      startedAt: new Date().toISOString(),
+      heldSec: 0,
+      doneWork: 0,
+    }
+    runRef.current = first
+    setRun(first)
+  }
+
+  const togglePause = () => {
+    const cur = runRef.current
+    if (!cur) return
+    const next: Running = cur.paused
+      ? { ...cur, paused: false, endsAt: Date.now() + cur.remaining * 1000 }
+      : { ...cur, paused: true,  remaining: (cur.endsAt - Date.now()) / 1000 }
+    playCue(cur.paused ? 'open' : 'tick')
+    runRef.current = next
+    setRun(next)
+  }
+
+  const pickMusic = (f: File | undefined) => {
+    if (!f) return
+    music?.dispose()
+    setMusic(new LocalAudio(f, f.name))
+    persist(setMusicName(loadState(), f.name))
+    void saveTrack(f)          // survives a reload; never blocks the session
+  }
+
+  const phase: Phase | null = run ? phases[run.index] : null
+  const hold  = phase ? HOLD_BY_ID[phase.holdId] : null
+  const isWork  = phase?.kind === 'work'
+  const isReady = phase?.kind === 'ready'
+  const accent  = isReady ? READY : isWork ? WORK : REST
+  const pct = phase ? Math.max(0, Math.min(1, (run!.remaining) / phase.seconds)) : 0
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+      {/* Header */}
+      <div style={{ flexShrink: 0, padding: '10px 14px 8px',
+        borderBottom: `1px solid ${NEON}18` }}>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 13, fontWeight: 900,
+          letterSpacing: '0.16em', color: NEON, textShadow: `0 0 12px ${NEON}60` }}>
+          ⧗ VIGILANTE
+        </p>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
+          color: 'rgba(148,163,184,0.45)', marginTop: 2 }}>
+          {tr('Statics · time under tension', 'Статика · время под нагрузкой')}
+        </p>
+      </div>
+
+      {flash && (
+        <div style={{ position: 'absolute', top: 10, right: 14, zIndex: 40,
+          padding: '5px 11px', borderRadius: 7,
+          background: 'rgba(4,10,18,0.96)', border: `1px solid ${NEON}45` }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800,
+            letterSpacing: '0.12em', color: NEON }}>{flash}</p>
+        </div>
+      )}
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px' }}>
+
+        {/* ── Running ── */}
+        {run && phase && hold ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
+              letterSpacing: '0.22em', color: accent }}>
+              {isReady ? tr('GET INTO POSITION', 'ЗАЙМИТЕ ПОЗИЦИЮ')
+                       : isWork ? tr('HOLD', 'ДЕРЖАТЬ') : tr('REST', 'ОТДЫХ')}
+            </p>
+
+            {/* The clock */}
+            <div style={{ position: 'relative', width: 180, height: 180, flexShrink: 0,
+              borderRadius: '50%',
+              background: `conic-gradient(${accent} ${pct * 100}%, rgba(255,255,255,0.05) ${pct * 100}%)`,
+              transition: 'background 0.2s linear' }}>
+              <div style={{ position: 'absolute', inset: 9, borderRadius: '50%',
+                background: 'var(--bg-void)', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 40, fontWeight: 900,
+                  color: accent, textShadow: `0 0 18px ${accent}70`, lineHeight: 1 }}>
+                  {Math.ceil(run.remaining)}
+                </span>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 10,
+                  color: 'rgba(148,163,184,0.5)', letterSpacing: '0.1em' }}>
+                  {tr('sec', 'сек')}
+                </span>
+              </div>
+            </div>
+
+            <p style={{ fontFamily: 'var(--font)', fontSize: 17, fontWeight: 800,
+              color: 'rgba(225,235,255,0.95)' }}>
+              {hold.icon} {tr(hold.name, hold.nameRu)}
+            </p>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11,
+              color: 'rgba(148,163,184,0.6)', textAlign: 'center', lineHeight: 1.55, maxWidth: 320 }}>
+              {isWork || isReady
+                ? tr(hold.cue, hold.cueRu)
+                : tr('Breathe. Next one is coming.', 'Дышите. Следующий подход близко.')}
+            </p>
+
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11,
+              color: 'rgba(148,163,184,0.4)', letterSpacing: '0.08em' }}>
+              {tr(`Round ${phase.round}/${state.spec.rounds}`,
+                  `Круг ${phase.round}/${state.spec.rounds}`)}
+              {' · '}
+              {tr(`${run.index + 1}/${phases.length} steps`,
+                  `шаг ${run.index + 1}/${phases.length}`)}
+            </p>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <button onClick={togglePause} style={btn(accent)}>
+                {run.paused ? `▶ ${tr('RESUME', 'ПРОДОЛЖИТЬ')}` : `❚❚ ${tr('PAUSE', 'ПАУЗА')}`}
+              </button>
+              <button onClick={() => endSession(false)} style={btn('rgba(148,163,184,0.5)')}>
+                ■ {tr('END', 'ЗАВЕРШИТЬ')}
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* ── Idle: the plan ── */
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 12 }}>
+              {state.spec.holdIds.map(id => {
+                const h = HOLD_BY_ID[id]
+                if (!h) return null
+                return (
+                  <div key={id} style={{ display: 'flex', alignItems: 'flex-start', gap: 9,
+                    padding: '8px 10px', borderRadius: 8,
+                    background: 'rgba(10,12,30,0.45)',
+                    border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <span style={{ fontSize: 15, flexShrink: 0 }}>{h.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
+                        fontWeight: 700, color: 'rgba(225,235,255,0.9)' }}>
+                        {tr(h.name, h.nameRu)}
+                        <span style={{ fontSize: 11, color: `${NEON}90`, marginLeft: 7 }}>
+                          {state.spec.workSec}{tr('s', 'с')} × {state.spec.rounds}
+                        </span>
+                      </p>
+                      <p style={{ fontFamily: 'var(--font)', fontSize: 10.5,
+                        color: 'rgba(148,163,184,0.55)', lineHeight: 1.5, marginTop: 2 }}>
+                        {tr(h.cue, h.cueRu)}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Timings */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <NumField label={tr('HOLD', 'ДЕРЖАТЬ')} suffix={tr('s', 'с')} value={state.spec.workSec}
+                onChange={v => persist(setSpec(loadState(), { ...state.spec, workSec: clampSec(v, 30) }))} />
+              <NumField label={tr('REST', 'ОТДЫХ')} suffix={tr('s', 'с')} value={state.spec.restSec}
+                onChange={v => persist(setSpec(loadState(), { ...state.spec, restSec: clampSec(v, 45) }))} />
+              <NumField label={tr('ROUNDS', 'КРУГИ')} value={state.spec.rounds}
+                onChange={v => persist(setSpec(loadState(), { ...state.spec, rounds: clampRounds(v) }))} />
+              <NumField label={tr('READY', 'ПОДГОТ.')} suffix={tr('s', 'с')} value={state.spec.leadInSec}
+                onChange={v => persist(setSpec(loadState(), { ...state.spec, leadInSec: clampLeadIn(v) }))} />
+            </div>
+
+            {/* Music */}
+            <div style={{ padding: '9px 11px', borderRadius: 8, marginBottom: 12,
+              background: 'rgba(10,12,30,0.45)', border: `1px solid ${NEON}22` }}>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
+                letterSpacing: '0.14em', color: `${NEON}b0`, marginBottom: 5 }}>
+                ♪ {tr('SOUNDTRACK', 'САУНДТРЕК')}
+              </p>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10.5,
+                color: 'rgba(148,163,184,0.6)', lineHeight: 1.5, marginBottom: 7 }}>
+                {music
+                  ? tr(`Playing: ${music.label} — starts and stops with the timer.`,
+                       `Играет: ${music.label} — запускается и останавливается вместе с таймером.`)
+                  : tr('Pick a track and it runs with the timer — plays on START, pauses on PAUSE.',
+                       'Выберите трек — он пойдёт вместе с таймером: старт на СТАРТ, пауза на ПАУЗУ.')}
+              </p>
+              <input ref={fileRef} type="file" accept="audio/*" style={{ display: 'none' }}
+                onChange={e => pickMusic(e.target.files?.[0])} />
+              <button onClick={() => fileRef.current?.click()} style={btn(NEON)}>
+                {music ? tr('CHANGE TRACK', 'СМЕНИТЬ ТРЕК') : tr('CHOOSE TRACK', 'ВЫБРАТЬ ТРЕК')}
+              </button>
+            </div>
+
+            <button onClick={start} disabled={!phases.length} style={{
+              width: '100%', padding: '13px', borderRadius: 9, cursor: 'pointer',
+              fontFamily: 'var(--font)', fontSize: 14, fontWeight: 900, letterSpacing: '0.16em',
+              color: '#050810', background: NEON, border: 'none',
+              boxShadow: `0 0 22px ${NEON}55`,
+            }}>
+              ▶ {tr('START', 'СТАРТ')}
+            </button>
+
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10,
+              color: 'rgba(148,163,184,0.4)', textAlign: 'center', marginTop: 7 }}>
+              {tr(`${clock(specHoldSeconds(state.spec))} under tension · ${phases.length} steps`,
+                  `${clock(specHoldSeconds(state.spec))} под нагрузкой · ${phases.length} шагов`)}
+            </p>
+
+            {/* Record */}
+            {state.log.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
+                  letterSpacing: '0.14em', color: 'rgba(148,163,184,0.4)', marginBottom: 6 }}>
+                  {tr('RECORD', 'ЗАПИСЬ')} · {tr(
+                    `${summary.finished}/${summary.sessions} finished · ${clock(summary.heldSec)} total`,
+                    `${summary.finished}/${summary.sessions} завершено · ${clock(summary.heldSec)} всего`)}
+                </p>
+                {state.log.slice(0, 8).map(r => (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '6px 9px', borderRadius: 6, marginBottom: 3,
+                    background: 'rgba(10,12,30,0.4)',
+                    borderLeft: `2px solid ${r.finished ? REST : 'rgba(148,163,184,0.3)'}` }}>
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 10.5,
+                      color: 'rgba(148,163,184,0.7)', flex: 1 }}>{r.date}</span>
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 10.5,
+                      color: r.finished ? REST : 'rgba(148,163,184,0.5)' }}>
+                      {r.doneWork}/{r.totalWork} {tr(
+                        plural(r.totalWork, 'hold', 'holds', 'holds'),
+                        plural(r.totalWork, 'удержание', 'удержания', 'удержаний'))}
+                    </span>
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: `${NEON}b0` }}>
+                      {clock(r.heldSec)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const btn = (accent: string): React.CSSProperties => ({
+  padding: '8px 14px', borderRadius: 7, cursor: 'pointer',
+  fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.1em',
+  color: accent, background: 'transparent', border: `1px solid ${accent}55`,
+})
+
+function NumField({ label, value, onChange, suffix }: {
+  label: string; value: number; onChange: (v: number) => void; suffix?: string
+}) {
+  return (
+    <div style={{ flex: 1 }}>
+      <p style={{ fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 800,
+        letterSpacing: '0.12em', color: 'rgba(148,163,184,0.45)', marginBottom: 3 }}>{label}</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+        <input type="number" value={value} onChange={e => onChange(Number(e.target.value))}
+          style={{ width: '100%', padding: '6px 8px', borderRadius: 6,
+            fontFamily: 'var(--font)', fontSize: 13, fontWeight: 700,
+            color: 'rgba(225,235,255,0.9)', background: 'rgba(10,12,30,0.6)',
+            border: '1px solid rgba(255,255,255,0.08)' }} />
+        {suffix && <span style={{ fontFamily: 'var(--font)', fontSize: 10,
+          color: 'rgba(148,163,184,0.4)' }}>{suffix}</span>}
+      </div>
+    </div>
+  )
+}

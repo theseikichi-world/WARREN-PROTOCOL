@@ -9,6 +9,7 @@ import type { Goal } from './types'
 import { THRESHOLD_UNLOCK_AT } from './types'
 import { nodeScore } from './chain'
 import type { ModuleSummaries } from '../bigscreen/moduleStats'
+import { t as tr, plural } from '../../i18n'
 
 export interface Stat {
   key:    string
@@ -40,7 +41,10 @@ export function deriveStats(goals: Goal[], tasks: Task[], sums: ModuleSummaries)
   const automatism: Stat = {
     key: 'automatism', label: 'AUTOMATISM', ru: 'АВТОМАТИЗМ', color: '#00f5ff',
     value: routines.length ? pct((routines.reduce((s, r) => s + r.score, 0) / routines.length) * 100) : null,
-    detail: routines.length ? `${routines.length} routines running` : 'no routines installed',
+    detail: routines.length
+      ? tr(`${routines.length} routines running`,
+           `${routines.length} ${plural(routines.length, 'рутина', 'рутины', 'рутин')} в работе`)
+      : tr('no routines installed', 'рутины не установлены'),
   }
 
   // STREAK — the longest unbroken run you're currently holding
@@ -48,7 +52,10 @@ export function deriveStats(goals: Goal[], tasks: Task[], sums: ModuleSummaries)
   const streak: Stat = {
     key: 'streak', label: 'STREAK', ru: 'СЕРИЯ', color: '#ff6b00',
     value: routines.length ? pct((bestStreak / 66) * 100) : null,   // 66 days ≈ the median formation point
-    detail: routines.length ? `${bestStreak} day best run` : 'nothing running yet',
+    detail: routines.length
+      ? tr(`${bestStreak} day best run`,
+           `лучшая серия — ${bestStreak} ${plural(bestStreak, 'день', 'дня', 'дней')}`)
+      : tr('nothing running yet', 'пока ничего не запущено'),
   }
 
   // RESOLVE — how much of what you started you actually finished
@@ -56,7 +63,9 @@ export function deriveStats(goals: Goal[], tasks: Task[], sums: ModuleSummaries)
   const resolve: Stat = {
     key: 'resolve', label: 'RESOLVE', ru: 'ВОЛЯ', color: '#ffd700',
     value: routines.length ? pct((automatic / routines.length) * 100) : null,
-    detail: routines.length ? `${automatic}/${routines.length} automatic` : 'nothing to hold yet',
+    detail: routines.length
+      ? tr(`${automatic}/${routines.length} automatic`, `${automatic}/${routines.length} на автомате`)
+      : tr('nothing to hold yet', 'пока нечего держать'),
   }
 
   // VITALITY — SOLARIS, the body the rest of it runs on
@@ -64,7 +73,9 @@ export function deriveStats(goals: Goal[], tasks: Task[], sums: ModuleSummaries)
   const vitality: Stat = {
     key: 'vitality', label: 'VITALITY', ru: 'ЖИЗНЕННЫЕ СИЛЫ', color: '#4ade80',
     value: sol ? pct((Math.min(100, sol.kcalPct) + sol.waterPct) / 2) : null,
-    detail: sol ? `${sol.kcalPct}% fuel · ${sol.waterPct}% water` : 'no crew calibrated',
+    detail: sol
+      ? tr(`${sol.kcalPct}% fuel · ${sol.waterPct}% water`, `${sol.kcalPct}% топлива · ${sol.waterPct}% воды`)
+      : tr('no crew calibrated', 'экипаж не откалиброван'),
   }
 
   // RECALL — A.R.D.O, what you can actually reproduce from memory
@@ -72,7 +83,10 @@ export function deriveStats(goals: Goal[], tasks: Task[], sums: ModuleSummaries)
   const recall: Stat = {
     key: 'recall', label: 'RECALL', ru: 'ПАМЯТЬ', color: '#00e4a0',
     value: ardo && ardo.texts > 0 ? pct(ardo.mastery) : null,
-    detail: ardo && ardo.texts > 0 ? `${ardo.texts} texts · ${ardo.due} due` : 'no texts loaded',
+    detail: ardo && ardo.texts > 0
+      ? tr(`${ardo.texts} texts · ${ardo.due} due`,
+           `${ardo.texts} ${plural(ardo.texts, 'текст', 'текста', 'текстов')} · ${ardo.due} к повтору`)
+      : tr('no texts loaded', 'тексты не загружены'),
   }
 
   // INSIGHT — the journal, i.e. whether you're paying attention to yourself
@@ -80,10 +94,25 @@ export function deriveStats(goals: Goal[], tasks: Task[], sums: ModuleSummaries)
   const insight: Stat = {
     key: 'insight', label: 'INSIGHT', ru: 'ОСОЗНАННОСТЬ', color: '#c084fc',
     value: jr && jr.entries > 0 ? pct((Math.min(jr.streak, 30) / 30) * 100) : null,
-    detail: jr && jr.entries > 0 ? `${jr.entries} entries · ${jr.streak} day streak` : 'journal untouched',
+    detail: jr && jr.entries > 0
+      ? tr(`${jr.entries} entries · ${jr.streak} day streak`,
+           `${jr.entries} ${plural(jr.entries, 'запись', 'записи', 'записей')} · серия ${jr.streak} ${plural(jr.streak, 'день', 'дня', 'дней')}`)
+      : tr('journal untouched', 'журнал не открывали'),
   }
 
-  return [automatism, streak, resolve, vitality, recall, insight]
+  // IRON — VIGILANTE, time you actually spent under tension. Scaled against an
+  // hour: a stat you can move in a week would say nothing by the second month.
+  const vg = sums.vigilante
+  const iron: Stat = {
+    key: 'iron', label: 'IRON', ru: 'СТОЙКОСТЬ', color: '#6366f1',
+    value: vg && vg.sessions > 0 ? pct((Math.min(vg.heldSec, 3600) / 3600) * 100) : null,
+    detail: vg && vg.sessions > 0
+      ? tr(`${vg.finished}/${vg.sessions} sessions held`,
+           `${vg.finished}/${vg.sessions} ${plural(vg.sessions, 'сессия', 'сессии', 'сессий')} выдержано`)
+      : tr('never held a position', 'ни одного удержания'),
+  }
+
+  return [automatism, streak, resolve, vitality, recall, insight, iron]
 }
 
 /** One headline number: the average of whatever is actually measurable. */

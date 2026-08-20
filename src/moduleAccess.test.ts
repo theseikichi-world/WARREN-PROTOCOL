@@ -10,8 +10,17 @@ describe('module gates', () => {
   })
 
   it('locks below its level and opens at it', () => {
-    expect(moduleUnlocked('ardo', 3)).toBe(false)
-    expect(moduleUnlocked('ardo', 4)).toBe(true)
+    expect(moduleUnlocked('hoot', 2)).toBe(false)
+    expect(moduleUnlocked('hoot', 3)).toBe(true)
+  })
+
+  it('never gates a utility — they answer to no goal and cost no slot', () => {
+    // Rule 8: gate complexity, never utility. A.R.D.O and PICTURES feed no gate
+    // and take no bandwidth, so locking them withheld a toy rather than pacing
+    // anything. Their depth is still earned by use, not opened by a level.
+    for (const m of GUILD.filter(g => g.built && g.group === 'utility')) {
+      expect(moduleLevel(m.id), `${m.id} is a utility and must not be gated`).toBe(1)
+    }
   })
 
   it('only names real modules', () => {
@@ -24,7 +33,7 @@ describe('module gates', () => {
   })
 
   it('reports what a level opens, for the level screen to name', () => {
-    expect(modulesOpenedAt(4)).toContain('ardo')
+    expect(modulesOpenedAt(3)).toContain('hoot')
     expect(modulesOpenedAt(2)).toEqual(expect.arrayContaining(['pomu', 'scrap7']))
   })
 })
@@ -50,9 +59,11 @@ describe('a locked door is never a dead end', () => {
     }
   })
 
-  it('keeps the three you start with open at level 1', () => {
-    // Somewhere to put a dream, somewhere to write, and the character sheet
-    for (const id of ['log', 'hoot'] as ModuleId[]) expect(moduleUnlocked(id, 1)).toBe(true)
+  it('keeps what you start with open at level 1', () => {
+    // Somewhere to put a dream, and the character sheet it hangs off. The
+    // journal is no longer one of them — it arrives with stage 3.
+    expect(moduleUnlocked('log', 1)).toBe(true)
+    expect(moduleUnlocked('hoot', 1)).toBe(false)
   })
 
   it('never gates a module past the last level the quest line can reach', () => {

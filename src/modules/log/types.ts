@@ -1,18 +1,24 @@
-// ─── L.O.G — Long-range Objective Graph ───────────────────────────────────────
+// ─── PATHFINDER — where dreams are written and read ───────────────────────────
 // Hierarchy: Dream → Mission → Task
-// Tasks of type daily/habit sync to SCRAP-7 automatically.
+//
+// The old flow synced daily/habit tasks straight into ORBIT, where they landed
+// with origin 'log' and earned nothing. A dream's work now goes out through the
+// SHELF instead, which types every candidate by the system allowed to hold it —
+// see `progression/shelf.ts`.
+
+import type { DreamRead, Interview } from '../progression/spine'
 
 export type MissionStatus   = 'active' | 'completed' | 'paused'
 export type MissionPriority = 'critical' | 'high' | 'medium' | 'low'
 export type LogTaskType     = 'todo' | 'daily' | 'habit'
 
-// ─── Task (finest grain — can live in SCRAP-7 too) ────────────────────────────
+// ─── Task (finest grain — can live in ORBIT too) ────────────────────────────
 export interface LogTask {
   id:        string
   text:      string
   type:      LogTaskType
   done:      boolean
-  scrap7Id?: string    // set when synced to SCRAP-7 (same ID)
+  scrap7Id?: string    // set when synced to ORBIT (same ID)
   createdAt: string
 }
 
@@ -47,7 +53,21 @@ export interface Dream {
   category:    string
   missions:    Mission[]
   createdAt:   string
-  analysis?:   DreamAnalysis   // persisted single-dream AI breakdown
+  /**
+   * THE SPINE — the current read of this dream: its acts, and the shelf of
+   * candidates that can be deployed from it. One read now feeds both PATHFINDER
+   * and the protocol; see `progression/spine.ts`.
+   */
+  read?:       DreamRead
+  /**
+   * What the guide asked about this dream, and what was answered. Kept so the
+   * answers survive a re-read — they are facts about a life, and re-typing them
+   * every time the spine is regenerated would be the fastest way to stop
+   * answering honestly.
+   */
+  interview?:  Interview
+  /** The pre-spine breakdown. Kept so an existing one can be converted, not lost. */
+  analysis?:   DreamAnalysis
   x?:          number          // star-map position, 0..1 (fraction of board)
   y?:          number
 }
@@ -75,12 +95,12 @@ export interface ConstellationLink {
   dreams:  string[]   // dream titles that connect
   insight: string
 }
-/** A unified, SCRAP-7-ready action with a clean, natural name. */
+/** A unified, ORBIT-ready action with a clean, natural name. */
 export interface PlanItem {
   text:      string       // short, natural task name (NOT the full dream text)
   type:      LogTaskType
   serves:    string       // which dream(s) this advances
-  deployed?: boolean      // true once pushed to SCRAP-7 (prevents dup re-deploys)
+  deployed?: boolean      // true once pushed to ORBIT (prevents dup re-deploys)
 }
 export interface Constellation {
   synthesis:   string

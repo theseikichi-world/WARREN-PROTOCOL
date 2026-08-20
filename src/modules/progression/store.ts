@@ -10,11 +10,11 @@ import { applyDraft, draftToGoal, type ChainDraft } from './draft'
 import { baselineTaskId, customTaskId, type LifeSupportTemplate } from './lifeSupport'
 import { evaluateUnlocks, isUnlocked, nodeScore, routineTaskId } from './chain'
 import { awardXp, awardBaselineXp, gatedLevel, type XpEvent } from './xp'
-import { evaluateQuests, type Quest, type QuestContext } from './quests'
+import { evaluateQuests, questFloorXp, type Quest, type QuestContext } from './quests'
 import {
-  loadState as loadScrap7, saveState as saveScrap7, createExternalTask,
+  loadState as loadScrap7, saveState as saveScrap7, createExternalTask, trackHabit,
 } from '../scrap7/store'
-import { isOrphanHabit } from '../scrap7/types'
+import { isOrphanHabit, taskOrigin } from '../scrap7/types'
 
 const KEY = 'warren_progression_v1'
 
@@ -25,11 +25,17 @@ export function loadProgression(): ProgressionState {
     const raw = localStorage.getItem(KEY)
     if (!raw) return structuredClone(INITIAL)
     const parsed = JSON.parse(raw) as Partial<ProgressionState>
+    const quests = (parsed.quests && typeof parsed.quests === 'object') ? parsed.quests : {}
+    const banked = typeof parsed.xp === 'number' ? parsed.xp : 0
     return {
       goals:  Array.isArray(parsed.goals) ? parsed.goals : [],
       seeded: parsed.seeded === true,
-      xp:     typeof parsed.xp === 'number' ? parsed.xp : 0,
-      quests: (parsed.quests && typeof parsed.quests === 'object') ? parsed.quests : {},
+      // A cleared quest banks its XP once, so retuning a reward leaves every
+      // existing save short by the difference — and a stage that no longer pays
+      // for its level strands you between the two (rule 21). The floor repairs
+      // that on load. It only ever raises: routine XP lives in the same total.
+      xp:     Math.max(banked, questFloorXp(quests)),
+      quests,
       initiatedAt: typeof parsed.initiatedAt === 'string' ? parsed.initiatedAt : null,
       celebratedLevel: typeof parsed.celebratedLevel === 'number' ? parsed.celebratedLevel : 1,
     }
@@ -164,7 +170,7 @@ export function archiveGoal(s: ProgressionState, goalId: string, now = new Date(
   return { ...s, goals: s.goals.map(g => g.id === goalId ? stamp(g, 'archived', now) : g) }
 }
 
-// ─── Chain ↔ SCRAP-7 sync ─────────────────────────────────────────────────────
+// ─── Chain ↔ ORBIT sync ─────────────────────────────────────────────────────
 
 /**
  * Which unlocked routines of a goal may carry a live habit right now.
@@ -192,7 +198,7 @@ export function instantiableNodes(goal: Goal, tasks: ReturnType<typeof loadScrap
 }
 
 /**
- * Reconcile the chains with SCRAP-7. Opens routines whose prerequisites are
+ * Reconcile the chains with ORBIT. Opens routines whose prerequisites are
  * integrated and keeps frozen flags honest — but never installs anything.
  *
  * Installation is a decision, like spending a perk point: an AVAILABLE routine
@@ -304,7 +310,7 @@ export function addGoal(s: ProgressionState, goal: Goal, now = new Date()): Prog
  * Every habit that isn't a goal routine becomes LIFE SUPPORT.
  *
  * A hand-made habit and a basic were always the same thing described twice, and
- * once SCRAP-7 stopped showing habits the hand-made ones had nowhere left to
+ * once ORBIT stopped showing habits the hand-made ones had nowhere left to
  * be seen. Rather than leave data alive and invisible, they are adopted.
  *
  * Over the slot cap is fine and deliberate: the cap governs what you may ADD,
@@ -325,7 +331,7 @@ export function adoptOrphanHabits(): number {
 }
 
 /**
- * Push an edit down into SCRAP-7, in one pass.
+ * Push an edit down into ORBIT, in one pass.
  *
  * DETACHED — a routine dropped from a chain is not deleted. Freeze never
  * deletes and neither does editing: the habit keeps its score and streak and
@@ -371,12 +377,18 @@ export interface CommitResult {
 export function commitDraft(s: ProgressionState, draft: ChainDraft, now = new Date()): CommitResult {
   const existing = draft.goalId ? s.goals.find(g => g.id === draft.goalId) : null
 
+  // So "after <habit>" reads as the habit's actual name. Derived at commit
+  // rather than stored by the picker, which means renaming a routine renames
+  // every cue anchored to it.
+  const names = new Map(loadScrap7().tasks.map(t => [t.id, t.text]))
+  const nameOf = (taskId: string): string | null => names.get(taskId) ?? null
+
   if (!existing) {
-    const goal = draftToGoal({ ...draft, goalId: null }, s.goals.map(g => g.id), now)
+    const goal = draftToGoal({ ...draft, goalId: null }, s.goals.map(g => g.id), now, nameOf)
     return { state: addGoal(s, goal, now), goalId: goal.id, detached: [] }
   }
 
-  const { goal, detached } = applyDraft(existing, draft, now)
+  const { goal, detached } = applyDraft(existing, draft, now, nameOf)
   applyScrap7Edits(detached, new Map(goal.nodes
     .filter(n => n.scrapTaskId)
     .map(n => [n.scrapTaskId, { text: n.title, category: goal.title }])))
@@ -393,7 +405,7 @@ export function commitDraft(s: ProgressionState, draft: ChainDraft, now = new Da
 
 /**
  * Install a baseline habit. Returns false when it already exists.
- * The cue stays on the template rather than the task — SCRAP-7 has no field
+ * The cue stays on the template rather than the task — ORBIT has no field
  * for it, and life support anchors are fixed rather than authored.
  */
 export function installLifeSupport(template: LifeSupportTemplate, title: string, unit: string): boolean {
@@ -475,6 +487,39 @@ export function recordBaselineRun(state: ProgressionState, before: number, after
 }
 
 // ─── Earning ──────────────────────────────────────────────────────────────────
+
+/**
+ * Track a habit from anywhere, and bank what it is worth.
+ *
+ * Rule 31 used to forbid tracking outside UPLINKS, for a good reason: moving a
+ * score without awarding its XP silently desyncs the two. The rule was really a
+ * symptom of there being no shared path — UPLINKS knew to call `recordRun` for a
+ * routine and `recordBaselineRun` for a basic, and nothing else did.
+ *
+ * This is that path. Now that ORBIT's list shows the whole day, a routine has to
+ * be completable from the row you are looking at, and the score, the streak and
+ * the XP all move together wherever the tap happened.
+ */
+export function trackFromList(taskId: string): { gained: number; levelUp: number | null } {
+  const s7     = loadScrap7()
+  const task   = s7.tasks.find(t => t.id === taskId)
+  if (!task || task.taskType !== 'habit') return { gained: 0, levelUp: null }
+
+  const before = task.score ?? 0
+  const { state: next } = trackHabit(s7, taskId, 1)
+  saveScrap7(next)
+  const after = next.tasks.find(t => t.id === taskId)?.score ?? 0
+
+  const origin = taskOrigin(task)
+  const state  = loadProgression()
+  const reward = origin === 'baseline'
+    ? recordBaselineRun(state, before, after)
+    : recordRun(state, taskId, before, after)
+
+  saveProgression(reward.state)
+  window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'orbit' } }))
+  return { gained: reward.gained, levelUp: reward.levelUp }
+}
 
 export interface RunReward {
   state:  ProgressionState

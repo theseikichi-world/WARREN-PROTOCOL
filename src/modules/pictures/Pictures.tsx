@@ -416,6 +416,7 @@ function AddModal({ defaultStatus, onClose, onAdd }: {
       air_schedule: item.air_schedule ?? null,
       episodes_in_season: item.episodes_in_season ?? null,
       episodes_released: item.episodes_released ?? null,
+      runtime: item.runtime ?? null,
       imdb_id: item.imdb_id ?? null,
       status: item.release_date && daysUntil(item.release_date) !== null && daysUntil(item.release_date)! > 0
         ? 'coming-soon' : targetStatus,
@@ -764,6 +765,9 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
       if (d.tagline) patch.tagline = d.tagline
       if (d.episodes_in_season != null) patch.episodes_in_season = d.episodes_in_season
       if (d.episodes_released != null) patch.episodes_released = d.episodes_released
+      // Backfills items added before runtime was stored, so their invitations
+      // stop claiming a generic 45 minutes.
+      if (d.runtime != null) patch.runtime = d.runtime
       if (d.air_schedule) patch.air_schedule = d.air_schedule
       patch.next_episode_date = d.next_episode_date ?? null
       if (d.imdb_id) patch.imdb_id = d.imdb_id
@@ -1421,6 +1425,7 @@ export default function Pictures() {
       air_schedule: item.air_schedule ?? null,
       episodes_in_season: item.episodes_total ?? null,
       episodes_released: item.episodes_aired ?? null,
+      runtime: null,
       imdb_id: item.imdb_id, rating: 0,
       progress: { season: 1, episode: 0 },
       release_date: item.release_date, addedAt: new Date().toISOString(), notes: '',

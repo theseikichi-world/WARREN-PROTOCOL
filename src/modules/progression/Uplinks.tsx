@@ -10,6 +10,10 @@ import {
 } from './store'
 import type { LifeSupportTemplate } from './lifeSupport'
 import { SkillTree } from './SkillTree'
+import { ShelfPanel } from './ShelfPanel'
+import { DreamsPanel } from './DreamsPanel'
+import { NewUplink } from './NewUplink'
+import type { Dream } from '../log/types'
 import { CharacterSheet } from './CharacterSheet'
 import { ChainForge } from './ChainForge'
 import { goalToDraft, type ChainDraft } from './draft'
@@ -22,6 +26,7 @@ import { loadSettings } from '../../settings'
 import { maxNodesFor, type Goal, type ProgressionState } from './types'
 
 const CYAN = '#00f5ff'
+const LOG_NEON = '#c084fc'   // DREAMS keeps PATHFINDER's colour — same thing, new home
 const GOLD = '#ffd700'
 const DIM  = 'rgba(148,163,184,0.55)'
 
@@ -33,7 +38,9 @@ export default function Uplinks() {
   const [state, setState] = useState<ProgressionState>(() => seedIfEmpty(loadProgression()))
   const [tasks, setTasks] = useState<Task[]>(() => loadScrap7().tasks)
   const [now, setNow]     = useState(() => new Date())
-  const [view, setView]   = useState<'character' | 'primary' | 'secondary'>('character')
+  const [view, setView]   = useState<'dreams' | 'character' | 'primary' | 'secondary'>('character')
+  /** The dream being promoted. PATHFINDER used to own this; it is one screen now. */
+  const [promoting, setPromoting] = useState<Dream | null>(null)
   const [sums, setSums]   = useState<ModuleSummaries>(() => getModuleSummaries())
   const [toast, setToast] = useState('')
   const [forging, setForging]   = useState<ChainDraft | null>(null)
@@ -71,6 +78,7 @@ export default function Uplinks() {
   // A quest that points here also says which tab it meant
   useEffect(() => {
     const nav = location.state as { spotlight?: string } | null
+    if (nav?.spotlight === 'new-uplink') setView('dreams')
     if (nav?.spotlight === 'life-support') setView('character')
     if (nav?.spotlight === 'install-routine') setView(v => v === 'character' ? 'primary' : v)
   }, [location.state])
@@ -172,6 +180,8 @@ export default function Uplinks() {
   const secondary = secondaryGoal(state)
   const archived  = archivedGoals(state)
   const cooldown  = cooldownRemaining(state, now)
+  /** The two tabs that show a protocol. DREAMS and CHARACTER own their own body. */
+  const isSlotView = view === 'primary' || view === 'secondary'
   const shown     = view === 'primary' ? primary : view === 'secondary' ? secondary : null
   const accent    = view === 'primary' ? CYAN : GOLD
   const level     = gatedLevel(state.xp, state.quests).level
@@ -194,7 +204,9 @@ export default function Uplinks() {
             disagreeing with itself. */}
       </div>
 
-      {/* Character, then a tab per uplink */}
+      {/* Dreams, character, then a tab per uplink — the whole goal system, in
+          the order it actually happens: you write one, you become someone, it
+          runs. PATHFINDER was this tab wearing a module costume (rule 17). */}
       <div data-tour="uplink-tabs" style={{ display: 'flex', flexShrink: 0, borderBottom: `1px solid ${CYAN}10` }}>
         <button onClick={() => setView('character')} style={{
           flex: 0.8, padding: '9px 6px', cursor: 'pointer',
@@ -239,9 +251,35 @@ export default function Uplinks() {
             </button>
           )
         })}
+
+        {/* Last on the bar on purpose. Writing a dream is something you do once
+            or twice, and then live with for months — it does not belong in the
+            place your eye lands every time you open this screen. */}
+        <button onClick={() => setView('dreams')} style={{
+          flex: 0.7, padding: '9px 6px', cursor: 'pointer',
+          background: view === 'dreams' ? `${LOG_NEON}0c` : 'transparent',
+          borderBottom: `2px solid ${view === 'dreams' ? LOG_NEON : 'transparent'}`,
+          fontFamily: 'var(--font)',
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
+            color: view === 'dreams' ? `${LOG_NEON}b0` : 'rgba(148,163,184,0.35)' }}>
+            {tr('SOURCE', 'ИСТОК')}
+          </p>
+          <p style={{ fontSize: 13, fontWeight: 900, letterSpacing: '0.08em', marginTop: 3,
+            color: view === 'dreams' ? LOG_NEON : 'rgba(148,163,184,0.5)',
+            textShadow: view === 'dreams' ? `0 0 10px ${LOG_NEON}50` : 'none' }}>
+            {tr('DREAMS', 'МЕЧТЫ')}
+          </p>
+        </button>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+        {view === 'dreams' && (
+          <DreamsPanel
+            promotedIds={new Set(state.goals.map(g => g.sourceDreamId).filter((id): id is string => !!id))}
+            onPromote={d => setPromoting(d)} />
+        )}
+
         {view === 'character' && (
           <CharacterSheet goals={state.goals} tasks={tasks} xp={state.xp}
             sums={sums} name={loadSettings().displayName} quests={state.quests}
@@ -254,34 +292,40 @@ export default function Uplinks() {
             }} />
         )}
 
-        {view !== 'character' && shown ? (
+        {isSlotView && shown ? (
           <>
             <SkillTree goal={shown} tasks={tasks} accent={accent}
               onInstall={handleInstall} onTrack={handleTrack} />
 
-            <GoalActions goal={shown} view={view} cooldown={cooldown}
+            {/* A protocol holds routines and nothing else. The bookings, the
+                gear, the basics and the datable proofs the read found live
+                here, beside the tree they serve, and go out on your say-so. */}
+            <ShelfPanel goal={shown} accent={accent}
+              onChanged={() => { setState(loadProgression()); setTasks(loadScrap7().tasks) }} />
+
+            <GoalActions goal={shown} view={view === 'secondary' ? 'secondary' : 'primary'} cooldown={cooldown}
               canInstallMore={hasCapacity(shown, tasks)}
               onEdit={() => setForging(goalToDraft(shown))}
               onPromote={() => persist(promoteSecondary(state, now))}
               onDemote={() => persist(assignSecondary(state, shown.id, now))}
               onFreeze={() => persist(archiveGoal(state, shown.id, now))} />
           </>
-        ) : view !== 'character' ? (
+        ) : isSlotView ? (
           <div style={{ textAlign: 'center', padding: '36px 16px' }}>
             <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM }}>
               {tr('This uplink is unallocated.', 'Этот канал свободен.')}
             </p>
             <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(148,163,184,0.35)',
               marginTop: 7, lineHeight: 1.7, maxWidth: 300, marginLeft: 'auto', marginRight: 'auto' }}>
-              {tr('A goal starts as a dream. Write one in PATHFINDER and promote it — the guide proposes the chain, you edit every node.',
-                  'Цель начинается с мечты. Запишите её в PATHFINDER и продвиньте — гид предложит цепь, вы правите каждый узел.')}
+              {tr('A goal starts as a dream. Write one on the DREAMS tab and promote it — the guide asks, writes the acts, and you edit every routine.',
+                  'Цель начинается с мечты. Запишите её во вкладке МЕЧТЫ и продвиньте — гид спросит, напишет акты, вы правите каждую рутину.')}
             </p>
             <button onClick={() => navigate('/log')} style={{
               marginTop: 12, padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
               fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.14em',
               color: '#02121a', background: `linear-gradient(135deg, ${accent}, ${accent}b0)`,
               border: 'none', boxShadow: `0 0 16px ${accent}45`,
-            }}>◈ {tr('OPEN PATHFINDER', 'ОТКРЫТЬ PATHFINDER')}</button>
+            }}>◈ {tr('OPEN YOUR DREAMS', 'ОТКРЫТЬ МЕЧТЫ')}</button>
           </div>
         ) : null}
 
@@ -314,6 +358,18 @@ export default function Uplinks() {
           </>
         )}
       </div>
+
+      {/* Promote runs the interview, the read and the forge — one press, and it
+          lands on the tab next door rather than in another module. */}
+      {promoting && (
+        <NewUplink accent={CYAN} dream={promoting}
+          onClose={() => setPromoting(null)}
+          onCommitted={() => {
+            setPromoting(null)
+            setState(loadProgression())
+            setView('primary')
+          }} />
+      )}
 
       {forging && (
         <ChainForge draft={forging} accent={accent === GOLD ? GOLD : CYAN}

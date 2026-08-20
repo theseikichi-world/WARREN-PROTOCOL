@@ -2,6 +2,7 @@ import {
   type Task, type Scrap7State, type ChatMessage, type Schedule, type Priority, type Direction,
   type TaskOrigin,
   DEFAULT_CATEGORIES, HABIT_MILESTONES, todayKey, taskOrigin,
+  daysBetweenKeys, shiftDateKey,
 } from './types'
 
 // v4 adds Task.origin. The v3 record is read once and then left untouched, so
@@ -19,7 +20,7 @@ const FROZEN_DECAY = 0.5
 function makeInitialGreeting(): ChatMessage {
   return {
     id: crypto.randomUUID(),
-    text: "SCRAP-7 online. Systems operational. Tell me what needs to get done.",
+    text: "ORBIT online. Systems operational. Tell me what needs to get done.",
     sender: 'scrap7',
     ts: new Date().toISOString(),
   }
@@ -67,8 +68,6 @@ export function applyDailyReset(state: Scrap7State): Scrap7State {
   const today = todayKey()
   if (state.lastDailyReset === today) return state
 
-  const todayDate = new Date(today)
-
   const tasks = state.tasks.map(t => {
     if (t.taskType === 'daily') {
       return { ...t, completed: false }
@@ -79,8 +78,7 @@ export function applyDailyReset(state: Scrap7State): Scrap7State {
       const skipped = new Set(t.skippedDates ?? [])
 
       if (last && last !== today) {
-        const lastDate  = new Date(last)
-        const totalDays = Math.round((todayDate.getTime() - lastDate.getTime()) / 86400000)
+        const totalDays = daysBetweenKeys(last, today)
 
         let newScore  = t.score ?? 0
         let streakBroken = false
@@ -89,11 +87,11 @@ export function applyDailyReset(state: Scrap7State): Scrap7State {
         // rate and keeps its streak, because you were never asked to do it.
         const decay = t.frozen ? ALPHA * FROZEN_DECAY : ALPHA
 
-        // Apply decay for each day between last tracked and today
+        // Apply decay for each day between last tracked and today. Both keys are
+        // local dates, so the walk stays on the operator's calendar — mixing a
+        // UTC-parsed date with a local getDate() drifted an hour across DST.
         for (let d = 1; d < totalDays; d++) {
-          const missed = new Date(lastDate)
-          missed.setDate(lastDate.getDate() + d)
-          const missedKey = missed.toISOString().slice(0, 10)
+          const missedKey = shiftDateKey(last, d)
           if (!skipped.has(missedKey)) {
             newScore = newScore * (1 - decay)      // decay: outcome = 0
             if (!t.frozen) streakBroken = true
@@ -179,10 +177,10 @@ export function createTask(state: Scrap7State, data: NewTaskData): Scrap7State {
 }
 
 // ─── External task intake (cross-module sync) ─────────────────────────────────
-// Other modules (L.O.G, INFINITY-8, …) create SCRAP-7 tasks through this
+// Other modules (L.O.G, INFINITY-8, …) create ORBIT tasks through this
 // function so the Task shape lives in exactly one place. It loads via
 // loadState (so migrations apply), upserts by id, saves, and fires
-// warren:sync — safe to call while SCRAP-7 isn't mounted.
+// warren:sync — safe to call while ORBIT isn't mounted.
 
 export interface ExternalTaskData extends NewTaskData {
   /** Reuse the caller's id so completion state can be cross-referenced (upsert key). */
@@ -367,6 +365,67 @@ export function fuzzyMatchTask(tasks: Task[], query: string): Task | null {
   return bestMatch
 }
 
+/**
+ * Stopwords for duplicate detection. These carry no identity — a task is not
+ * the same task because both titles contain "on".
+ */
+const DEDUP_SKIP = new Set([
+  'a', 'an', 'the', 'to', 'on', 'in', 'at', 'of', 'for', 'my', 'me', 'and', 'or', 'with', 'do',
+  'и', 'в', 'на', 'по', 'с', 'у', 'мой', 'моя', 'моё', 'мои',
+])
+
+/**
+ * Crude suffix fold, so "stretch" / "stretching" / "stretches" are one thing.
+ * Deliberately shallow — both sides get the same treatment, so a stem that
+ * over-trims still matches itself. Trimming too little only means a near-
+ * duplicate gets added, which the user can see and delete; trimming too much
+ * would start eating real tasks again.
+ */
+function stem(w: string): string {
+  if (w.length > 5 && w.endsWith('ing')) return w.slice(0, -3)
+  if (w.length > 4 && w.endsWith('ed'))  return w.slice(0, -2)
+  if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1)
+  return w
+}
+
+function dedupWords(text: string): string[] {
+  return text.toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 1 && !DEDUP_SKIP.has(w))
+    .map(stem)
+}
+
+/**
+ * Is this title already on the list?
+ *
+ * Deliberately NOT `fuzzyMatchTask`. That one is generous on purpose — the user
+ * naming a task they already have ("I did stretching") should find it. Generous
+ * is exactly wrong here: it matched "Work on Warren" to "Diction/Breath/
+ * Tonguetwister Workouts" — "workouts" contains "work", "diction" contains "on"
+ * — and silently dropped a task the assistant had just said it added. A false
+ * positive here loses the user's work with no way to see why.
+ *
+ * So: whole words only, meaningful words only, and most of them have to agree.
+ */
+export function duplicateTask(tasks: Task[], text: string): Task | null {
+  const q = dedupWords(text)
+  if (!q.length) return null
+  const qKey = q.join(' ')
+  const qSet = new Set(q)
+  for (const t of tasks) {
+    const tw = dedupWords(t.text)
+    if (!tw.length) continue
+    if (tw.join(' ') === qKey) return t
+    const tSet = new Set(tw)
+    let shared = 0
+    for (const w of qSet) if (tSet.has(w)) shared++
+    const union = new Set([...qSet, ...tSet]).size
+    if (union > 0 && shared / union >= 0.75) return t
+  }
+  return null
+}
+
 export function todayScheduledDailies(tasks: Task[]): Task[] {
   const daysMap: Record<number, string> = { 0:'sun',1:'mon',2:'tue',3:'wed',4:'thu',5:'fri',6:'sat' }
   const todayDayKey = daysMap[new Date().getDay()]
@@ -405,21 +464,71 @@ export function pickableCategories(state: Scrap7State): string[] {
 }
 
 /**
- * ORBIT's single list: everything due today, repeating or not, open first.
+ * ORBIT's single list: EVERYTHING the day asks of you, whoever asked.
  *
- * A repeating task only appears on the days it is scheduled for; a one-off
- * appears until it's done. There are no tabs because there is no second kind of
- * thing here — the repeat mark is a property of a task, not a category of task.
+ * Routines used to be excluded on the reasoning that the line is BUILDS YOU vs
+ * JUST HAS TO HAPPEN, and the first half lives in UPLINKS. That line is still
+ * true about *ownership* — UPLINKS still scores, streaks and caps them — but it
+ * was the wrong line for a LIST. A day is not divided into two days. Being
+ * unable to see the whole of it in one place is what made the day feel like two
+ * apps, and it makes "did I finish today" unanswerable.
+ *
+ * So everything due appears here, and every row says where it came from. What
+ * does NOT change is what each one is worth: a routine is scored, a task you
+ * added yourself is not, and `source` is what lets the UI say so plainly. A row
+ * that looks like it counts and doesn't is the thing to avoid.
  */
+export type TaskSource = 'uplink' | 'basic' | 'yours'
+
+/**
+ * What a row says about itself. The scored sources are named and coloured; the
+ * unscored one says so in words rather than being left blank, because "this does
+ * not count" is exactly the thing a list must not leave to inference.
+ */
+export const SOURCE_LABEL: Record<TaskSource, { en: string; ru: string; color: string }> = {
+  uplink: { en: 'UPLINK', ru: 'КАНАЛ',   color: '#00f5ff' },
+  basic:  { en: 'BASIC',  ru: 'БАЗА',    color: '#7dd3a0' },
+  yours:  { en: 'YOURS',  ru: 'СВОЁ',    color: 'rgba(148,163,184,0.5)' },
+}
+
+export function taskSource(t: Task): TaskSource {
+  const o = taskOrigin(t)
+  if (o === 'chain')    return 'uplink'
+  if (o === 'baseline') return 'basic'
+  return 'yours'
+}
+
+/** Whether a habit is scheduled for today. Dailies carry a schedule; habits don't. */
+function habitDueToday(t: Task): boolean {
+  if (t.taskType !== 'habit') return false
+  if ((t.direction ?? 'positive') !== 'positive') return false
+  const s = t.schedule
+  if (!s || s.type === 'everyday') return true
+  const day = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date().getDay()]
+  return s.type === 'weekly' && !!s.days?.includes(day)
+}
+
+/** A habit counts as done when today's dose is met, not when a checkbox is ticked. */
+export function habitDoneToday(t: Task): boolean {
+  return t.lastTrackedDate === todayKey() && (t.todayCount ?? 0) >= (t.target ?? 1)
+}
+
 export function orbitTasks(tasks: Task[]): Task[] {
-  const dueToday = new Set(todayScheduledDailies(tasks).map(t => t.id))
+  const dueDaily = new Set(todayScheduledDailies(tasks).map(t => t.id))
+  const done = (t: Task): boolean => t.taskType === 'habit' ? habitDoneToday(t) : t.completed
+
+  // Scored work leads, because it is the part that compounds. Within a source,
+  // repeating things anchor the day, then one-offs.
+  const rank: Record<TaskSource, number> = { uplink: 0, basic: 1, yours: 2 }
+
   return tasks
-    .filter(t => (t.taskType === 'todo') || dueToday.has(t.id))
+    .filter(t => t.taskType === 'todo' || dueDaily.has(t.id) || habitDueToday(t))
     .sort((a, b) => {
-      if (a.completed !== b.completed) return a.completed ? 1 : -1
-      // Repeating things anchor the day, so they lead
-      const ar = a.taskType === 'daily' ? 0 : 1
-      const br = b.taskType === 'daily' ? 0 : 1
+      if (done(a) !== done(b)) return done(a) ? 1 : -1
+      const bySource = rank[taskSource(a)] - rank[taskSource(b)]
+      if (bySource !== 0) return bySource
+      const ar = a.taskType === 'todo' ? 1 : 0
+      const br = b.taskType === 'todo' ? 1 : 0
       return ar - br
     })
 }

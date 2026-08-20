@@ -11,6 +11,7 @@ import {
 import { useLocale, setLocale, t } from './i18n'
 import { forgetTours } from './tour'
 import { chronotype, CHRONOTYPE_LABEL, type Gender } from './profile'
+import { play as playCue } from './sound'
 
 const conflictBtn = (color: string): React.CSSProperties => ({
   flex: 1, padding: '7px 4px', borderRadius: 6, cursor: 'pointer',
@@ -353,11 +354,13 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           {isTauri() && <>
           <Section label={t('Behavior', 'Поведение')} />
 
-          <Row label="Always on top" sub="Keep Warren above other windows">
+          <Row label={t('Always on top', 'Поверх всех окон')}
+            sub={t('Keep Warren above other windows', 'Warren остаётся поверх остальных окон')}>
             <Toggle on={settings.alwaysOnTop} onChange={handleAlwaysOnTop} accent={acc} />
           </Row>
 
-          <Row label="Start on startup" sub="Launch Warren when Windows starts">
+          <Row label={t('Start on startup', 'Запуск при старте')}
+            sub={t('Launch Warren when Windows starts', 'Открывать Warren вместе с Windows')}>
             <Toggle
               on={settings.startOnStartup}
               onChange={autostartLoading ? () => {} : handleAutostart}
@@ -366,8 +369,34 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           </Row>
           </>}
 
-          <Row label="Show intro animation" sub="Matrix boot screen on launch">
+          <Row label={t('Show intro animation', 'Заставка при запуске')}
+            sub={t('Matrix boot screen on launch', 'Экран загрузки в стиле «Матрицы»')}>
             <Toggle on={settings.showIntro} onChange={v => update({ showIntro: v })} accent={acc} />
+          </Row>
+
+          {/* Changing either of these plays a cue, because the only useful way
+              to set a volume is to hear it where you are sitting. */}
+          <Row label={t('Sound', 'Звук')}
+            sub={t('Quiet synthesised cues — a tap, a reward, a threshold crossed',
+                   'Тихие синтезированные сигналы — нажатие, награда, новый уровень')}>
+            <Toggle on={settings.sounds} onChange={v => { update({ sounds: v }); if (v) playCue('open') }} accent={acc} />
+          </Row>
+
+          {settings.sounds && (
+            <Row label={t('Volume', 'Громкость')} sub={`${settings.soundVolume}%`}>
+              <input type="range" min={0} max={100} step={5} value={settings.soundVolume}
+                onChange={e => update({ soundVolume: Number(e.target.value) })}
+                onMouseUp={() => playCue('check')}
+                onTouchEnd={() => playCue('check')}
+                style={{ width: 130, accentColor: acc }} />
+            </Row>
+          )}
+
+          <Row
+            label={t('Open every module', 'Открыть все модули')}
+            sub={t('Ignore level locks. Quests and XP still run — this only unlocks the doors.',
+                   'Игнорировать уровни. Квесты и опыт работают — открываются только двери.')}>
+            <Toggle on={settings.unlockAll} onChange={v => update({ unlockAll: v })} accent={acc} />
           </Row>
 
           <Row label={t('Replay the guided tours', 'Показать обучение заново')}
@@ -402,7 +431,7 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
             type="text"
             value={settings.displayName}
             onChange={e => update({ displayName: e.target.value })}
-            placeholder="Leave empty to use system username"
+            placeholder={t('Leave empty to use system username', 'Оставьте пустым — возьмём имя из системы')}
             maxLength={32}
             style={{
               width: '100%', padding: '8px 10px',
@@ -485,11 +514,11 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
             <div style={{ padding: '10px 12px', borderRadius: 7, marginBottom: 12,
               background: 'rgba(255,107,0,0.07)', border: '1px solid rgba(255,107,0,0.3)' }}>
               <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', color: '#ff6b00',
-                fontWeight: 700, marginBottom: 4 }}>⚠ NO API KEY</p>
+                fontWeight: 700, marginBottom: 4 }}>⚠ {t('NO API KEY', 'НЕТ API-КЛЮЧА')}</p>
               <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
                 color: 'rgba(255,107,0,0.6)', lineHeight: 1.6 }}>
-                AI features (L.O.G analysis, A.R.D.O, Solaris deliveries) need a Claude key.
-                Paste it below — it stays on this machine.
+                {t('AI features (dream analysis, A.R.D.O, Solaris deliveries) need a Claude key. Paste it below — it stays on this machine.',
+                   'Функциям ИИ (разбор мечты, A.R.D.O, поставки SOLARIS) нужен ключ Claude. Вставьте его ниже — он не покинет этот компьютер.')}
               </p>
             </div>
           ) : (
@@ -701,7 +730,8 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           </p>
 
           <Row label={t('Enable sync', 'Включить')}
-            sub={t('Pulls on launch, pushes when you leave', 'Тянет при запуске')}>
+            sub={t('Pulls on launch, pushes when you leave',
+                   'Забирает при запуске, отправляет при выходе')}>
             <Toggle on={settings.syncEnabled} onChange={v => update({ syncEnabled: v })} accent={acc} />
           </Row>
 

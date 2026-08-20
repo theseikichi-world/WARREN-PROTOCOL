@@ -4,7 +4,7 @@
 // Training days are pinned to weekdays and times on purpose — floating
 // frequency ("3× a week") measurably slows integration.
 //
-// scrapTaskId is empty until step 3 links each routine to its SCRAP-7 habit.
+// scrapTaskId is empty until step 3 links each routine to its ORBIT habit.
 
 import type { ChainNode, Chapter, Goal, NodeTier } from './types'
 import { DEFAULT_UNLOCKS_AT } from './types'
