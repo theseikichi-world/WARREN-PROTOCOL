@@ -70,3 +70,37 @@ describe('tours', () => {
     expect(resetKeys(['warren_tours_v1', ...RESET_KEEP])).toEqual(['warren_tours_v1'])
   })
 })
+
+describe('VIGILANTE survives a backup', () => {
+  it('carries the training record and the ladder position', async () => {
+    // The log IS the ladder — stage is derived from it — so losing this file
+    // does not just lose history, it silently resets you to stage 0.
+    // A tiny in-memory shim: this suite runs in node, where the other cases
+    // only ever touch pure functions.
+    const store = new Map<string, string>()
+    ;(globalThis as Record<string, unknown>).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => { store.set(k, String(v)) },
+      removeItem: (k: string) => { store.delete(k) },
+      clear: () => store.clear(),
+      key: (i: number) => [...store.keys()][i] ?? null,
+      get length() { return store.size },
+    }
+
+    const { exportAllJson, importBackup } = await import('./backup')
+    localStorage.setItem('vigilante_v1', JSON.stringify({
+      spec: { tier: 'hero', restSec: 30, rounds: 3, leadInSec: 10 },
+      log: [{ id: 'a', date: '2026-08-20', finished: true, heldSec: 360 }],
+      voiceOn: true, habitId: 'life:own-statics', habitDays: ['mon'], version: 1,
+    }))
+
+    const json = exportAllJson()
+    localStorage.clear()
+    importBackup(json)
+
+    const back = JSON.parse(localStorage.getItem('vigilante_v1')!)
+    expect(back.spec.tier).toBe('hero')
+    expect(back.log).toHaveLength(1)
+    expect(back.habitId).toBe('life:own-statics')
+  })
+})

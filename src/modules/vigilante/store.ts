@@ -32,6 +32,8 @@ export function loadState(): VigilanteState {
         : { ...DEFAULT_SPEC },
       log: Array.isArray(parsed.log) ? parsed.log : [],
       voiceOn: typeof parsed.voiceOn === 'boolean' ? parsed.voiceOn : true,
+      habitId: typeof parsed.habitId === 'string' ? parsed.habitId : null,
+      habitDays: Array.isArray(parsed.habitDays) ? parsed.habitDays : [],
     }
   } catch {
     return { ...EMPTY_STATE, spec: { ...DEFAULT_SPEC } }
@@ -86,6 +88,10 @@ export function setMusicName(s: VigilanteState, musicName: string): VigilanteSta
 
 export function setVoiceOn(s: VigilanteState, voiceOn: boolean): VigilanteState {
   return { ...s, voiceOn }
+}
+
+export function setHabit(s: VigilanteState, habitId: string | null, habitDays: string[]): VigilanteState {
+  return { ...s, habitId, habitDays }
 }
 
 /**

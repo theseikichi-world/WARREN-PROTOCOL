@@ -35,12 +35,13 @@ export type Objective =
   | { kind: 'routine.runs';       need: number }
   | { kind: 'routine.depth';      need: number }  // best automatism × 100
   | { kind: 'ardo.texts';         need: number }
+  | { kind: 'vigilante.sessions'; need: number }  // sessions HELD, not started
 
 /**
  * Where the quest actually happens. A brief that says "reach your water target"
  * and then leaves you to find the kitchen is a puzzle, not a starting zone.
  */
-export type QuestTarget = 'journal' | 'solaris' | 'ardo' | 'log' | 'character' | 'uplink'
+export type QuestTarget = 'journal' | 'solaris' | 'ardo' | 'log' | 'character' | 'uplink' | 'vigilante'
 
 /**
  * A control the destination should highlight on arrival. Landing on SOLARIS
@@ -78,6 +79,7 @@ export const QUEST_DESTINATIONS: Record<QuestTarget, QuestDestination> = {
   // Both land on UPLINKS, but they want different tabs and different advice
   character:{ path: '/uplinks', label: 'OPEN YOUR CHARACTER',ru: 'ОТКРЫТЬ ПЕРСОНАЖА' },
   uplink:   { path: '/uplinks', label: 'OPEN YOUR PROTOCOL', ru: 'ОТКРЫТЬ ПРОТОКОЛ' },
+  vigilante:{ path: '/vigilante', label: 'OPEN VIGILANTE',   ru: 'ОТКРЫТЬ VIGILANTE' },
 }
 
 /**
@@ -171,6 +173,18 @@ export const QUEST_LINE: Quest[] = [
     briefRu: 'Доведите одну рутину до «прочно». Примерно месяц регулярности — точка, где она перестаёт стоить усилий.',
     objective: { kind: 'routine.depth', need: 65 }, target: 'uplink', xp: 200,
   },
+
+  // ── Stage 5 — THE BODY ──────────────────────────────────────────────────────
+  // VIGILANTE opens at level 5, which is exactly when this becomes live, so the
+  // door is never locked when the quest points at it (rule 29). It arrives last
+  // on purpose: holding a position is worth nothing until you have the habit of
+  // turning up, and stages 1-4 are what build that.
+  {
+    id: 'q8-statics', stage: 5, title: 'TIME UNDER TENSION', ru: 'ВРЕМЯ ПОД НАГРУЗКОЙ',
+    brief:   'Hold one full VIGILANTE session — every position, every round. One stage of the ladder is three of them.',
+    briefRu: 'Выдержите одну полную сессию VIGILANTE — каждую позицию, каждый круг. Один этап лестницы — это три сессии.',
+    objective: { kind: 'vigilante.sessions', need: 1 }, target: 'vigilante', xp: 120,
+  },
 ]
 
 /** The last level the quest line gates. Beyond it, XP alone carries you. */
@@ -202,6 +216,8 @@ export function measure(objective: Objective, ctx: QuestContext): number {
     case 'routine.depth':
       return Math.round(Math.max(0, ...installed.map(n => nodeScore(n, tasks))) * 100)
     case 'ardo.texts':         return sums.ardo?.texts ?? 0
+    // Finished, never started: a session you walked out of is not a session.
+    case 'vigilante.sessions': return sums.vigilante?.finished ?? 0
   }
 }
 

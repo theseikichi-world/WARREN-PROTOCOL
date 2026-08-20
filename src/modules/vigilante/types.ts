@@ -257,6 +257,10 @@ export interface VigilanteState {
   musicName: string
   /** Spoken cues, so you never look at the screen mid-hold. */
   voiceOn:  boolean
+  /** The life-support habit this module owns, if you scheduled one. */
+  habitId:  string | null
+  /** Days it is scheduled on, so the panel can show them back to you. */
+  habitDays: string[]
   version:  number
 }
 
@@ -265,6 +269,8 @@ export const EMPTY_STATE: VigilanteState = {
   log: [],
   musicName: '',
   voiceOn: true,
+  habitId: null,
+  habitDays: [],
   version: 1,
 }
 

@@ -25,6 +25,7 @@ export const MODULE_LEVEL: Partial<Record<ModuleId, number>> = {
   pomu:   2,   // SOLARIS    — stage 2 sends you here for WATER DISCIPLINE
   scrap7: 2,   // ORBIT      — the day's obligations, once the character exists
   hoot:   3,   // JOURNAL    — stage 3, once there is something worth recording
+  vigil:  5,   // VIGILANTE  — stage 5; the body comes after the habit of showing up
 }
 
 /** The level a module opens at. Anything unlisted is open from the start. */

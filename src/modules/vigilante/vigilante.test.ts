@@ -7,6 +7,7 @@ import {
 } from './types'
 import { clampSec, clampRounds, logSession, deriveVigilante, LOG_CAP, setTier } from './store'
 import { cueFor, countdownAt, prepareCue, PREPARE_AT } from './voice'
+import { freeByPeriod, bestPeriod } from './schedule'
 
 const spec = (over: Partial<CircuitSpec> = {}): CircuitSpec => ({ ...DEFAULT_SPEC, ...over })
 /** Most sequence assertions are about work/rest, so start cold by default. */
@@ -298,5 +299,36 @@ describe('prepareCue (get set before the hold)', () => {
   it('skips rests too short to leave room for the countdown', () => {
     const tight = buildPhases(cold({ rounds: 2, restSec: 5 }), 0)
     expect(prepareCue(tight, 1, PREPARE_AT)).toBeNull()
+  })
+})
+
+describe('picking the best time', () => {
+  const free = (m: Record<string, number>) =>
+    ({ morning: 0, midday: 0, afternoon: 0, evening: 0, ...m })
+
+  it('splits a block that straddles a boundary instead of dumping it whole', () => {
+    // 10:00-12:00 is one hour of morning and one of midday.
+    const out = freeByPeriod([{ kind: 'free', start: 600, end: 720 }])
+    expect(out.morning).toBe(60)
+    expect(out.midday).toBe(60)
+  })
+
+  it('ignores anything that is not free time', () => {
+    expect(freeByPeriod([{ kind: 'commitment', start: 600, end: 720 }]).morning).toBe(0)
+  })
+
+  it('puts the session where the room actually is', () => {
+    expect(bestPeriod(free({ morning: 20, evening: 180 }), 30)).toBe('evening')
+  })
+
+  it('will not choose a slot too small for the session', () => {
+    // Evening is bigger but still short; morning is the only one that fits.
+    expect(bestPeriod(free({ morning: 90, evening: 20 }), 60)).toBe('morning')
+  })
+
+  it('falls back to the warmest part of the day when nothing fits', () => {
+    // A day with no room anywhere still has to answer, and the afternoon is
+    // when the body is warmest — the same reason anchor.ts describes it so.
+    expect(bestPeriod(free({}), 60)).toBe('afternoon')
   })
 })

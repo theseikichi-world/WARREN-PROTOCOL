@@ -97,7 +97,7 @@ export const GUILD: GuildMember[] = [
     desc: 'Never sleeps. Finds the casting call before anyone else.',
   },
   {
-    id: 'vigil', group: 'utility' as GuildGroup, name: 'VIGILANTE',     unit: 'VGL', animal: 'Bat',
+    id: 'vigil', group: 'instrument' as GuildGroup, name: 'VIGILANTE',  unit: 'VGL', animal: 'Bat',
     role: 'Static Protocol',
     neon: '#6366f1', path: '/vigilante', free: false, built: true,
     desc: 'Time under tension. Holds a position and counts the seconds — the training runs here, the habit lives in UPLINKS.',

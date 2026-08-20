@@ -4,15 +4,22 @@ import { play as playCue } from '../../sound'
 import {
   HOLD_BY_ID, buildPhases, specHoldSeconds, clock, holdsAt, holdSecFor,
   TIERS, TIER_ORDER, BOSS_SEC, STEP_SEC, SESSIONS_PER_STAGE, PULLUP_UNLOCK_STAGE,
-  maxStage, toNextStage, bossBeaten,
+  maxStage, toNextStage, bossBeaten, stageFrom,
   type Phase,
 } from './types'
 import {
   loadState, saveState, setSpec, setMusicName, logSession,
   clampSec, clampRounds, clampLeadIn, deriveVigilante, setVoiceOn,
-  setTier, currentStage, finishedCount,
+  setTier, currentStage, finishedCount, setHabit,
 } from './store'
 import { LocalAudio } from './music'
+import { installTrainingHabit, DEFAULT_DAYS, type WhenChoice } from './schedule'
+import { trackFromList } from '../progression/store'
+import { loadState as loadScrap7 } from '../scrap7/store'
+import { habitDoneToday } from '../scrap7/store'
+import { WEEKDAYS } from '../scrap7/types'
+import { PERIOD_LABEL } from '../progression/anchor'
+import type { Period } from '../infinity8/store'
 import { saveTrack, loadTrack } from './musicStore'
 import { speak, silence, cueFor, countdownAt, prepareCue, voiceSupported, type Cue } from './voice'
 
@@ -42,6 +49,16 @@ function say(cue: Cue, nameOf: (id: string) => string): string {
   }
 }
 
+/** The card that closes a session. Held on screen until dismissed, not flashed. */
+interface Verdict {
+  heldSec:   number
+  doneWork:  number
+  totalWork: number
+  finished:  boolean
+  /** Stage the session bought, if it bought one. */
+  stageUp:   number | null
+}
+
 /** Running clock. Driven off wall time, never off a decrementing counter. */
 interface Running {
   index:     number      // which phase
@@ -58,6 +75,10 @@ export default function Vigilante() {
   const [run, setRun]     = useState<Running | null>(null)
   const [music, setMusic] = useState<LocalAudio | null>(null)
   const [flash, setFlash] = useState('')
+  const [verdict, setVerdict] = useState<Verdict | null>(null)
+  const [marked, setMarked]   = useState(false)
+  const [pickDays, setPickDays] = useState<string[]>(DEFAULT_DAYS)
+  const [pickWhen, setPickWhen] = useState<WhenChoice>('auto')
 
   const tick = useRef<ReturnType<typeof setInterval> | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
@@ -76,6 +97,34 @@ export default function Vigilante() {
   const atBoss   = bossBeaten(state.spec.tier, stage)
 
   const persist = useCallback((s: typeof state) => { saveState(s); setState(s) }, [])
+
+  /**
+   * Already ticked today? Then the card offers nothing to press.
+   *
+   * Read on render rather than memoised: it only runs while a verdict is on
+   * screen, and it has to reflect a tick made from ORBIT a moment ago — a
+   * cached answer here would offer a second tick for the same day.
+   */
+  const habitDoneAlready = !!verdict && !!state.habitId &&
+    (() => { const t = loadScrap7().tasks.find(x => x.id === state.habitId); return !!t && habitDoneToday(t) })()
+
+  /**
+   * Tick the habit through the one shared path.
+   *
+   * trackFromList is what ORBIT's list and the character sheet both call, so a
+   * session marked here moves the score, the streak and the XP exactly as it
+   * would anywhere else — no second economy, no XP this module mints itself.
+   */
+  const markDone = useCallback(() => {
+    if (!state.habitId) return
+    const { gained, levelUp } = trackFromList(state.habitId)
+    setMarked(true)
+    setState(loadState())
+    if (levelUp)     { setFlash(tr(`LEVEL ${levelUp}`, `УРОВЕНЬ ${levelUp}`)); playCue('level') }
+    else if (gained) { setFlash(`+${gained} XP`); playCue('xp') }
+    else             playCue('check')
+    setTimeout(() => setFlash(''), 2600)
+  }, [state.habitId])
 
   const holdName = useCallback(
     (id: string) => { const h = HOLD_BY_ID[id]; return h ? tr(h.name, h.nameRu) : '' }, [])
@@ -182,10 +231,12 @@ export default function Vigilante() {
     }))
     void music?.stop()
     silence()
-    setFlash(finished
-      ? tr('SESSION COMPLETE', 'СЕССИЯ ЗАВЕРШЕНА')
-      : tr('SESSION ENDED', 'СЕССИЯ ПРЕРВАНА'))
-    setTimeout(() => setFlash(''), 2600)
+    setMarked(false)
+    setVerdict({
+      heldSec: Math.round(cur.heldSec), doneWork: cur.doneWork,
+      totalWork: holdsAt(stage).length * state.spec.rounds,
+      finished, stageUp: null,
+    })
     playCue(finished ? 'level' : 'deny')
   }, [music, persist, state.spec, stage])
 
@@ -226,8 +277,14 @@ export default function Vigilante() {
       }))
       void music?.stop()
       announce({ kind: 'done' })
-      setFlash(tr('SESSION COMPLETE', 'СЕССИЯ ЗАВЕРШЕНА'))
-      setTimeout(() => setFlash(''), 2600)
+      const before = stageFrom(finished, state.spec.tier)
+      const after  = stageFrom(finished + 1, state.spec.tier)
+      setMarked(false)
+      setVerdict({
+        heldSec: Math.round(heldSec), doneWork,
+        totalWork: holdsAt(stage).length * state.spec.rounds,
+        finished: true, stageUp: after > before ? after : null,
+      })
       playCue('level')
       return
     }
@@ -247,7 +304,7 @@ export default function Vigilante() {
     }
     runRef.current = stepped
     setRun(stepped)
-  }, [phases, music, persist, state.spec, stage, announce])
+  }, [phases, music, persist, state.spec, stage, announce, finished])
 
   // The clock. Remaining is recomputed from wall time every tick, so a
   // backgrounded window or a throttled interval cannot make a 30-second hold
@@ -347,6 +404,57 @@ export default function Vigilante() {
           background: 'rgba(4,10,18,0.96)', border: `1px solid ${NEON}45` }}>
           <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800,
             letterSpacing: '0.12em', color: NEON }}>{flash}</p>
+        </div>
+      )}
+
+      {/* ── What the session was worth ──
+          Rule 10: it reports, it does not applaud. The numbers ARE the reward —
+          "6:00 under tension, one stage bought" lands harder than a well done,
+          and unlike a well done it is true whether or not you finished. */}
+      {verdict && (
+        <div style={{ flexShrink: 0, margin: '10px 14px 0', padding: '11px 13px', borderRadius: 9,
+          background: verdict.finished ? `${REST}0e` : 'rgba(148,163,184,0.06)',
+          border: `1px solid ${verdict.finished ? REST : 'rgba(148,163,184,0.28)'}` }}>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 12, fontWeight: 900,
+            letterSpacing: '0.14em', color: verdict.finished ? REST : 'rgba(148,163,184,0.75)' }}>
+            {verdict.finished
+              ? tr('SESSION HELD', 'СЕССИЯ ВЫДЕРЖАНА')
+              : tr('SESSION ENDED EARLY', 'СЕССИЯ ПРЕРВАНА')}
+          </p>
+          <p style={{ fontFamily: 'var(--font)', fontSize: 11, marginTop: 4,
+            color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
+            {tr(`${clock(verdict.heldSec)} under tension · ${verdict.doneWork}/${verdict.totalWork} holds`,
+                `${clock(verdict.heldSec)} под нагрузкой · ${verdict.doneWork}/${verdict.totalWork} удержаний`)}
+            {verdict.stageUp !== null && (
+              tr(` · stage ${verdict.stageUp} reached, +${STEP_SEC}s on every position`,
+                 ` · этап ${verdict.stageUp}, +${STEP_SEC}с к каждой позиции`))}
+          </p>
+
+          {/* The habit is the record that counts. Marking it here goes through
+              the same path ORBIT and UPLINKS use, so score, streak and XP move
+              together rather than this module keeping a private tally. */}
+          {verdict.finished && state.habitId && (
+            marked || habitDoneAlready ? (
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, marginTop: 7, color: REST }}>
+                ✓ {tr('Marked in your habits for today.', 'Отмечено в привычках на сегодня.')}
+              </p>
+            ) : (
+              <button onClick={markDone} style={{ ...btn(REST), marginTop: 8 }}>
+                ✓ {tr('MARK DONE IN HABITS', 'ОТМЕТИТЬ В ПРИВЫЧКАХ')}
+              </button>
+            )
+          )}
+          {verdict.finished && !state.habitId && (
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, marginTop: 7,
+              color: 'rgba(148,163,184,0.5)', lineHeight: 1.5 }}>
+              {tr('Schedule this below and finishing a session will mark it in your habits.',
+                  'Запланируйте ниже — и завершённая сессия будет отмечаться в привычках.')}
+            </p>
+          )}
+
+          <button onClick={() => setVerdict(null)} style={{ ...btn('rgba(148,163,184,0.45)'), marginTop: 8 }}>
+            {tr('DISMISS', 'ЗАКРЫТЬ')}
+          </button>
         </div>
       )}
 
@@ -522,6 +630,90 @@ export default function Vigilante() {
               <button onClick={() => fileRef.current?.click()} style={btn(NEON)}>
                 {music ? tr('CHANGE TRACK', 'СМЕНИТЬ ТРЕК') : tr('CHOOSE TRACK', 'ВЫБРАТЬ ТРЕК')}
               </button>
+            </div>
+
+            {/* ── When you train ──
+                You say which days and roughly when; the module reads the real
+                day and puts it where you actually have room. The habit itself
+                is a life-support basic (rule 31), so it is scored, streaked and
+                paid for by the same system as everything else. */}
+            <div style={{ padding: '9px 11px', borderRadius: 8, marginBottom: 12,
+              background: 'rgba(10,12,30,0.45)', border: `1px solid ${NEON}22` }}>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
+                letterSpacing: '0.14em', color: `${NEON}b0`, marginBottom: 5 }}>
+                ⌾ {tr('WHEN YOU TRAIN', 'КОГДА ТРЕНИРОВАТЬСЯ')}
+              </p>
+
+              {state.habitId ? (
+                <>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 10.5,
+                    color: 'rgba(148,163,184,0.65)', lineHeight: 1.5 }}>
+                    {tr(`In your habits on ${state.habitDays.map(d => d.toUpperCase()).join(' · ')}. Finishing a session marks it.`,
+                        `В привычках: ${state.habitDays.map(d => d.toUpperCase()).join(' · ')}. Завершённая сессия отмечает её.`)}
+                  </p>
+                  <button onClick={() => persist(setHabit(loadState(), null, []))}
+                    style={{ ...btn('rgba(148,163,184,0.45)'), marginTop: 7 }}>
+                    {tr('UNLINK', 'ОТВЯЗАТЬ')}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 10.5,
+                    color: 'rgba(148,163,184,0.6)', lineHeight: 1.5, marginBottom: 7 }}>
+                    {tr('Pick your days. AUTO reads today and puts the session where you actually have room.',
+                        'Выберите дни. АВТО читает ваш день и ставит сессию туда, где реально есть время.')}
+                  </p>
+                  <div style={{ display: 'flex', gap: 3, marginBottom: 7 }}>
+                    {WEEKDAYS.map(d => {
+                      const on = pickDays.includes(d.value)
+                      return (
+                        <button key={d.value} onClick={() => setPickDays(p =>
+                          p.includes(d.value) ? p.filter(x => x !== d.value) : [...p, d.value])}
+                          style={{ flex: 1, padding: '5px 0', borderRadius: 5, cursor: 'pointer',
+                            fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 800,
+                            color: on ? '#050810' : 'rgba(148,163,184,0.5)',
+                            background: on ? NEON : 'transparent',
+                            border: `1px solid ${on ? NEON : 'rgba(255,255,255,0.08)'}` }}>
+                          {d.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', gap: 3, marginBottom: 8 }}>
+                    {(['auto', 'morning', 'midday', 'afternoon', 'evening'] as WhenChoice[]).map(w => {
+                      const on = pickWhen === w
+                      return (
+                        <button key={w} onClick={() => setPickWhen(w)}
+                          style={{ flex: 1, padding: '5px 0', borderRadius: 5, cursor: 'pointer',
+                            fontFamily: 'var(--font)', fontSize: 9, fontWeight: 800,
+                            color: on ? '#050810' : 'rgba(148,163,184,0.5)',
+                            background: on ? NEON : 'transparent',
+                            border: `1px solid ${on ? NEON : 'rgba(255,255,255,0.08)'}` }}>
+                          {w === 'auto' ? tr('AUTO', 'АВТО')
+                            : tr(PERIOD_LABEL[w as Period].en, PERIOD_LABEL[w as Period].ru).slice(0, 4)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button
+                    disabled={!pickDays.length}
+                    onClick={() => {
+                      const mins = Math.round(specHoldSeconds(state.spec, stage) / 60) + 5
+                      const { taskId, period } = installTrainingHabit(
+                        tr('Statics', 'Статика'), pickDays, pickWhen, mins)
+                      if (!taskId) { setFlash(tr('COULD NOT ADD', 'НЕ УДАЛОСЬ')); return }
+                      persist(setHabit(loadState(), taskId, pickDays))
+                      window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'vigilante' } }))
+                      setFlash(tr(`SCHEDULED · ${PERIOD_LABEL[period].en}`,
+                                  `ЗАПЛАНИРОВАНО · ${PERIOD_LABEL[period].ru}`))
+                      setTimeout(() => setFlash(''), 2600)
+                      playCue('open')
+                    }}
+                    style={{ ...btn(NEON), opacity: pickDays.length ? 1 : 0.4 }}>
+                    ✛ {tr('ADD TO MY HABITS', 'ДОБАВИТЬ В ПРИВЫЧКИ')}
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Spoken cues. Hidden where the engine does not exist rather than
