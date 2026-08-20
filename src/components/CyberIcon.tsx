@@ -397,6 +397,31 @@ function IconUplink({ size, color = 'currentColor', glow }: IconProps) {
   )
 }
 
+/**
+ * VIGILANTE — a line held between two anchors, with the load pressing on it.
+ *
+ * Not an hourglass and not a bat. The job is time under tension: something held
+ * straight against something pushing down, for as long as you can keep it. The
+ * anchors are why it is a HOLD rather than a rep — nothing here moves.
+ */
+export function IconVigil(p: IconProps) {
+  const c = p.color ?? 'currentColor'
+  return (
+    <Svg {...p}>
+      {/* Anchored at both ends — a hold goes nowhere */}
+      <rect x="1.5" y="8.6" width="2.8" height="6.8" rx="1" fill={c} opacity="0.9"/>
+      <rect x="19.7" y="8.6" width="2.8" height="6.8" rx="1" fill={c} opacity="0.9"/>
+      {/* The line you keep straight */}
+      <line x1="4.3" y1="12" x2="19.7" y2="12" stroke={c} strokeWidth="1.7" strokeLinecap="round"/>
+      {/* What is pressing on it */}
+      <path d="M12 3.6v4.4m0 0-2.1-2.1M12 8l2.1-2.1" fill="none" stroke={c}
+        strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.85"/>
+      {/* The seconds it is counting */}
+      <circle cx="12" cy="17.8" r="1.5" fill={c} opacity="0.5"/>
+    </Svg>
+  )
+}
+
 /* ── Map: moduleId → icon component ── */
 import type { ModuleId } from '../guild'
 
@@ -415,6 +440,7 @@ export function CyberIcon({ id, size, color, glow }: { id: ModuleId | 'hub' | 's
     case 'pavi':   return <IconPavi   {...props} />
     case 'ferri':  return <IconFerri  {...props} />
     case 'foxy':   return <IconFoxy   {...props} />
+    case 'vigil':  return <IconVigil  {...props} />
     case 'hub':    return <IconHub    {...props} />
     case 'set':    return <IconSet    {...props} />
     case 'pwr':    return <IconPwr    {...props} />

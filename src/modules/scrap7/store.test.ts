@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createTask, duplicateTask, pickableCategories, orbitTasks, taskSource, habitDoneToday, type NewTaskData } from './store'
+import { parseCommand } from './commandParser'
 import { isOrphanHabit, todayKey, dateKey, parseDateKey, shiftDateKey, daysBetweenKeys, dayKeyAt, sleepCutoffMin } from './types'
 import type { Scrap7State, Task } from './types'
 
@@ -274,5 +275,40 @@ describe('isOrphanHabit', () => {
   it('never touches anything that is not a habit', () => {
     expect(isOrphanHabit({ taskType: 'todo',  origin: 'log' } as Task)).toBe(false)
     expect(isOrphanHabit({ taskType: 'daily', origin: 'log' } as Task)).toBe(false)
+  })
+})
+
+describe('the fast parser knows what it cannot handle', () => {
+  const tasks: Task[] = []
+
+  it('hands a scheduled class with times to the AI instead of mangling it', () => {
+    // It used to match `every <weekday> (.+)` and title the task with the whole
+    // remaining sentence — clock times, commute and all — because the capture
+    // group had no opinion about what it swallowed.
+    expect(parseCommand(
+      'every Wednesday I have Acting Class from 19:30 to 22:30, usually I walk there it takes 30 minutes to get',
+      tasks,
+    )).toBeNull()
+  })
+
+  it('declines anything carrying a clock time', () => {
+    expect(parseCommand('add gym at 19:30', tasks)).toBeNull()
+  })
+
+  it('declines a sentence with a second clause', () => {
+    expect(parseCommand('add reading, then journal', tasks)).toBeNull()
+  })
+
+  it('still answers instantly for the short things it is for', () => {
+    // The whole point of tier 1 is that "add pushups" never waits on a network.
+    const simple = parseCommand('add a daily pushups', tasks)
+    expect(simple).not.toBeNull()
+    expect(simple!.actions[0]).toMatchObject({ type: 'create_direct' })
+  })
+
+  it('still takes a plain weekday recurrence', () => {
+    const weekly = parseCommand('every monday gym', tasks)
+    expect(weekly).not.toBeNull()
+    expect(weekly!.actions[0]).toMatchObject({ type: 'create_direct', recurrence: 'weekly' })
   })
 })

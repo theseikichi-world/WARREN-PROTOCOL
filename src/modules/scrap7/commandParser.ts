@@ -107,6 +107,32 @@ function extractWeekdays(text: string): string[] {
 }
 
 /**
+ * Is this richer than a regex should be touching?
+ *
+ * Tier 1 exists to make "add pushups" instant, not to comprehend English. Given
+ * "every Wednesday I have Acting Class from 19:30 to 22:30, usually I walk there
+ * it takes 30 minutes to get" it matched `every <weekday> (.+)` and cheerfully
+ * titled the task with the entire remaining sentence — clock times, commute and
+ * all — because the capture group had no opinion about what it swallowed.
+ *
+ * A clock time, a second clause, or simply too many words means the sentence
+ * carries structure worth extracting: when it starts, how long it runs, what the
+ * thing is actually CALLED. That is the AI's job, and returning null here is how
+ * it gets handed over. A fast wrong answer is worse than a slow right one.
+ */
+const TOO_RICH = [
+  /\d{1,2}[:.]\d{2}/,          // a clock time — "from 19:30 to 22:30"
+  /\b(from|until|till|до)\b.*\d/i,   // a span with a number in it
+  /,/,                          // a second clause
+]
+
+function tooRichForTier1(title: string, whole: string): boolean {
+  if (TOO_RICH.some(re => re.test(whole))) return true
+  // Six words is a title; more is a sentence describing a situation.
+  return title.trim().split(/\s+/).length > 6
+}
+
+/**
  * Tries to parse free-form natural language as a task creation intent.
  * Returns NLCreate if confident, null if not.
  */
@@ -119,6 +145,7 @@ function parseNaturalCreate(text: string): NLCreate | null {
   )
   if (everyDayMatch) {
     let title = everyDayMatch[2].trim()
+    if (tooRichForTier1(title, t)) return null
     title = title.charAt(0).toUpperCase() + title.slice(1)
     const days = extractWeekdays(t)
     return {
@@ -156,6 +183,7 @@ function parseNaturalCreate(text: string): NLCreate | null {
         .trim()
 
       if (title.length < 2) continue
+      if (tooRichForTier1(title, t)) return null
       title = title.charAt(0).toUpperCase() + title.slice(1)
 
       const timeOfDay = detectTimeOfDay(t)

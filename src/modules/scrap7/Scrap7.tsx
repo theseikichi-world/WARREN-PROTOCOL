@@ -16,6 +16,7 @@ import { t as tr } from '../../i18n'
 import { loadSettings, aiJson, modelForTask, type AiMessage } from '../../settings'
 import { trackFromList } from '../progression/store'
 import { play as playCue } from '../../sound'
+import { CyberIcon } from '../../components/CyberIcon'
 
 const NEON = '#00b4ff'
 
@@ -514,7 +515,7 @@ function ChatMsg({ text, sender }: { text: string; sender: 'user' | 'scrap7' }) 
         background: isUser ? 'rgba(255,255,255,0.08)' : `${NEON}18`,
         border: `1px solid ${isUser ? 'rgba(255,255,255,0.1)' : `${NEON}30`}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14.5 }}>
-        {isUser ? '👤' : '🦝'}
+        {isUser ? '👤' : <CyberIcon id="scrap7" size={15} color={NEON} />}
       </div>
       <div style={{ maxWidth: '75%', padding: '8px 12px',
         borderRadius: isUser ? '10px 2px 10px 10px' : '2px 10px 10px 10px',
@@ -899,7 +900,7 @@ export default function Scrap7() {
           {thinking && (
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
               <div style={{ width: 26, height: 26, borderRadius: 6, background: `${NEON}18`,
-                border: `1px solid ${NEON}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14.5 }}>🦝</div>
+                border: `1px solid ${NEON}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CyberIcon id="scrap7" size={15} color={NEON} /></div>
               <div style={{ padding: '10px 14px', borderRadius: '2px 10px 10px 10px',
                 background: `rgba(0,180,255,0.08)`, border: `1px solid ${NEON}20`,
                 display: 'flex', gap: 4, alignItems: 'center' }}>
