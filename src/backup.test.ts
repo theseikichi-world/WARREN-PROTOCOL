@@ -143,3 +143,56 @@ describe('a backup round-trips values that are not JSON', () => {
     expect(() => importBackup(bad)).toThrow()
   })
 })
+
+describe('secrets travel sealed, never in the file', () => {
+  const shim = () => {
+    const store = new Map<string, string>()
+    ;(globalThis as Record<string, unknown>).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => { store.set(k, String(v)) },
+      removeItem: (k: string) => { store.delete(k) },
+      clear: () => store.clear(),
+      key: (i: number) => [...store.keys()][i] ?? null,
+      get length() { return store.size },
+    }
+  }
+  const seed = () => localStorage.setItem('warren_settings', JSON.stringify({
+    userName: 'V', aiApiKey: 'sk-ant-real', tmdbApiKey: 'tmdb', rawgApiKey: 'rawg',
+    syncPassphrase: 'correct horse', syncBypass: 'tok',
+  }))
+
+  it('keeps every key out of the downloadable file', async () => {
+    // The file gets mailed and dropped in shared folders. A billable key in it
+    // is a key anyone who sees the file can spend.
+    shim(); const { exportAllJson } = await import('./backup'); seed()
+    const out = exportAllJson()
+    for (const secret of ['sk-ant-real', 'tmdb', 'rawg', 'correct horse', 'tok'])
+      expect(out).not.toContain(secret)
+  })
+
+  it('carries the API keys when the payload is going to be sealed', async () => {
+    shim(); const { exportAll } = await import('./backup'); seed()
+    const s = JSON.parse(exportAll({ secrets: true }).data['warren_settings'])
+    expect(s.aiApiKey).toBe('sk-ant-real')
+    expect(s.tmdbApiKey).toBe('tmdb')
+  })
+
+  it('never carries the passphrase, even sealed', async () => {
+    // The key to the vault does not go inside the vault, and a device that can
+    // open the blob already has the passphrase by definition.
+    shim(); const { exportAll } = await import('./backup'); seed()
+    const s = JSON.parse(exportAll({ secrets: true }).data['warren_settings'])
+    expect(s.syncPassphrase).toBeUndefined()
+    expect(s.syncBypass).toBeUndefined()
+  })
+
+  it('leaves a device its own key when the incoming blob has none', async () => {
+    shim(); const { importBackup } = await import('./backup')
+    localStorage.setItem('warren_settings', JSON.stringify({ aiApiKey: 'sk-ant-mine' }))
+    importBackup(JSON.stringify({
+      app: 'warren', version: 1, exportedAt: '',
+      data: { warren_settings: JSON.stringify({ userName: 'V' }) },
+    }))
+    expect(JSON.parse(localStorage.getItem('warren_settings')!).aiApiKey).toBe('sk-ant-mine')
+  })
+})

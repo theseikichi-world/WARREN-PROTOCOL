@@ -24,19 +24,43 @@ const SKIP = [/^pictures_discover_/, /^pictures_games_/]
  * hand the whole account to anyone who opened one export.
  */
 const SECRET_FIELDS = ['aiApiKey', 'tmdbApiKey', 'rawgApiKey', 'syncPassphrase', 'syncBypass'] as const
+
+/**
+ * Secrets that may ride the ENCRYPTED sync, and only that.
+ *
+ * The two channels are not alike. The export file is plaintext you handle
+ * yourself — it gets mailed, dropped in a shared folder, pasted into a chat —
+ * so a billable API key in it is a key anyone who sees the file can spend. The
+ * sync blob is AES-GCM sealed under a PBKDF2 key that never leaves the device;
+ * a secret in there is no more exposed than the journal already beside it.
+ *
+ * The sync passphrase and bypass token are NOT here on purpose. Putting the key
+ * to the vault inside the vault buys nothing, and a device that can read the
+ * blob already has the passphrase by definition.
+ */
+const SYNCABLE_SECRETS = ['aiApiKey', 'tmdbApiKey', 'rawgApiKey'] as const
 const SETTINGS_KEY = 'warren_settings'
 
-function stripSecrets(settingsJson: string): string {
+function stripSecrets(settingsJson: string, keep: readonly string[] = []): string {
   try {
     const s = JSON.parse(settingsJson) as Record<string, unknown>
-    for (const f of SECRET_FIELDS) delete s[f]
+    for (const f of SECRET_FIELDS) if (!keep.includes(f)) delete s[f]
     return JSON.stringify(s)
   } catch {
     return settingsJson   // unparsable — exported as-is, validated on import anyway
   }
 }
 
-export function exportAll(): BackupFile {
+export interface ExportOpts {
+  /**
+   * Carry the API keys. ONLY the sealed sync path may pass this — see
+   * SYNCABLE_SECRETS. The downloadable file must never be built with it.
+   */
+  secrets?: boolean
+}
+
+export function exportAll(opts: ExportOpts = {}): BackupFile {
+  const keep = opts.secrets ? SYNCABLE_SECRETS : []
   const data: Record<string, string> = {}
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i)
@@ -44,7 +68,7 @@ export function exportAll(): BackupFile {
     if (SKIP.some(re => re.test(key))) continue
     const val = localStorage.getItem(key)
     if (val === null) continue
-    data[key] = key === SETTINGS_KEY ? stripSecrets(val) : val
+    data[key] = key === SETTINGS_KEY ? stripSecrets(val, keep) : val
   }
   return { app: 'warren', version: 1, exportedAt: new Date().toISOString(), data }
 }

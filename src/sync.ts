@@ -78,11 +78,33 @@ export async function sha256Hex(text: string): Promise<string> {
 }
 
 /**
- * Which bucket on the server this device talks to. A hash of the passphrase, so
- * two devices sharing a passphrase meet, and the server learns nothing.
+ * Which bucket on the server this device talks to. Derived from the passphrase,
+ * so two devices sharing one meet, and the server learns nothing.
+ *
+ * STRETCHED, and that matters more than it looks. v1 was a single SHA-256, so
+ * an attacker could hash a dictionary of common passphrases at millions a
+ * second and probe the endpoint to see which rooms exist. Finding one never
+ * decrypted it — PBKDF2 still stood in the way — but it confirmed a real target
+ * worth grinding, and the blob now carries API keys rather than only a journal.
+ * At 200k iterations that sweep costs the same as attacking the data itself.
+ *
+ * The salt is fixed rather than random because both devices must land on the
+ * same room from the passphrase alone. That is what a salt is normally for, so
+ * it is worth being explicit: this one exists to separate Warren's key space
+ * from anyone else's, not to make two identical passphrases differ.
+ *
+ * Bumping to v2 MOVES every room. Nothing is lost — the blob is a copy and the
+ * device still holds the original — but both devices re-enter the passphrase
+ * once and the first push re-seeds the new room.
  */
-export const roomId = (passphrase: string): Promise<string> =>
-  sha256Hex(`warren-sync-v1:${passphrase}`)
+export async function roomId(passphrase: string): Promise<string> {
+  const base = await crypto.subtle.importKey(
+    'raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: enc.encode('warren-sync-v2'), iterations: 200_000, hash: 'SHA-256' },
+    base, 256)
+  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('')
+}
 
 /** Fingerprint of the current local state — changes iff the data changed. */
 export const fingerprint = (blob: string): Promise<string> => sha256Hex(blob)
@@ -144,7 +166,9 @@ export const saveMark = (m: SyncMark): void => {
 export function snapshotLocal(): void {
   try {
     localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({
-      at: new Date().toISOString(), data: exportAll(),
+      // Keys included: this is the way back from a pull, and a restore that
+      // silently dropped your API key would not be a way back.
+      at: new Date().toISOString(), data: exportAll({ secrets: true }),
     }))
   } catch { /* quota */ }
 }
@@ -192,7 +216,7 @@ export async function fetchRemote(s: SyncSettings): Promise<RemoteRecord | null>
 
 export async function pushRemote(s: SyncSettings, device: string, baseUpdatedAt: string | null): Promise<RemoteMeta> {
   const room   = await roomId(s.passphrase)
-  const sealed = await seal(JSON.stringify(exportAll()), s.passphrase)
+  const sealed = await seal(JSON.stringify(exportAll({ secrets: true })), s.passphrase)
   const res = await fetch(endpoint(s, room), {
     method: 'PUT',
     headers: headers(s),
@@ -246,7 +270,13 @@ export async function syncOnce(s: SyncSettings, device: string): Promise<SyncOut
   return { action: 'in-sync' }
 }
 
-export const localFingerprint = (): Promise<string> => fingerprint(JSON.stringify(exportAll()))
+/**
+ * Must be taken over the SAME payload that gets pushed, secrets and all.
+ * Fingerprinting a stripped copy would leave a changed API key looking like no
+ * change at all, and the new key would sit unsynced until something else moved.
+ */
+export const localFingerprint = (): Promise<string> =>
+  fingerprint(JSON.stringify(exportAll({ secrets: true })))
 
 // ─── The automatic runs ───────────────────────────────────────────────────────
 

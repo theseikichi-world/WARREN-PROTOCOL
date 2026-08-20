@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { decideSync, EMPTY_FINGERPRINT, seal, open, roomId, fingerprint,
+import { decideSync, EMPTY_FINGERPRINT, seal, open, roomId, fingerprint, sha256Hex,
   type SyncMark, type RemoteMeta } from './sync'
 
 const mark = (updatedAt: string | null, fingerprint: string | null): SyncMark => ({ updatedAt, fingerprint })
@@ -115,5 +115,31 @@ describe('the marks that make it work', () => {
       const action = decideSync(mark(T1, 'base'), fp, remote(T2))
       expect(action).not.toBe('push')
     }
+  })
+})
+
+describe('room id (v2, stretched)', () => {
+  it('still looks like what the server accepts', async () => {
+    // api/sync.ts guards with /^[0-9a-f]{64}$/ — a derivation that changed
+    // shape would be rejected at the door with "bad room".
+    expect(await roomId('correct horse battery staple')).toMatch(/^[0-9a-f]{64}$/)
+  })
+
+  it('is deterministic, so two devices land in the same room', async () => {
+    const a = await roomId('same passphrase')
+    const b = await roomId('same passphrase')
+    expect(a).toBe(b)
+  })
+
+  it('separates different passphrases', async () => {
+    expect(await roomId('one')).not.toBe(await roomId('two'))
+  })
+
+  it('is no longer a bare SHA-256 of the passphrase', async () => {
+    // The v1 derivation was a single hash, so a dictionary of guesses could be
+    // swept against the endpoint at millions per second. This pins that the
+    // cheap sweep no longer finds anything.
+    const v1 = await sha256Hex('warren-sync-v1:hunter2')
+    expect(await roomId('hunter2')).not.toBe(v1)
   })
 })
