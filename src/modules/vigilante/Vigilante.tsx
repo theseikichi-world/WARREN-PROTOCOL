@@ -2,15 +2,19 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { t as tr, plural, getLocale } from '../../i18n'
 import { play as playCue } from '../../sound'
 import {
-  HOLD_BY_ID, buildPhases, specHoldSeconds, clock, type Phase,
+  HOLD_BY_ID, buildPhases, specHoldSeconds, clock, holdsAt, holdSecFor,
+  TIERS, TIER_ORDER, BOSS_SEC, STEP_SEC, SESSIONS_PER_STAGE, PULLUP_UNLOCK_STAGE,
+  maxStage, toNextStage, bossBeaten,
+  type Phase,
 } from './types'
 import {
   loadState, saveState, setSpec, setMusicName, logSession,
   clampSec, clampRounds, clampLeadIn, deriveVigilante, setVoiceOn,
+  setTier, currentStage, finishedCount,
 } from './store'
 import { LocalAudio } from './music'
 import { saveTrack, loadTrack } from './musicStore'
-import { speak, silence, cueFor, countdownAt, voiceSupported, type Cue } from './voice'
+import { speak, silence, cueFor, countdownAt, prepareCue, voiceSupported, type Cue } from './voice'
 
 const NEON = '#6366f1'
 const WORK = '#ff3b6b'   // the hold — the colour you learn to dread
@@ -31,6 +35,8 @@ function say(cue: Cue, nameOf: (id: string) => string): string {
       return cue.nextHoldId
         ? tr(`Rest. Next: ${nameOf(cue.nextHoldId)}.`, `Отдых. Далее: ${nameOf(cue.nextHoldId)}.`)
         : tr('Rest.', 'Отдых.')
+    case 'prepare':
+      return tr(`Get set. ${nameOf(cue.holdId)}.`, `Приготовьтесь. ${nameOf(cue.holdId)}.`)
     case 'done':
       return tr('Session complete.', 'Сессия завершена.')
   }
@@ -59,9 +65,15 @@ export default function Vigilante() {
   const runRef = useRef<Running | null>(null)
   /** Last second already counted down, so a 200ms tick says "three" once. */
   const spokenSec = useRef<number | null>(null)
+  /** Phase index already told to get set, so the call does not repeat. */
+  const preparedAt = useRef<number | null>(null)
 
-  const phases = useMemo(() => buildPhases(state.spec), [state.spec])
-  const summary = useMemo(() => deriveVigilante(state), [state])
+  const stage    = useMemo(() => currentStage(state), [state])
+  const phases   = useMemo(() => buildPhases(state.spec, stage), [state.spec, stage])
+  const summary  = useMemo(() => deriveVigilante(state), [state])
+  const finished = useMemo(() => finishedCount(state), [state])
+  const owed     = toNextStage(finished, state.spec.tier)
+  const atBoss   = bossBeaten(state.spec.tier, stage)
 
   const persist = useCallback((s: typeof state) => { saveState(s); setState(s) }, [])
 
@@ -155,12 +167,15 @@ export default function Vigilante() {
     runRef.current = null
     setRun(null)
     persist(logSession(loadState(), {
-      holdIds:   state.spec.holdIds,
-      workSec:   state.spec.workSec,
+      holdIds:    holdsAt(stage),
+      tier:       state.spec.tier,
+      stage,
+      maxHoldSec: Math.max(...holdsAt(stage)
+        .map(id => holdSecFor(state.spec.tier, stage, id))),
       restSec:   state.spec.restSec,
       rounds:    state.spec.rounds,
       doneWork:  cur.doneWork,
-      totalWork: state.spec.holdIds.length * state.spec.rounds,
+      totalWork: holdsAt(stage).length * state.spec.rounds,
       heldSec:   Math.round(cur.heldSec),
       finished,
       startedAt: cur.startedAt,
@@ -172,7 +187,7 @@ export default function Vigilante() {
       : tr('SESSION ENDED', 'СЕССИЯ ПРЕРВАНА'))
     setTimeout(() => setFlash(''), 2600)
     playCue(finished ? 'level' : 'deny')
-  }, [music, persist, state.spec])
+  }, [music, persist, state.spec, stage])
 
   /**
    * Step off the phase at `fromIndex`.
@@ -196,12 +211,15 @@ export default function Vigilante() {
       runRef.current = null
       setRun(null)
       persist(logSession(loadState(), {
-        holdIds:   state.spec.holdIds,
-        workSec:   state.spec.workSec,
+        holdIds:    holdsAt(stage),
+        tier:       state.spec.tier,
+        stage,
+        maxHoldSec: Math.max(...holdsAt(stage)
+          .map(id => holdSecFor(state.spec.tier, stage, id))),
         restSec:   state.spec.restSec,
         rounds:    state.spec.rounds,
         doneWork,
-        totalWork: state.spec.holdIds.length * state.spec.rounds,
+        totalWork: holdsAt(stage).length * state.spec.rounds,
         heldSec:   Math.round(heldSec),
         finished:  true,
         startedAt: cur.startedAt,
@@ -216,6 +234,7 @@ export default function Vigilante() {
 
     playCue(phases[next].kind === 'work' ? 'check' : 'tick')
     spokenSec.current = null
+    preparedAt.current = null
     const cue = cueFor(phases, next)
     if (cue) announce(cue)
     const stepped: Running = {
@@ -228,7 +247,7 @@ export default function Vigilante() {
     }
     runRef.current = stepped
     setRun(stepped)
-  }, [phases, music, persist, state.spec, announce])
+  }, [phases, music, persist, state.spec, stage, announce])
 
   // The clock. Remaining is recomputed from wall time every tick, so a
   // backgrounded window or a throttled interval cannot make a 30-second hold
@@ -243,6 +262,10 @@ export default function Vigilante() {
       if (!cur || cur.paused) return
       const left = (cur.endsAt - Date.now()) / 1000
       if (left <= 0) { advance(cur.index); return }
+      if (preparedAt.current !== cur.index && voiceRef.current) {
+        const prep = prepareCue(phases, cur.index, left)
+        if (prep) { preparedAt.current = cur.index; announce(prep) }
+      }
       const n = countdownAt(left)
       if (n !== null && spokenSec.current !== n && voiceRef.current) {
         spokenSec.current = n
@@ -253,7 +276,7 @@ export default function Vigilante() {
       setRun(prev => (prev ? { ...prev, remaining: left } : prev))
     }, 200)
     return () => { if (tick.current) clearInterval(tick.current) }
-  }, [ticking, advance])
+  }, [ticking, advance, phases, announce])
 
   const start = () => {
     if (!phases.length) return
@@ -390,23 +413,74 @@ export default function Vigilante() {
         ) : (
           /* ── Idle: the plan ── */
           <>
+            {/* Which way in. Every tier ends at the same boss — the choice is
+                where you start, not where you finish. */}
+            <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
+              {TIER_ORDER.map(t => {
+                const on = state.spec.tier === t
+                return (
+                  <button key={t} onClick={() => persist(setTier(loadState(), t))} style={{
+                    flex: 1, padding: '7px 4px', borderRadius: 7, cursor: 'pointer',
+                    fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 800, letterSpacing: '0.06em',
+                    color: on ? '#050810' : 'rgba(148,163,184,0.55)',
+                    background: on ? NEON : 'transparent',
+                    border: `1px solid ${on ? NEON : 'rgba(255,255,255,0.08)'}`,
+                  }}>{tr(TIERS[t].name, TIERS[t].nameRu)}</button>
+                )
+              })}
+            </div>
+
+            {/* Where the ladder sits. Bought with finished sessions, never set. */}
+            <div style={{ padding: '9px 11px', borderRadius: 8, marginBottom: 12,
+              background: atBoss ? `${READY}12` : 'rgba(10,12,30,0.45)',
+              border: `1px solid ${atBoss ? READY : NEON}33` }}>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
+                letterSpacing: '0.14em', color: atBoss ? READY : `${NEON}b0`, marginBottom: 4 }}>
+                {atBoss
+                  ? tr('◆ FINAL BOSS DOWN — A MINUTE OF EVERYTHING', '◆ БОСС ПОВЕРЖЕН — ПО МИНУТЕ НА КАЖДОЕ')
+                  : tr(`STAGE ${stage} / ${maxStage(state.spec.tier)}`,
+                       `ЭТАП ${stage} / ${maxStage(state.spec.tier)}`)}
+              </p>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10.5,
+                color: 'rgba(148,163,184,0.6)', lineHeight: 1.5 }}>
+                {atBoss
+                  ? tr('Nothing left to add. Hold the line.', 'Добавить больше нечего. Держите planку.')
+                  : tr(`${owed} more finished ${owed === 1 ? 'session' : 'sessions'} buys +${STEP_SEC}s on every position.`,
+                       `Ещё ${owed} ${plural(owed, 'завершённая сессия', 'завершённые сессии', 'завершённых сессий')} — и +${STEP_SEC}с к каждой позиции.`)}
+              </p>
+              {/* Three squares: the week's work, as it lands. */}
+              <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                {Array.from({ length: SESSIONS_PER_STAGE }, (_, i) => {
+                  const done = (finished % SESSIONS_PER_STAGE) > i || atBoss
+                  return <div key={i} style={{ flex: 1, height: 4, borderRadius: 2,
+                    background: done ? (atBoss ? READY : NEON) : 'rgba(255,255,255,0.07)' }} />
+                })}
+              </div>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 12 }}>
-              {state.spec.holdIds.map(id => {
+              {holdsAt(stage).map(id => {
                 const h = HOLD_BY_ID[id]
                 if (!h) return null
+                const sec = holdSecFor(state.spec.tier, stage, id)
+                const maxed = sec >= BOSS_SEC
+                const fresh = id === 'pullup-hold' && stage === PULLUP_UNLOCK_STAGE
                 return (
                   <div key={id} style={{ display: 'flex', alignItems: 'flex-start', gap: 9,
                     padding: '8px 10px', borderRadius: 8,
                     background: 'rgba(10,12,30,0.45)',
-                    border: '1px solid rgba(255,255,255,0.05)' }}>
+                    border: `1px solid ${fresh ? `${NEON}55` : 'rgba(255,255,255,0.05)'}` }}>
                     <span style={{ fontSize: 15, flexShrink: 0 }}>{h.icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
                         fontWeight: 700, color: 'rgba(225,235,255,0.9)' }}>
                         {tr(h.name, h.nameRu)}
-                        <span style={{ fontSize: 11, color: `${NEON}90`, marginLeft: 7 }}>
-                          {state.spec.workSec}{tr('s', 'с')} × {state.spec.rounds}
+                        <span style={{ fontSize: 11, marginLeft: 7,
+                          color: maxed ? READY : `${NEON}90` }}>
+                          {sec}{tr('s', 'с')} × {state.spec.rounds}{maxed ? ' ◆' : ''}
                         </span>
+                        {fresh && <span style={{ fontSize: 9.5, marginLeft: 6, color: NEON,
+                          letterSpacing: '0.1em' }}>{tr('NEW', 'НОВОЕ')}</span>}
                       </p>
                       <p style={{ fontFamily: 'var(--font)', fontSize: 10.5,
                         color: 'rgba(148,163,184,0.55)', lineHeight: 1.5, marginTop: 2 }}>
@@ -420,8 +494,6 @@ export default function Vigilante() {
 
             {/* Timings */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <NumField label={tr('HOLD', 'ДЕРЖАТЬ')} suffix={tr('s', 'с')} value={state.spec.workSec}
-                onChange={v => persist(setSpec(loadState(), { ...state.spec, workSec: clampSec(v, 30) }))} />
               <NumField label={tr('REST', 'ОТДЫХ')} suffix={tr('s', 'с')} value={state.spec.restSec}
                 onChange={v => persist(setSpec(loadState(), { ...state.spec, restSec: clampSec(v, 45) }))} />
               <NumField label={tr('ROUNDS', 'КРУГИ')} value={state.spec.rounds}
@@ -490,8 +562,8 @@ export default function Vigilante() {
 
             <p style={{ fontFamily: 'var(--font)', fontSize: 10,
               color: 'rgba(148,163,184,0.4)', textAlign: 'center', marginTop: 7 }}>
-              {tr(`${clock(specHoldSeconds(state.spec))} under tension · ${phases.length} steps`,
-                  `${clock(specHoldSeconds(state.spec))} под нагрузкой · ${phases.length} шагов`)}
+              {tr(`${clock(specHoldSeconds(state.spec, stage))} under tension · ${phases.length} steps`,
+                  `${clock(specHoldSeconds(state.spec, stage))} под нагрузкой · ${phases.length} шагов`)}
             </p>
 
             {/* Record */}

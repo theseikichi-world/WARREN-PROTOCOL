@@ -19,8 +19,8 @@ import { loadLib } from '../pictures/types'
 import { loadArdoState, getTotalDue } from '../ardo/store'
 import { loadLogState } from '../log/store'
 import { loadJournal, todayKey as journalToday } from '../journal/store'
-import { loadState as loadVigilante, sessionsOn } from '../vigilante/store'
-import { specHoldSeconds, todayKey as vigilanteToday } from '../vigilante/types'
+import { loadState as loadVigilante, sessionsOn, currentStage } from '../vigilante/store'
+import { specHoldSeconds, holdsAt, todayKey as vigilanteToday } from '../vigilante/types'
 import { GUILD, type ModuleId } from '../../guild'
 import { moduleUnlocked } from '../../moduleAccess'
 import { loadProgression } from '../progression/store'
@@ -176,15 +176,17 @@ function vigilanteSuggestions(): Suggestion[] {
   // Once a day. A second invitation on a day you already trained is nagging,
   // and statics need the recovery more than they need the volume.
   if (sessionsOn(st, vigilanteToday()).length > 0) return []
-  const holdSec = specHoldSeconds(st.spec)
+  const stage = currentStage(st)
+  const holds = holdsAt(stage)
+  const holdSec = specHoldSeconds(st.spec, stage)
   if (holdSec <= 0) return []
   const minutes = Math.max(5, Math.round(
-    (holdSec + st.spec.holdIds.length * st.spec.rounds * st.spec.restSec) / 60))
+    (holdSec + holds.length * st.spec.rounds * st.spec.restSec) / 60))
   return [{
     id: 'vigilante-session', module: 'vigilante', icon: '⧗',
     label: tr('Hold the statics', 'Отработать статику'),
-    detail: tr(`${st.spec.holdIds.length} positions · ${st.spec.rounds} rounds`,
-               `${st.spec.holdIds.length} позиции · ${st.spec.rounds} круга`),
+    detail: tr(`${holds.length} positions · ${st.spec.rounds} rounds`,
+               `${holds.length} позиции · ${st.spec.rounds} круга`),
     minutes, path: '/vigilante', tone: 'grow', weight: 7,
   }]
 }

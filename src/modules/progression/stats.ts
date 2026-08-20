@@ -107,8 +107,8 @@ export function deriveStats(goals: Goal[], tasks: Task[], sums: ModuleSummaries)
     key: 'iron', label: 'IRON', ru: 'СТОЙКОСТЬ', color: '#6366f1',
     value: vg && vg.sessions > 0 ? pct((Math.min(vg.heldSec, 3600) / 3600) * 100) : null,
     detail: vg && vg.sessions > 0
-      ? tr(`${vg.finished}/${vg.sessions} sessions held`,
-           `${vg.finished}/${vg.sessions} ${plural(vg.sessions, 'сессия', 'сессии', 'сессий')} выдержано`)
+      ? tr(`stage ${vg.stage} · ${vg.finished}/${vg.sessions} held`,
+           `этап ${vg.stage} · ${vg.finished}/${vg.sessions} выдержано`)
       : tr('never held a position', 'ни одного удержания'),
   }
 

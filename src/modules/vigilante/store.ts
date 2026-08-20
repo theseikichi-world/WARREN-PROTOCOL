@@ -1,8 +1,8 @@
 // ─── VIGILANTE store — localStorage, like every other module ──────────────────
 
 import {
-  EMPTY_STATE, DEFAULT_SPEC, STATIC_HOLDS, todayKey,
-  type VigilanteState, type SessionLog, type CircuitSpec,
+  EMPTY_STATE, DEFAULT_SPEC, TIERS, todayKey, stageFrom,
+  type VigilanteState, type SessionLog, type CircuitSpec, type Tier,
 } from './types'
 
 const KEY = 'vigilante_v1'
@@ -19,16 +19,14 @@ export function loadState(): VigilanteState {
     return {
       ...EMPTY_STATE,
       ...parsed,
-      // A spec with no holds would build an empty session and start a timer
-      // that ends immediately, so it falls back rather than shipping a no-op.
-      spec: spec && Array.isArray(spec.holdIds) && spec.holdIds.length
+      // A tier we do not recognise (hand-edited storage, or a future build read
+      // by an older one) falls back rather than producing a session with no
+      // holds and a timer that ends the instant it starts.
+      spec: spec
         ? {
-            holdIds: spec.holdIds.filter(id => STATIC_HOLDS.some(h => h.id === id)),
-            workSec: clampSec(spec.workSec, DEFAULT_SPEC.workSec),
-            restSec: clampSec(spec.restSec, DEFAULT_SPEC.restSec),
-            rounds:  clampRounds(spec.rounds),
-            // Saved before the lead-in existed → adopt the default rather than
-            // silently starting cold.
+            tier:      isTier(spec.tier) ? spec.tier : DEFAULT_SPEC.tier,
+            restSec:   clampSec(spec.restSec, DEFAULT_SPEC.restSec),
+            rounds:    clampRounds(spec.rounds),
             leadInSec: clampLeadIn(spec.leadInSec),
           }
         : { ...DEFAULT_SPEC },
@@ -45,6 +43,20 @@ export function saveState(s: VigilanteState): void {
 }
 
 /** 5s–10min. Below five seconds is not a hold; above ten it is a different sport. */
+export const isTier = (v: unknown): v is Tier =>
+  typeof v === 'string' && Object.prototype.hasOwnProperty.call(TIERS, v)
+
+/**
+ * Switching tier keeps the ladder position you earned.
+ *
+ * Stage is bought with finished sessions, and moving to a harder tier does not
+ * un-do that work — it raises the floor under it, which is what choosing a
+ * harder tier is supposed to mean.
+ */
+export function setTier(s: VigilanteState, tier: Tier): VigilanteState {
+  return { ...s, spec: { ...s.spec, tier, restSec: TIERS[tier].restSec, rounds: TIERS[tier].rounds } }
+}
+
 export function clampSec(v: unknown, fallback: number): number {
   const n = Number(v)
   if (!Number.isFinite(n)) return fallback
@@ -104,7 +116,15 @@ export const sessionsOn = (s: VigilanteState, date: string): SessionLog[] =>
 
 /** Longest single hold you have ever completed, in seconds. */
 export const bestHoldSec = (s: VigilanteState): number =>
-  s.log.reduce((m, r) => (r.doneWork > 0 ? Math.max(m, r.workSec) : m), 0)
+  s.log.reduce((m, r) => (r.doneWork > 0 ? Math.max(m, r.maxHoldSec ?? 0) : m), 0)
+
+/** Sessions actually finished — the only thing that buys a stage. */
+export const finishedCount = (s: VigilanteState): number =>
+  s.log.filter(r => r.finished).length
+
+/** Where the ladder currently sits, read off the log. */
+export const currentStage = (s: VigilanteState): number =>
+  stageFrom(finishedCount(s), s.spec.tier)
 
 /** Total time under tension across every logged session. */
 export const totalHeldSec = (s: VigilanteState): number =>
@@ -116,6 +136,8 @@ export interface VigilanteSummary {
   heldSec:     number
   bestHoldSec: number
   todayCount:  number
+  tier:        Tier
+  stage:       number
 }
 
 export function deriveVigilante(s: VigilanteState, today = todayKey()): VigilanteSummary {
@@ -125,5 +147,7 @@ export function deriveVigilante(s: VigilanteState, today = todayKey()): Vigilant
     heldSec:     totalHeldSec(s),
     bestHoldSec: bestHoldSec(s),
     todayCount:  sessionsOn(s, today).length,
+    tier:        s.spec.tier,
+    stage:       currentStage(s),
   }
 }

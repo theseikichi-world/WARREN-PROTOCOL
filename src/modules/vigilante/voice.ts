@@ -67,6 +67,8 @@ export type Cue =
   /** `named` = this is a hold you have not just been doing, so say its name. */
   | { kind: 'work';     holdId: string; round: number; named: boolean }
   | { kind: 'rest';     nextHoldId: string | null }
+  /** Spoken near the end of a rest, so you are already moving when the clock hits. */
+  | { kind: 'prepare';  holdId: string }
   | { kind: 'done' }
 
 /**
@@ -95,6 +97,29 @@ export function cueFor(phases: Phase[], index: number): Cue | null {
 
 /** Seconds remaining at which the corner man counts you down. */
 export const COUNTDOWN_FROM = 3
+
+/**
+ * Seconds remaining in a rest when you are told to get set.
+ *
+ * The session runs unattended, so nothing prompts you to move — without this
+ * the first seconds of every hold are spent climbing into it, and a 30-second
+ * plank becomes a 25-second plank plus five of scrambling. Sits before the
+ * countdown so the numbers land while you are already in position.
+ */
+export const PREPARE_AT = 8
+
+/** Only worth saying if the rest is long enough to leave a gap after it. */
+export const PREPARE_MIN_REST = PREPARE_AT + COUNTDOWN_FROM
+
+/** The hold a rest phase is leading into, if it is time to call it. */
+export function prepareCue(phases: Phase[], index: number, remaining: number): Cue | null {
+  const p = phases[index]
+  if (!p || p.kind !== 'rest') return null
+  if (p.seconds < PREPARE_MIN_REST) return null
+  if (Math.ceil(remaining) !== PREPARE_AT) return null
+  const next = phases[index + 1]
+  return next ? { kind: 'prepare', holdId: next.holdId } : null
+}
 
 /** Does this tick cross a whole second inside the countdown window? */
 export function countdownAt(remaining: number): number | null {
