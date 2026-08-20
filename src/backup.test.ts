@@ -104,3 +104,42 @@ describe('VIGILANTE survives a backup', () => {
     expect(back.habitId).toBe('life:own-statics')
   })
 })
+
+describe('a backup round-trips values that are not JSON', () => {
+  const shim = () => {
+    const store = new Map<string, string>()
+    ;(globalThis as Record<string, unknown>).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => { store.set(k, String(v)) },
+      removeItem: (k: string) => { store.delete(k) },
+      clear: () => store.clear(),
+      key: (i: number) => [...store.keys()][i] ?? null,
+      get length() { return store.size },
+    }
+  }
+
+  it('accepts the locale, which is a bare string and not JSON', async () => {
+    // The regression: import demanded every value parse as JSON, so a single
+    // "ru" rejected the entire file — every backup made after the language had
+    // been set was unimportable.
+    shim()
+    const { exportAllJson, importBackup } = await import('./backup')
+    localStorage.setItem('warren_locale', 'ru')
+    localStorage.setItem('scrap7_v4', JSON.stringify({ tasks: [] }))
+
+    const json = exportAllJson()
+    localStorage.clear()
+    expect(() => importBackup(json)).not.toThrow()
+    expect(localStorage.getItem('warren_locale')).toBe('ru')
+  })
+
+  it('still refuses a JSON store that has been truncated', async () => {
+    // The check has to keep earning its place: mangled JSON must not restore.
+    shim()
+    const { importBackup } = await import('./backup')
+    const bad = JSON.stringify({
+      app: 'warren', version: 1, exportedAt: '', data: { scrap7_v4: '{"tasks":[' },
+    })
+    expect(() => importBackup(bad)).toThrow()
+  })
+})

@@ -143,12 +143,29 @@ export function importBackup(json: string): number {
                        'Это не резервная копия Warren — нет полей app/data.'))
   }
 
-  // Each value must be a string that itself parses as JSON (our stores all are)
   const entries = Object.entries(b.data)
-  if (entries.length === 0) throw new Error('Backup contains no data.')
+  if (entries.length === 0) {
+    throw new Error(tr('Backup contains no data.', 'В копии нет данных.'))
+  }
+
+  // NOT every value is JSON. `warren_locale` holds a bare "ru", and demanding
+  // that every value parse rejected the whole file over it — so any backup
+  // taken after the language had been set was unimportable, which is every
+  // backup anyone using the app in Russian has ever made.
+  //
+  // Only JSON-SHAPED values are held to parsing. That still catches the failure
+  // worth catching — a truncated or hand-mangled store — without inventing a
+  // rule the app itself never followed. A clipped bare string is undetectable
+  // either way, and harmless.
   for (const [key, val] of entries) {
-    if (typeof val !== 'string') throw new Error(`Invalid value for key "${key}".`)
-    try { JSON.parse(val) } catch { throw new Error(`Corrupted data for key "${key}".`) }
+    if (typeof val !== 'string') {
+      throw new Error(tr(`Invalid value for key "${key}".`, `Неверное значение для ключа «${key}».`))
+    }
+    const head = val.trimStart()[0]
+    if (head !== '{' && head !== '[') continue
+    try { JSON.parse(val) } catch {
+      throw new Error(tr(`Corrupted data for key "${key}".`, `Повреждены данные для ключа «${key}».`))
+    }
   }
 
   for (const [key, val] of entries) {
