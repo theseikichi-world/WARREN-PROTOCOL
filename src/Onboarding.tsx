@@ -59,6 +59,7 @@ export function Onboarding({ settings, onDone }: {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 95, overflowY: 'auto',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '28px 22px',
+      paddingTop: 'calc(28px + var(--sa-top))', paddingBottom: 'calc(28px + var(--sa-bottom))',
       background: 'radial-gradient(ellipse at 50% 40%, rgba(0,60,80,0.3), rgba(1,4,9,0.99) 70%)',
       backdropFilter: 'blur(8px)',
     }}>

@@ -87,6 +87,7 @@ export function Initiation({ name, onDone }: { name: string; onDone: () => void 
       position: 'fixed', inset: 0, zIndex: 90,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       gap: 10, padding: '32px 26px', cursor: done ? 'default' : 'pointer',
+      paddingTop: 'calc(32px + var(--sa-top))', paddingBottom: 'calc(32px + var(--sa-bottom))',
       background: 'radial-gradient(ellipse at 50% 45%, rgba(0,60,80,0.28), rgba(1,4,9,0.99) 70%)',
       backdropFilter: 'blur(8px)',
     }}>

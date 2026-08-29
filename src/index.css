@@ -19,6 +19,35 @@
   --fs-sm:   13.5px;   /* small labels, tabs           */
   --fs-xs:   12.5px;   /* badges, tiny labels          */
   --fs-2xs:  11.5px;   /* micro labels                 */
+
+  /* iOS draws the web view edge to edge — under the status bar and under the
+     home indicator (viewport-fit=cover + black-translucent in index.html).
+     That is a contract: the page owes those pixels back itself. On desktop and
+     on Android every one of these resolves to 0px and nothing moves. */
+  --sa-top:    env(safe-area-inset-top, 0px);
+  --sa-bottom: env(safe-area-inset-bottom, 0px);
+  --sa-left:   env(safe-area-inset-left, 0px);
+  --sa-right:  env(safe-area-inset-right, 0px);
+
+  /* Sidebar hit area. A mouse is precise; a thumb is not. */
+  --nav-btn-w: 42px;
+  --nav-btn-h: 34px;
+}
+
+@media (pointer: coarse) {
+  :root { --nav-btn-w: 46px; --nav-btn-h: 42px; }
+
+  /* iOS scales the whole page up when you focus a field whose text is under
+     16px, and nothing in a fixed-height shell survives that. The fields set
+     their size inline from the font scale, so this has to outrank them — the
+     one place in the app where !important is the honest tool. */
+  input, textarea, select { font-size: 16px !important; }
+}
+
+/* Phone-width: the OS clock is already on screen, an inch higher. */
+@media (max-width: 520px) {
+  .titlebar-clock  { display: none; }
+  .weekstrip-count { display: none; }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,6 +56,19 @@ html, body, #root {
   height: 100%; width: 100%;
   overflow: hidden;
   background: transparent;
+  /* A standalone iOS app that rubber-bands at the edges reads as a web page in
+     a costume. Nothing here scrolls the document, so refuse the bounce. */
+  overscroll-behavior: none;
+}
+
+/* The window is 100vh on anything that has a real window. On mobile Safari
+   100vh means "tallest the viewport ever gets", which puts the bottom status
+   strip under the browser chrome; dvh means "as tall as it is right now".
+   Declared twice on purpose — the second line is ignored where dvh is not
+   understood, which is exactly the fallback we want. */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
 }
 
 body {
@@ -34,6 +76,10 @@ body {
   color: var(--text);
   user-select: none;
   -webkit-user-select: none;
+  /* Touch: no grey flash on tap, and no 300ms wait for a second tap that is
+     never coming — the app has nothing to zoom into. */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 button {

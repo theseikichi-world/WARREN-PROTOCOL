@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { t as tr } from './i18n'
 import { markTourSeen, hasSeenTour, tourForPath, type Tour, type TourStep } from './tour'
+import { safeArea } from './safeArea'
 
 // ─── The tour, drawn ──────────────────────────────────────────────────────────
 // A dimmed page with a hole cut where the step is pointing, and a card beside
@@ -71,11 +72,14 @@ export function TourOverlay({ tour, onDone }: { tour: Tour; onDone: () => void }
   const last = i === steps.length - 1
   const dim  = 'rgba(2,6,12,0.82)'
 
-  // Card goes below the hole when there's room, otherwise above it
+  // Card goes below the hole when there's room, otherwise above it. "Room" and
+  // "the top" both stop at the safe area — window.innerHeight on a notched
+  // iPhone counts pixels the home indicator is sitting on.
+  const sa = safeArea()
   const below = box ? box.top + box.height + 12 : 0
   const cardTop = box
-    ? (below + 150 < window.innerHeight ? below : Math.max(12, box.top - 158))
-    : Math.max(12, window.innerHeight / 2 - 80)
+    ? (below + 150 < window.innerHeight - sa.bottom ? below : Math.max(sa.top + 12, box.top - 158))
+    : Math.max(sa.top + 12, window.innerHeight / 2 - 80)
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 88 }}>

@@ -53,6 +53,7 @@ export function LevelUp({ level, onDone }: { level: number; onDone: () => void }
       position: 'fixed', inset: 0, zIndex: 92,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       padding: '30px 24px',
+      paddingTop: 'calc(30px + var(--sa-top))', paddingBottom: 'calc(30px + var(--sa-bottom))',
       background: 'radial-gradient(ellipse at 50% 42%, rgba(0,70,90,0.32), rgba(1,4,9,0.99) 70%)',
       backdropFilter: 'blur(8px)',
     }}>

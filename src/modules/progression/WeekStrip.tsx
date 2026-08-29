@@ -25,7 +25,7 @@ export function WeekStrip({ tasks }: { tasks: Task[] }) {
   return (
     <div style={{ padding: '10px 13px', borderRadius: 10, marginBottom: 16,
       background: 'rgba(13,24,48,0.5)', border: '1px solid rgba(255,255,255,0.05)',
-      display: 'flex', alignItems: 'center', gap: 12 }}>
+      display: 'flex', alignItems: 'center', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, flexShrink: 0 }}>
         <span style={{ fontFamily: 'var(--font)', fontSize: 20, fontWeight: 900,
           color: streak > 0 ? '#ff6b00' : 'rgba(148,163,184,0.3)',
@@ -60,7 +60,11 @@ export function WeekStrip({ tasks }: { tasks: Task[] }) {
           )
         })}
       </div>
-      <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
+      {/* Hidden on a phone (see index.css). The row needs ~376px to lay out and
+          a 393px screen does not have it once the padding is paid; this is the
+          part that says least, because the seven dots to its left already say
+          it. */}
+      <span className="weekstrip-count" style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
         color: doneCnt === 7 ? '#39ff14' : `${NEON}55`, flexShrink: 0 }}>{doneCnt}/7</span>
     </div>
   )

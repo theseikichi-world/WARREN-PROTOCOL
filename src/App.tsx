@@ -111,6 +111,7 @@ function IntroScreen({ onDone, displayName }: { onDone: () => void; displayName:
       background: 'rgba(0,4,10,0.97)',
       display: 'flex', flexDirection: 'column', justifyContent: 'center',
       padding: '0 28px',
+      paddingTop: 'var(--sa-top)', paddingBottom: 'var(--sa-bottom)',
       opacity: exiting ? 0 : 1,
       transition: exiting ? 'opacity 0.5s ease' : 'none',
       borderRadius: 10,
@@ -185,7 +186,11 @@ function Clock() {
 
   return (
     <div style={{ textAlign: 'right', lineHeight: 1 }}>
-      <p style={{
+      {/* Hidden on a phone (see index.css): iOS is already showing the time in
+          the status bar directly above this, and two clocks stacked is a waste
+          of the narrowest bar in the app. The date line stays — the status bar
+          does not carry that. */}
+      <p className="titlebar-clock" style={{
         fontSize: 20, fontWeight: 800, letterSpacing: '0.04em',
         color: '#fff', textShadow: '0 0 12px rgba(0,245,255,0.5)',
       }}>{time}</p>
@@ -207,8 +212,15 @@ function TitleBar() {
     <div
       data-tauri-drag-region
       style={{
-        height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 14px 0 16px', flexShrink: 0, cursor: 'grab',
+        // The bar keeps its 52px of content and grows by whatever iOS is
+        // covering, so its background runs behind the clock and the notch
+        // instead of the clock landing on the word WARREN.
+        height: 'calc(52px + var(--sa-top))',
+        paddingTop: 'var(--sa-top)',
+        paddingRight: 'calc(14px + var(--sa-right))',
+        paddingLeft: 'calc(16px + var(--sa-left))',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexShrink: 0, cursor: 'grab',
         borderBottom: '1px solid var(--border)',
         background: 'rgba(6,11,22,0.5)',
       }}
@@ -305,7 +317,8 @@ function SidebarBtn({ iconId, neon, active, title, dim = false, locked = false, 
       onMouseLeave={() => setHov(false)}
       title={title}
       style={{
-        width: 42, height: 34, borderRadius: 7, flexShrink: 0,
+        // Grows on touch screens — see --nav-btn-* in index.css.
+        width: 'var(--nav-btn-w)', height: 'var(--nav-btn-h)', borderRadius: 7, flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: on ? `${neon}12` : 'transparent',
         border: `1px solid ${on ? `${neon}35` : 'transparent'}`,
@@ -659,7 +672,10 @@ export default function App() {
     m.built && location.pathname.startsWith(m.path) && !moduleUnlocked(m.id, level, settings.unlockAll))
   const tourEnabled    = !showIntro && !showOnboarding && !showInitiation && !showLevelUp && !settingsOpen
 
-  const bgColor = `rgba(6, 11, 22, ${settings.opacity})`
+  // Window transparency only means something when there is a desktop behind the
+  // window. In a browser there is nothing behind it, so the slider would just
+  // dilute the app against the default white canvas.
+  const bgColor = isTauri() ? `rgba(6, 11, 22, ${settings.opacity})` : 'rgb(6, 11, 22)'
 
   // Big Screen (Warren OS mode) is immersive — no title bar, no sidebar.
   // The initiation-protocol intro plays on top of it, fullscreen.
@@ -678,16 +694,23 @@ export default function App() {
     )
   }
 
+  // The rim light, the rounded corners and the drop shadow all say "a window
+  // floating on a desktop". On a phone the app IS the screen, so the same
+  // styling reads as a smaller screen inset inside the real one.
+  const framed = isTauri()
+
   return (
-    <div style={{
+    <div className="app-shell" style={{
       display: 'flex', flexDirection: 'column',
-      height: '100vh', width: '100vw',
+      width: '100vw',
       background: bgColor,
       backdropFilter: 'blur(22px) saturate(1.5)',
       WebkitBackdropFilter: 'blur(22px) saturate(1.5)',
-      border: '1px solid rgba(0,245,255,0.1)',
-      borderRadius: 10, overflow: 'hidden',
-      boxShadow: '0 12px 50px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,245,255,0.06), inset 0 1px 0 rgba(255,255,255,0.04)',
+      border: framed ? '1px solid rgba(0,245,255,0.1)' : 'none',
+      borderRadius: framed ? 10 : 0, overflow: 'hidden',
+      boxShadow: framed
+        ? '0 12px 50px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,245,255,0.06), inset 0 1px 0 rgba(255,255,255,0.04)'
+        : 'none',
     }}>
       {/* Matrix intro */}
       {intro && settings.showIntro && (
@@ -730,7 +753,8 @@ export default function App() {
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
         {/* Main content */}
-        <main style={{ flex: 1, overflow: 'hidden', position: 'relative',
+        <main style={{ flex: 1, minWidth: 0, overflow: 'hidden', position: 'relative',
+          paddingLeft: 'var(--sa-left)',
           display: 'flex', flexDirection: 'column' }}>
           {/* Settings panel */}
           {settingsOpen && (
@@ -768,8 +792,8 @@ export default function App() {
 
         {/* Sidebar — RIGHT side */}
         <aside data-tour="sidebar" style={{
-          width: 48, flexShrink: 0, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', padding: '8px 0',
+          width: 'calc(48px + var(--sa-right))', flexShrink: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', paddingTop: 8, paddingBottom: 8, paddingRight: 'var(--sa-right)',
           borderLeft: '1px solid var(--border)',
           background: 'rgba(6,11,22,0.4)',
           gap: 2,
@@ -842,8 +866,11 @@ export default function App() {
 
       {/* Status bar */}
       <div style={{
-        height: 18, flexShrink: 0, display: 'flex', alignItems: 'center',
-        padding: '0 14px', gap: 8,
+        height: 'calc(18px + var(--sa-bottom))',
+        paddingBottom: 'var(--sa-bottom)',
+        paddingLeft: 'calc(14px + var(--sa-left))',
+        paddingRight: 'calc(14px + var(--sa-right))',
+        flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8,
         borderTop: '1px solid var(--border)',
         background: 'rgba(6,11,22,0.35)',
       }}>
