@@ -52,6 +52,11 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Set from main.tsx on anything that is not the Tauri shell. Painting the
+   canvas costs nothing and means no edge the app fails to reach can ever show
+   up as white. */
+html[data-web], html[data-web] body { background-color: #02060a; }
+
 html, body, #root {
   height: 100%; width: 100%;
   overflow: hidden;
