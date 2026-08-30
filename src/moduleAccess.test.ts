@@ -5,8 +5,8 @@ import { QUEST_LINE, QUEST_DESTINATIONS } from './modules/progression/quests'
 
 describe('module gates', () => {
   it('leaves anything unlisted open from the start', () => {
-    expect(moduleLevel('kana')).toBe(1)
-    expect(moduleUnlocked('kana', 1)).toBe(true)
+    expect(moduleLevel('nimbus')).toBe(1)
+    expect(moduleUnlocked('nimbus', 1)).toBe(true)
   })
 
   it('locks below its level and opens at it', () => {

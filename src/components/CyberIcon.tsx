@@ -435,7 +435,7 @@ export function CyberIcon({ id, size, color, glow }: { id: ModuleId | 'hub' | 's
     case 'hoot':   return <IconHoot   {...props} />
     case 'otty':   return <IconOtty   {...props} />
     case 'pomu':   return <IconPomu   {...props} />
-    case 'kana':   return <IconKana   {...props} />
+    case 'nimbus': return <IconKana   {...props} />
     case 'maggi':  return <IconMaggi  {...props} />
     case 'pavi':   return <IconPavi   {...props} />
     case 'ferri':  return <IconFerri  {...props} />

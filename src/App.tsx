@@ -47,6 +47,7 @@ import { trackFromList } from './modules/progression/store'
 import type { Task } from './modules/scrap7/types'
 import { useLocale, t } from './i18n'
 import { sessionDaysAway, greetingFor, briefFor } from './greeting'
+import { readCachedSky, isStale, fetchSky, skyLine, aqiBand, type Sky } from './modules/nimbus/sky'
 import { CyberIcon } from './components/CyberIcon'
 import { HubWindow } from './components/HubWindow'
 
@@ -475,6 +476,22 @@ function Welcome({ displayName }: { displayName: string }) {
   const [snap, setSnap] = useState(() => getNowSnapshot())
   const [tasks, setTasks] = useState<Task[]>(() => loadScrap7().tasks)
   const [suggest, setSuggest] = useState<Suggestion | null>(null)
+
+  // NIMBUS. Cached for two hours, refreshed in the background, and completely
+  // silent when no place is set — the app should not start asking the internet
+  // where you are on its own.
+  const [sky, setSky] = useState<Sky | null>(() => readCachedSky())
+  useEffect(() => {
+    const place = loadSettings().weatherPlace?.trim()
+    if (!place) { setSky(null); return }
+    const cached = readCachedSky()
+    if (cached) setSky(cached)
+    if (!isStale(cached)) return
+    let alive = true
+    fetchSky(place).then(s2 => { if (alive) setSky(s2) })
+      .catch(() => { /* the line simply does not appear */ })
+    return () => { alive = false }
+  }, [])
   useEffect(() => {
     const refresh = () => {
       const s = getNowSnapshot()
@@ -496,9 +513,9 @@ function Welcome({ displayName }: { displayName: string }) {
   const head = greetingFor(hour, away)
   const brief = briefFor({
     days: away, due, freeMin: snap.freeMinutes, awake: snap.awake,
-    // The sky goes here once SUNNY KANA exists — the slot is deliberate.
-    weather: null,
+    weather: skyLine(sky),
   })
+  const air = aqiBand(sky?.aqi ?? null)
 
   return (
     <div style={{ marginBottom: 20 }}>
@@ -511,6 +528,24 @@ function Welcome({ displayName }: { displayName: string }) {
         <p style={{ fontSize: 13, color: 'rgba(148,163,184,0.75)', lineHeight: 1.55, marginTop: 5 }}>
           {brief}
         </p>
+      )}
+
+      {/* The air, reported. A number and the word for it — not a instruction
+          about whether to go outside, which this is not qualified to give. */}
+      {air && (
+        <div title={`${t('European AQI', 'Европейский ИКВ')} ${Math.round(sky!.aqi!)} · ${sky!.place}`}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: 8,
+            padding: '3px 9px', borderRadius: 999,
+            background: `${air.color}12`, border: `1px solid ${air.color}40`,
+          }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: air.color,
+            boxShadow: `0 0 6px ${air.color}` }} />
+          <span style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
+            letterSpacing: '0.14em', color: `${air.color}d0` }}>
+            {t('AIR', 'ВОЗДУХ')} {Math.round(sky!.aqi!)} · {air.label.toUpperCase()}
+          </span>
+        </div>
       )}
 
       {/* One invitation, and only for time you actually have. It used to sit

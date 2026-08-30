@@ -655,6 +655,28 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
             </div>
           ))}
 
+          {/* ── NIMBUS ── */}
+          <Section label={t('Sky', 'Небо')} />
+          <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
+            lineHeight: 1.6, marginBottom: 10, letterSpacing: '0.03em' }}>
+            {t('NIMBUS puts one line about the weather in your greeting, and an air-quality badge under it. Open-Meteo needs no key. Leave this empty and it stays quiet — the city is sent to open-meteo.com to look up the forecast.',
+               'NIMBUS добавит строку о погоде в приветствие и значок качества воздуха под ним. Open-Meteo работает без ключа. Оставьте пустым — и он промолчит; город уходит на open-meteo.com за прогнозом.')}
+          </p>
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 4, letterSpacing: '0.06em' }}>
+              {t('City', 'Город')} {settings.weatherPlace ? <span style={{ color: '#39ff14' }}>●</span> : null}
+            </p>
+            <input value={settings.weatherPlace} onChange={e => update({ weatherPlace: e.target.value })}
+              placeholder={t('e.g. Tbilisi', 'напр. Тбилиси')}
+              style={{ width: '100%', padding: '7px 10px', borderRadius: 5,
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                outline: 'none', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
+                color: 'rgba(220,240,255,0.8)', userSelect: 'text', WebkitUserSelect: 'text' }}
+              onFocus={e => e.target.style.borderColor = `${acc}50`}
+              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+            />
+          </div>
+
           {/* ── Backup ── */}
           <Section label={t('Backup', 'Резервная копия')} />
           <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',

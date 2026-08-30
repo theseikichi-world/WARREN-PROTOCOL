@@ -1,6 +1,6 @@
 export type ModuleId =
   | 'scrap7' | 'ravi' | 'log' | 'ardo' | 'hoot' | 'otty'
-  | 'pomu' | 'kana' | 'maggi' | 'pavi' | 'ferri' | 'foxy' | 'vigil'
+  | 'pomu' | 'nimbus' | 'maggi' | 'pavi' | 'ferri' | 'foxy' | 'vigil'
 
 /**
  * INSTRUMENTS are granted by routines, deepen by use and feed the character
@@ -73,10 +73,10 @@ export const GUILD: GuildMember[] = [
     desc: "The Solar System's Kitchen. Orbital agri-station. Every meal grown & calibrated for you.",
   },
   {
-    id: 'kana', group: 'utility' as GuildGroup,  name: 'SUNNY KANA',    unit: 'KNA', animal: 'Canary',
-    role: 'Weather & Air Quality',
-    neon: '#fff000', path: '/kana', free: true, built: false,
-    desc: 'First signal. Reads the sky before you open the door.',
+    id: 'nimbus', group: 'utility' as GuildGroup, name: 'NIMBUS',      unit: 'NMB', animal: 'Canary',
+    role: 'Sky & air',
+    neon: '#7dd3fc', path: '/nimbus', free: true, built: false,
+    desc: 'Reads the sky before you open the door, and the air you will be breathing in it.',
   },
   {
     id: 'maggi', group: 'utility' as GuildGroup, name: 'CLEVER MAGGI',  unit: 'MGI', animal: 'Magpie',

@@ -83,6 +83,9 @@ export interface Settings {
   // Data sources (Galactic Pictures)
   tmdbApiKey:     string                    // themoviedb.org — movies/TV/posters
   rawgApiKey:     string                    // rawg.io — games with Metacritic
+  /** City NIMBUS reads the sky for. Empty means it stays quiet. Open-Meteo
+   *  needs no key, so this is the only thing the weather ever asks for. */
+  weatherPlace:   string
 }
 
 export const ACCENT_PRESETS = [
@@ -116,6 +119,7 @@ export const DEFAULT_SETTINGS: Settings = {
   taskModels:     {},
   tmdbApiKey:     '',
   rawgApiKey:     '',
+  weatherPlace:   '',
   syncUrl:        '',
   syncPassphrase: '',
   syncBypass:     '',
