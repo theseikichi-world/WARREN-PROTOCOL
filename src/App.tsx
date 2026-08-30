@@ -36,6 +36,7 @@ import { WeekStrip } from './modules/progression/WeekStrip'
 import { loadState as loadScrap7 } from './modules/scrap7/store'
 import { useLocale, t } from './i18n'
 import { CyberIcon } from './components/CyberIcon'
+import { HubWindow } from './components/HubWindow'
 
 // ─── Dormant surfaces ─────────────────────────────────────────────────────────
 // Warren OS (fullscreen launcher, file browser, quest log) is parked while the
@@ -390,8 +391,12 @@ function NowCard() {
 
   return (
    <div style={{ marginBottom: 16 }}>
-    <button onClick={() => navigate('/infinity8')} className="glow-pulse" style={{
-      width: '100%', textAlign: 'left', cursor: 'pointer',
+    {/* The card no longer travels to INFINITY-8 — it *is* INFINITY-8, minimized.
+        Tapping it maximizes the module over the hub without leaving it. */}
+    <HubWindow tone={INF} label={t('INFINITY-8 · TODAY', 'INFINITY-8 · СЕГОДНЯ')}
+      minimized={
+    <div className="glow-pulse" style={{
+      width: '100%', textAlign: 'left',
       padding: '13px 15px', borderRadius: 10,
       background: `linear-gradient(135deg, ${INF}14, rgba(57,255,20,0.04))`,
       border: `1px solid ${INF}30`,
@@ -425,7 +430,10 @@ function NowCard() {
           <p style={{ fontSize: 10, color: `${INF}70`, marginTop: 3 }}>{snap.doneCount}/{snap.committedCount} {t('done', 'готово')}</p>
         )}
       </div>
-    </button>
+    </div>
+      }>
+      <Infinity8 />
+    </HubWindow>
 
     {/* The guild's invitation for the free time at hand */}
     {isFreeNow && suggest && (
