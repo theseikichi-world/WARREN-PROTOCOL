@@ -5,7 +5,6 @@ import { gatedLevel, nextGate, GATES, isUnlockedAt } from './xp'
 import { deriveStats, overallRating, type Stat } from './stats'
 import { nodeState } from './chain'
 import type { ModuleSummaries } from '../bigscreen/moduleStats'
-import { LifeSupportPanel } from './LifeSupportPanel'
 
 const CYAN = '#00f5ff'
 const GOLD = '#ffd700'
@@ -16,15 +15,13 @@ const DIM  = 'rgba(148,163,184,0.5)'
 // you actually did, which is the only version of an RPG sheet that stays true
 // when the character is a real person.
 
-export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life }: {
+export function CharacterSheet({ goals, tasks, xp, sums, name, quests }: {
   goals:  Goal[]
   tasks:  Task[]
   xp:     number
   sums:   ModuleSummaries
   name:   string
   quests: Record<string, string>
-  /** Life-support handlers — the character sheet owns the habits with no tree. */
-  life:   Omit<Parameters<typeof LifeSupportPanel>[0], 'tasks'>
 }) {
   const lvl    = gatedLevel(xp, quests)
   const stats  = deriveStats(goals, tasks, sums)
@@ -95,8 +92,10 @@ export function CharacterSheet({ goals, tasks, xp, sums, name, quests, life }: {
         <Cell value={String(available.length)} label={tr('AVAILABLE', 'ДОСТУПНО')} color={available.length ? '#39ff14' : DIM} />
       </div>
 
-      {/* Life support — the habits that answer to no goal */}
-      <LifeSupportPanel tasks={tasks} {...life} />
+      {/* Life support moved to ORBIT, where its habits have always lived: they
+          are ORBIT tasks with origin `baseline`, and this was a second view of
+          the same rows. The sheet keeps the COUNT because a basic is part of
+          your standing — it just no longer offers to install one from here. */}
 
       {/* Attributes */}
       <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.2em',

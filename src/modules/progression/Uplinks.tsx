@@ -6,9 +6,7 @@ import {
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
   cooldownRemaining, promoteSecondary, assignPrimary, assignSecondary, archiveGoal,
   trainingCount, hasCapacity, commitDraft,
-  installLifeSupport, installCustomLifeSupport, deleteLifeSupport, recordBaselineRun,
 } from './store'
-import type { LifeSupportTemplate } from './lifeSupport'
 import { SkillTree } from './SkillTree'
 import { ShelfPanel } from './ShelfPanel'
 import { DreamsPanel } from './DreamsPanel'
@@ -92,7 +90,6 @@ export default function Uplinks() {
   useEffect(() => {
     const nav = location.state as { spotlight?: string } | null
     if (nav?.spotlight === 'new-uplink') setView('dreams')
-    if (nav?.spotlight === 'life-support') setView('character')
     if (nav?.spotlight === 'install-routine') setView(v => v === 'character' ? 'primary' : v)
   }, [location.state])
 
@@ -143,39 +140,8 @@ export default function Uplinks() {
   // ── Life support: the habits with no tree, owned by the character sheet ──
 
   /** Same +1 path as a routine, but banked flat and small — see recordBaselineRun. */
-  const handleBaselineTrack = useCallback((taskId: string) => {
-    const s7     = loadScrap7()
-    const before = s7.tasks.find(t => t.id === taskId)?.score ?? 0
-    const { state: next } = trackHabit(s7, taskId, 1)
-    saveScrap7(next)
-    const after = next.tasks.find(t => t.id === taskId)?.score ?? 0
-
-    const reward = recordBaselineRun(loadProgression(), before, after)
-    saveProgression(reward.state)
-    setState(reward.state)
-    setTasks(next.tasks)
-    if (reward.levelUp) flash(tr(`LEVEL ${reward.levelUp}`, `УРОВЕНЬ ${reward.levelUp}`))
-    else if (reward.gained) flash(`+${reward.gained} XP`)
-    window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'uplinks' } }))
-  }, [])
-
-  const handleCustomLifeInstall = useCallback((title: string, target: number, unit: string) => {
-    installCustomLifeSupport(title, target, unit)
-    setTasks(loadScrap7().tasks)
-    flash(tr('◆ LIFE SUPPORT ONLINE', '◆ ЖИЗНЕОБЕСПЕЧЕНИЕ АКТИВНО'))
-  }, [])
-
-  const handleLifeInstall = useCallback((template: LifeSupportTemplate) => {
-    const added = installLifeSupport(template, tr(template.title, template.ru), tr(template.unit, template.unitRu))
-    setTasks(loadScrap7().tasks)
-    if (added) flash(tr('◆ LIFE SUPPORT ONLINE', '◆ ЖИЗНЕОБЕСПЕЧЕНИЕ АКТИВНО'))
-  }, [])
-
-  const handleLifeDelete = useCallback((taskId: string) => {
-    deleteLifeSupport(taskId)
-    setTasks(loadScrap7().tasks)
-    flash(tr('Deleted. The slot is free.', 'Удалено. Слот свободен.'))
-  }, [])
+  // The life-support handlers moved to ORBIT with the panel they served. Their
+  // habits were always ORBIT tasks; only the surface was ever here.
 
   /** Save an edited protocol. Nothing earned is lost — see applyDraft. */
   const handleForgeCommit = useCallback((draft: ChainDraft) => {
@@ -296,13 +262,7 @@ export default function Uplinks() {
         {view === 'character' && (
           <CharacterSheet goals={state.goals} tasks={tasks} xp={state.xp}
             sums={sums} name={loadSettings().displayName} quests={state.quests}
-            life={{
-              level,
-              onTrack:         handleBaselineTrack,
-              onInstall:       handleLifeInstall,
-              onInstallCustom: handleCustomLifeInstall,
-              onDelete:        handleLifeDelete,
-            }} />
+            />
         )}
 
         {isSlotView && shown ? (

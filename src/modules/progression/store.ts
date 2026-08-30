@@ -7,14 +7,14 @@ import {
   SWAP_COOLDOWN_DAYS, THRESHOLD_UNLOCK_AT, maxNodesFor,
 } from './types'
 import { applyDraft, draftToGoal, type ChainDraft } from './draft'
-import { baselineTaskId, customTaskId, type LifeSupportTemplate } from './lifeSupport'
+import { baselineTaskId, customTaskId, lifeSupportSlots, type LifeSupportTemplate } from './lifeSupport'
 import { evaluateUnlocks, isUnlocked, nodeScore, routineTaskId } from './chain'
 import { awardXp, awardBaselineXp, gatedLevel, type XpEvent } from './xp'
 import { evaluateQuests, questFloorXp, type Quest, type QuestContext } from './quests'
 import {
   loadState as loadScrap7, saveState as saveScrap7, createExternalTask, trackHabit,
 } from '../scrap7/store'
-import { isOrphanHabit, taskOrigin } from '../scrap7/types'
+import { isBaseline, isOrphanHabit, taskOrigin } from '../scrap7/types'
 
 const KEY = 'warren_progression_v1'
 
@@ -404,13 +404,30 @@ export function commitDraft(s: ProgressionState, draft: ChainDraft, now = new Da
 // id derives from the template, and an existing habit is never rebuilt.
 
 /**
- * Install a baseline habit. Returns false when it already exists.
+ * How many basic slots are free right now.
+ *
+ * The cap used to live in LifeSupportPanel's UI, which meant every other caller
+ * was on its honour — and VIGILANTE was not, so it could push you to 4/3 slots
+ * and the character sheet would report a number that should be impossible. A
+ * cap enforced by one screen is not a cap; it is a habit that screen has.
+ */
+export function lifeSupportFree(): number {
+  const p     = loadProgression()
+  const level = gatedLevel(p.xp, p.quests).level
+  const used  = loadScrap7().tasks.filter(t => t.taskType === 'habit' && isBaseline(t)).length
+  return Math.max(0, lifeSupportSlots(level) - used)
+}
+
+/**
+ * Install a baseline habit. Returns false when it already exists, or when
+ * there is no slot for it.
  * The cue stays on the template rather than the task — ORBIT has no field
  * for it, and life support anchors are fixed rather than authored.
  */
 export function installLifeSupport(template: LifeSupportTemplate, title: string, unit: string): boolean {
   const id = baselineTaskId(template.id)
   if (loadScrap7().tasks.some(t => t.id === id)) return false
+  if (lifeSupportFree() <= 0) return false
 
   createExternalTask({
     id,
@@ -430,15 +447,27 @@ export function installLifeSupport(template: LifeSupportTemplate, title: string,
  * starting shelf, not the whole of what counts as looking after yourself.
  */
 export function installCustomLifeSupport(title: string, target: number, unit: string): string | null {
-  const slug = title.toLowerCase().trim()
-    .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/^-|-$/g, '').slice(0, 20)
+  const clean    = title.trim()
   const existing = loadScrap7().tasks
+
+  // Already yours under that exact name. The numbered-twin loop below is for a
+  // genuine SLUG collision — two different titles that reduce to the same id,
+  // which Cyrillic does constantly. Reaching it with the same title is how two
+  // "Static workout" basics appeared, so that case is answered first.
+  const twin = existing.find(t =>
+    t.taskType === 'habit' && isBaseline(t) && t.text.trim().toLowerCase() === clean.toLowerCase())
+  if (twin) return twin.id
+
+  if (lifeSupportFree() <= 0) return null
+
+  const slug = clean.toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/^-|-$/g, '').slice(0, 20)
   let id = customTaskId(slug || 'basic')
   for (let i = 2; existing.some(t => t.id === id); i++) id = `${customTaskId(slug || 'basic')}-${i}`
 
   createExternalTask({
     id,
-    text:      title.trim(),
+    text:      clean,
     category:  'Life support',
     taskType:  'habit',
     direction: 'positive',

@@ -15,10 +15,22 @@ import Infinity8 from '../infinity8/Infinity8'
 import { t as tr } from '../../i18n'
 import { loadSettings, aiJson, modelForTask, type AiMessage } from '../../settings'
 import { trackFromList } from '../progression/store'
+import {
+  installLifeSupport, installCustomLifeSupport, deleteLifeSupport, recordBaselineRun,
+  loadProgression, saveProgression,
+} from '../progression/store'
+import { gatedLevel } from '../progression/xp'
+import { lifeSupportSlots } from '../progression/lifeSupport'
+import { LifeSupportPanel } from '../progression/LifeSupportPanel'
+import type { LifeSupportTemplate } from '../progression/lifeSupport'
+import { isBaseline } from './types'
+import { trackHabit } from './store'
 import { play as playCue } from '../../sound'
 import { CyberIcon } from '../../components/CyberIcon'
 
 const NEON = '#00b4ff'
+/** Life support's green, shared with the panel that manages it. */
+const LIFE = '#39ff14'
 
 const SCRAP7_SYSTEM = `You are ORBIT, a cyber-raccoon task engineer. You turn what the user says into structured tasks.
 
@@ -548,6 +560,8 @@ export default function Scrap7() {
   const [pomo, setPomo]     = useState<PomoState | null>(null)
   /** Rule 27: real work gets a visible beat. Tracking a routine here pays XP. */
   const [flashMsg, setFlashMsg] = useState<string | null>(null)
+  /** The basics-management sheet. Opened from the BASICS line in the list. */
+  const [lifeOpen, setLifeOpen] = useState(false)
   useEffect(() => {
     if (!flashMsg) return
     const id = setTimeout(() => setFlashMsg(null), 2200)
@@ -750,6 +764,55 @@ export default function Scrap7() {
     persist(t.completed ? uncompleteTask(state, t.id) : completeTask(state, t.id))
   }
 
+  // ── Life support, where the basics actually live ──────────────────────────
+  // The habits were always in this list — taskSource() has ranked them as
+  // `basic` between uplink work and your own things for as long as the list has
+  // existed. What lived in UPLINKS was a second view of the same rows plus the
+  // only way to install one. That surface moves here; the sheet still renders
+  // the same panel, so tiers, thresholds and streaks come with it.
+  // Read at render rather than held: the level moves when a basic is tracked,
+  // and this component is already re-rendering for that.
+  const prog       = loadProgression()
+  const level      = gatedLevel(prog.xp, prog.quests).level
+  const basicSlots = lifeSupportSlots(level)
+  const basicsUsed = state.tasks.filter(t => t.taskType === 'habit' && isBaseline(t)).length
+
+  const lifeTrack = useCallback((taskId: string) => {
+    const s7     = loadState()
+    const before = s7.tasks.find(t => t.id === taskId)?.score ?? 0
+    const { state: next } = trackHabit(s7, taskId, 1)
+    saveState(next)
+    const after  = next.tasks.find(t => t.id === taskId)?.score ?? 0
+    const reward = recordBaselineRun(loadProgression(), before, after)
+    saveProgression(reward.state)
+    setState(loadState())
+    if (reward.levelUp)     { setFlashMsg(tr(`LEVEL ${reward.levelUp}`, `УРОВЕНЬ ${reward.levelUp}`)); playCue('level') }
+    else if (reward.gained) { setFlashMsg(`+${reward.gained} XP`); playCue('xp') }
+    window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'scrap7' } }))
+  }, [])
+
+  const lifeInstall = useCallback((template: LifeSupportTemplate) => {
+    if (installLifeSupport(template, tr(template.title, template.ru), tr(template.unit, template.unitRu))) {
+      setState(loadState())
+      setFlashMsg(tr('◆ BASIC ONLINE', '◆ ОСНОВА АКТИВНА'))
+      playCue('quest')
+    }
+  }, [])
+
+  const lifeInstallCustom = useCallback((title: string, target: number, unit: string) => {
+    if (installCustomLifeSupport(title, target, unit)) {
+      setState(loadState())
+      setFlashMsg(tr('◆ BASIC ONLINE', '◆ ОСНОВА АКТИВНА'))
+      playCue('quest')
+    }
+  }, [])
+
+  const lifeDelete = useCallback((taskId: string) => {
+    deleteLifeSupport(taskId)
+    setState(loadState())
+    setFlashMsg(tr('Deleted. The slot is free.', 'Удалено. Слот свободен.'))
+  }, [])
+
   return (
     <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
 
@@ -861,7 +924,51 @@ export default function Scrap7() {
             </div>
           )}
 
-          {activeTasks.map(t => (
+          {/* The list is already sorted uplink → basic → yours, so splitting it
+              keeps the order and only adds the one header that earns its place.
+              BASICS is the only group with a CAP and an INSTALL action — uplink
+              work is managed by its protocol, and your own things by the + above.
+              A header on all three would be chrome; a header on this one is the
+              control surface that used to be a whole screen in UPLINKS. */}
+          {activeTasks.filter(t => taskSource(t) === 'uplink').map(t => (
+            <TaskRow key={t.id} task={t}
+              onCheck={() => checkOff(t)}
+              onDelete={() => persist(deleteTask(state, t.id))}
+              onEdit={() => setEditingTask(t)}
+              onPomo={() => setPomo({ taskId: t.id, taskName: t.text, minutes: 25, remaining: 25*60, running: true, phase: 'work', sessions: 0 })}
+            />
+          ))}
+
+          <button data-tour="life-support" onClick={() => setLifeOpen(true)} style={{
+            width: '100%', textAlign: 'left', cursor: 'pointer',
+            padding: '7px 14px 5px', display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <span style={{ fontSize: 11 }}>🫀</span>
+            <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
+              color: `${LIFE}90`, letterSpacing: '0.12em', fontWeight: 700 }}>
+              {tr('BASICS', 'ОСНОВЫ')}
+            </span>
+            <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
+              color: 'rgba(148,163,184,0.35)', letterSpacing: '0.08em' }}>
+              {basicsUsed}/{basicSlots}
+            </span>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.03)' }} />
+            <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
+              color: `${LIFE}70`, letterSpacing: '0.12em', fontWeight: 800 }}>
+              {basicsUsed === 0 ? tr('ADD ONE', 'ДОБАВИТЬ') : tr('MANAGE', 'УПРАВЛЕНИЕ')} →
+            </span>
+          </button>
+
+          {activeTasks.filter(t => taskSource(t) === 'basic').map(t => (
+            <TaskRow key={t.id} task={t}
+              onCheck={() => checkOff(t)}
+              onDelete={() => persist(deleteTask(state, t.id))}
+              onEdit={() => setEditingTask(t)}
+              onPomo={() => setPomo({ taskId: t.id, taskName: t.text, minutes: 25, remaining: 25*60, running: true, phase: 'work', sessions: 0 })}
+            />
+          ))}
+
+          {activeTasks.filter(t => taskSource(t) === 'yours').map(t => (
             <TaskRow key={t.id} task={t}
               onCheck={() => checkOff(t)}
               onDelete={() => persist(deleteTask(state, t.id))}
@@ -977,6 +1084,38 @@ export default function Scrap7() {
           onCancel={() => setEditingTask(null)}
           onNewCategory={name => persist(addCategory(state, name))}
         />
+      )}
+
+      {/* Basics, managed where they live. The panel is the one UPLINKS used to
+          render — moving the surface rather than rewriting it keeps the tiers,
+          the thresholds and the streak history exactly as they were. */}
+      {lifeOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.72)',
+          display: 'flex', alignItems: 'flex-end' }}
+          onClick={e => { if (e.target === e.currentTarget) setLifeOpen(false) }}>
+          <div style={{
+            width: '100%', maxHeight: '86%', overflowY: 'auto',
+            background: 'rgba(4,12,10,0.98)', borderTop: `1px solid ${LIFE}35`,
+            borderTopLeftRadius: 14, borderTopRightRadius: 14, backdropFilter: 'blur(20px)',
+            padding: '4px 15px 16px',
+            paddingBottom: 'calc(16px + var(--sa-bottom))',
+          }}>
+            <LifeSupportPanel
+              tasks={state.tasks}
+              level={level}
+              onTrack={lifeTrack}
+              onInstall={lifeInstall}
+              onInstallCustom={lifeInstallCustom}
+              onDelete={lifeDelete}
+            />
+            <button onClick={() => setLifeOpen(false)} style={{
+              width: '100%', marginTop: 14, padding: '9px 0', borderRadius: 8, cursor: 'pointer',
+              border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)',
+              fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800,
+              letterSpacing: '0.14em', color: 'rgba(148,163,184,0.6)',
+            }}>{tr('CLOSE', 'ЗАКРЫТЬ')}</button>
+          </div>
+        </div>
       )}
     </div>
   )

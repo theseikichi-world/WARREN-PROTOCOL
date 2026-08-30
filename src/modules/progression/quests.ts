@@ -41,7 +41,7 @@ export type Objective =
  * Where the quest actually happens. A brief that says "reach your water target"
  * and then leaves you to find the kitchen is a puzzle, not a starting zone.
  */
-export type QuestTarget = 'journal' | 'solaris' | 'ardo' | 'log' | 'character' | 'uplink' | 'vigilante'
+export type QuestTarget = 'journal' | 'solaris' | 'ardo' | 'log' | 'character' | 'scrap7' | 'uplink' | 'vigilante'
 
 /**
  * A control the destination should highlight on arrival. Landing on SOLARIS
@@ -78,6 +78,7 @@ export const QUEST_DESTINATIONS: Record<QuestTarget, QuestDestination> = {
   log:      { path: '/uplinks', label: 'OPEN YOUR DREAMS',   ru: 'ОТКРЫТЬ МЕЧТЫ' },
   // Both land on UPLINKS, but they want different tabs and different advice
   character:{ path: '/uplinks', label: 'OPEN YOUR CHARACTER',ru: 'ОТКРЫТЬ ПЕРСОНАЖА' },
+  scrap7:   { path: '/scrap7',  label: 'OPEN ORBIT',          ru: 'ОТКРЫТЬ ORBIT' },
   uplink:   { path: '/uplinks', label: 'OPEN YOUR PROTOCOL', ru: 'ОТКРЫТЬ ПРОТОКОЛ' },
   vigilante:{ path: '/vigilante', label: 'OPEN VIGILANTE',   ru: 'ОТКРЫТЬ VIGILANTE' },
 }
@@ -119,7 +120,7 @@ export const QUEST_LINE: Quest[] = [
     id: 's1-life-support', stage: 1, title: 'KEEP YOURSELF RUNNING', ru: 'ОБЕСПЕЧЬТЕ СЕБЯ',
     brief:   'Add one life support habit on the character tab. The floor first — goals built on no sleep do not hold.',
     briefRu: 'Добавьте одну привычку жизнеобеспечения во вкладке персонажа. Сначала основа — цели на бессоннице не держатся.',
-    objective: { kind: 'baseline.installed', need: 1 }, target: 'character', spotlight: 'life-support', xp: 40,
+    objective: { kind: 'baseline.installed', need: 1 }, target: 'scrap7', spotlight: 'life-support', xp: 40,
   },
 
   // ── Stage 2 — THE FIRST ROUTINE ─────────────────────────────────────────────

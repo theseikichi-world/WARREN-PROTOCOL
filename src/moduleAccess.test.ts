@@ -34,7 +34,10 @@ describe('module gates', () => {
 
   it('reports what a level opens, for the level screen to name', () => {
     expect(modulesOpenedAt(3)).toContain('hoot')
-    expect(modulesOpenedAt(2)).toEqual(expect.arrayContaining(['pomu', 'scrap7']))
+    // ORBIT used to be here. It opens at level 1 now that LIFE SUPPORT lives in
+    // it and a stage-1 quest sends you there.
+    expect(modulesOpenedAt(2)).toEqual(['pomu'])
+    expect(modulesOpenedAt(2)).not.toContain('scrap7')
   })
 })
 

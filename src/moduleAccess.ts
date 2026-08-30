@@ -23,7 +23,11 @@ import type { ModuleId } from './guild'
 export const MODULE_LEVEL: Partial<Record<ModuleId, number>> = {
   log:    1,   // PATHFINDER — stage 1 sends you here for CHOOSE ONE DREAM
   pomu:   2,   // SOLARIS    — stage 2 sends you here for WATER DISCIPLINE
-  scrap7: 2,   // ORBIT      — the day's obligations, once the character exists
+  // ORBIT — open from the start since LIFE SUPPORT moved into it. Stage 1's
+  // KEEP YOURSELF RUNNING installs a basic, and a basic is an ORBIT habit, so
+  // holding the module to level 2 would have made that quest a dead end. The
+  // floor is not something you earn access to.
+  scrap7: 1,
   hoot:   3,   // JOURNAL    — stage 3, once there is something worth recording
   vigil:  5,   // VIGILANTE  — stage 5; the body comes after the habit of showing up
 }

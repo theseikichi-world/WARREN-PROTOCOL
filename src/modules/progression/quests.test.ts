@@ -219,7 +219,7 @@ describe('quest destinations', () => {
   it('sends each quest where its objective is actually measured', () => {
     const byId = Object.fromEntries(QUEST_LINE.map(q => [q.id, q.target]))
     expect(byId['s1-first-light']).toBe('journal')
-    expect(byId['s1-life-support']).toBe('character')
+    expect(byId['s1-life-support']).toBe('scrap7')   // basics live in the list they run in
     expect(byId['s1-first-uplink']).toBe('log')     // a dream is written before it is promoted
     expect(byId['q2-water']).toBe('solaris')        // the kitchen, not "somewhere"
     expect(byId['q6-memory']).toBe('ardo')
