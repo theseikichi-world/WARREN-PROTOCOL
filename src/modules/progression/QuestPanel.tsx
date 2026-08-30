@@ -145,10 +145,14 @@ export function QuestPanel() {
           background: `linear-gradient(90deg, ${GOLD}, #ffe98a)`,
           boxShadow: `0 0 10px ${GOLD}90`, transition: 'width 0.8s cubic-bezier(0.2,0.8,0.2,1)' }} />
       </div>
-      {/* The level and the XP count used to be labelled here. The hub bar this
-          panel opens out of already carries both in its shut line, one row
-          above — so reading them again the moment you open it is the same
-          duplication the panel was just cleared of. */}
+      <div style={{ display: 'flex', marginTop: 4 }}>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM }}>
+          {lvl.capped ? `${stage.cleared}/${stage.total} ${tr('objectives', 'задач')}` : `${lvl.intoNext} / ${lvl.needed} XP`}
+        </span>
+        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: `${GOLD}90`, marginLeft: 'auto' }}>
+          {tr('LEVEL', 'УРОВЕНЬ')} {lvl.level} → {lvl.level + 1}
+        </span>
+      </div>
 
       {/* The brief belongs to the objective you are about to act on. The ones
           queued behind it are titles until their turn comes — three paragraphs

@@ -36,8 +36,6 @@ import { WeekStrip } from './modules/progression/WeekStrip'
 import { loadState as loadScrap7 } from './modules/scrap7/store'
 import { useLocale, t } from './i18n'
 import { CyberIcon } from './components/CyberIcon'
-import { HubBar } from './components/HubBar'
-import { calcStreak } from './modules/scrap7/types'
 
 // ─── Dormant surfaces ─────────────────────────────────────────────────────────
 // Warren OS (fullscreen launcher, file browser, quest log) is parked while the
@@ -351,24 +349,8 @@ const INF = '#22d3ee'
 const SUGGEST_TONE: Record<Suggestion['tone'], string> = {
   play: '#ff8a4c', grow: '#8b9bff', care: '#ffd76b',
 }
-/** Which hub bar is open. Empty string means every bar is shut, deliberately. */
-const HUB_OPEN_KEY = 'warren_hub_open'
-
-/** The shut state of every bar but TODAY: one line, and nothing else. */
-function BarLine({ text }: { text: string }) {
-  return (
-    <p style={{ fontSize: 13, color: 'rgba(215,232,248,0.82)', letterSpacing: '0.02em',
-      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text}</p>
-  )
-}
-
-// ─── TODAY — the NOW card, now the hub's first bar ────────────────────────────
-// This used to be a card that navigated to INFINITY-8. It is the same content,
-// but it is the TODAY bar's shut state instead: tapping opens the day in place
-// rather than leaving the hub. The suggestion moved below the fold, because
-// "what could I do with this hour" is a question you ask on purpose.
-
-function useNowState() {
+function NowCard() {
+  const navigate = useNavigate()
   const [snap, setSnap] = useState(() => getNowSnapshot())
   const [nowMin, setNowMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() })
   const [suggest, setSuggest] = useState<Suggestion | null>(null)
@@ -391,8 +373,8 @@ function useNowState() {
   const cur = snap.current
   // "Free" only counts when nothing is scheduled AND nothing is still open —
   // unfinished quests mean the day isn't yours yet.
-  const idleNow   = !snap.awake || !cur || cur.kind === 'free' || cur.kind === 'break'
-  const isFreeNow = idleNow && snap.pendingCount === 0
+  const idleNow    = !snap.awake || !cur || cur.kind === 'free' || cur.kind === 'break'
+  const isFreeNow  = idleNow && snap.pendingCount === 0
   const headline = !snap.awake ? t('Off the clock', 'Вне графика')
     : !idleNow ? cur!.label
     : snap.pendingCount > 0
@@ -406,30 +388,34 @@ function useNowState() {
         ? `${fmtDur(snap.freeMinutes)} ${t('left today — knock them out', 'осталось сегодня — разделайтесь с ними')}`
         : (snap.next ? `${t('until', 'до')} ${snap.next.label} ${t('at', 'в')} ${fmtClock(snap.next.start)}` : t('rest of the day is yours', 'остаток дня — ваш'))
 
-  return { snap, suggest, idleNow, isFreeNow, headline, sub }
-}
-
-type NowState = ReturnType<typeof useNowState>
-
-/** The shut state of TODAY. Deliberately richer than the other bars' one line. */
-function NowSummary({ now }: { now: NowState }) {
-  const { snap, idleNow, headline, sub } = now
   return (
-    // The ∞ went with the card. Inside a bar the tag already says which module
-    // this is, and on a phone the glyph was costing the line its last 30px.
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+   <div style={{ marginBottom: 16 }}>
+    <button onClick={() => navigate('/infinity8')} className="glow-pulse" style={{
+      width: '100%', textAlign: 'left', cursor: 'pointer',
+      padding: '13px 15px', borderRadius: 10,
+      background: `linear-gradient(135deg, ${INF}14, rgba(57,255,20,0.04))`,
+      border: `1px solid ${INF}30`,
+      display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.15s',
+    }}
+      onMouseEnter={e => e.currentTarget.style.borderColor = `${INF}60`}
+      onMouseLeave={e => e.currentTarget.style.borderColor = `${INF}30`}
+    >
+      <span style={{ fontSize: 22, filter: `drop-shadow(0 0 8px ${INF})`,
+        animation: 'pulse 2.4s ease-in-out infinite' }}>∞</span>
       <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Only when it says something the headline does not. "● FREE NOW"
+            over "Free time", and "● QUESTS OPEN" over "3 quests still open",
+            were labels for the line underneath them. */}
         {!idleNow && (
           <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', color: INF }}>
             {t('● HAPPENING NOW', '● ИДЁТ СЕЙЧАС')}
           </p>
         )}
         <p style={{ fontSize: 16.5, fontWeight: 800, color: 'rgba(225,250,255,0.95)',
-          letterSpacing: '0.02em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          letterSpacing: '0.02em', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {headline}
         </p>
-        <p style={{ fontSize: 11, color: 'rgba(148,163,184,0.6)', letterSpacing: '0.04em', marginTop: 2,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</p>
+        <p style={{ fontSize: 11, color: 'rgba(148,163,184,0.6)', letterSpacing: '0.04em', marginTop: 2 }}>{sub}</p>
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
         <p style={{ fontSize: 18, fontWeight: 900, color: '#39ff14', lineHeight: 1,
@@ -439,45 +425,35 @@ function NowSummary({ now }: { now: NowState }) {
           <p style={{ fontSize: 10, color: `${INF}70`, marginTop: 3 }}>{snap.doneCount}/{snap.committedCount} {t('done', 'готово')}</p>
         )}
       </div>
-    </div>
-  )
-}
+    </button>
 
-/** What opens under TODAY. The full timeline lands here next. */
-function NowExpanded({ now }: { now: NowState }) {
-  const navigate = useNavigate()
-  const { suggest, isFreeNow } = now
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 9 }}>
-      {isFreeNow && suggest && (
-        <button onClick={() => navigate(suggest.path)} style={{
-          width: '100%', textAlign: 'left', cursor: 'pointer',
-          padding: '8px 12px', borderRadius: 9,
-          background: `${SUGGEST_TONE[suggest.tone]}10`,
-          border: `1px solid ${SUGGEST_TONE[suggest.tone]}38`,
-          display: 'flex', alignItems: 'center', gap: 10, transition: 'border-color 0.15s',
-        }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}70`}
-          onMouseLeave={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}38`}
-        >
-          <span style={{ fontSize: 20, flexShrink: 0 }}>{suggest.icon}</span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 14.5, fontWeight: 700, color: 'rgba(225,250,255,0.95)',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.label}</p>
-            {suggest.detail && (
-              <p style={{ fontSize: 10.5, color: 'rgba(148,163,184,0.6)', marginTop: 1,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.detail}</p>
-            )}
-          </div>
-          <span style={{ fontSize: 10.5, color: `${SUGGEST_TONE[suggest.tone]}cc`, flexShrink: 0 }}>~{fmtDur(suggest.minutes)}</span>
-        </button>
-      )}
-      <button onClick={() => navigate('/infinity8')} style={{
-        alignSelf: 'flex-start', cursor: 'pointer',
-        fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.14em',
-        color: `${INF}b0`, padding: '4px 2px',
-      }}>{t('OPEN THE TIMELINE', 'ОТКРЫТЬ ТАЙМЛАЙН')} →</button>
-    </div>
+    {/* The guild's invitation for the free time at hand */}
+    {isFreeNow && suggest && (
+      <button onClick={() => navigate(suggest.path)} style={{
+        width: '100%', textAlign: 'left', cursor: 'pointer', marginTop: 6,
+        padding: '8px 12px', borderRadius: 9,
+        background: `${SUGGEST_TONE[suggest.tone]}10`,
+        border: `1px solid ${SUGGEST_TONE[suggest.tone]}38`,
+        display: 'flex', alignItems: 'center', gap: 10, transition: 'border-color 0.15s',
+      }}
+        onMouseEnter={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}70`}
+        onMouseLeave={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}38`}
+      >
+        <span style={{ fontSize: 20, flexShrink: 0 }}>{suggest.icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: '0.16em',
+            color: `${SUGGEST_TONE[suggest.tone]}b0` }}>{t('THE GUILD SUGGESTS', 'ГИЛЬДИЯ СОВЕТУЕТ')}</p>
+          <p style={{ fontSize: 14.5, fontWeight: 700, color: 'rgba(225,250,255,0.95)', marginTop: 1,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.label}</p>
+          {suggest.detail && (
+            <p style={{ fontSize: 10.5, color: 'rgba(148,163,184,0.6)', marginTop: 1,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.detail}</p>
+          )}
+        </div>
+        <span style={{ fontSize: 10.5, color: `${SUGGEST_TONE[suggest.tone]}cc`, flexShrink: 0 }}>~{fmtDur(suggest.minutes)}</span>
+      </button>
+    )}
+   </div>
   )
 }
 
@@ -488,25 +464,10 @@ function Dashboard({ displayName }: { displayName: string }) {
   const name = displayName || null
   const navigate = useNavigate()
 
-  const nowState = useNowState()
-
-  // One bar open at a time. The hub's whole job is to be short, and two open
-  // bars is the screen this replaced. Remembered, so it opens where you left it.
-  const [openBar, setOpenBar] = useState<string | null>(() => {
-    try { const v = localStorage.getItem(HUB_OPEN_KEY); return v === null ? 'today' : (v || null) }
-    catch { return 'today' }
-  })
-  const toggleBar = (id: string) => setOpenBar(cur => {
-    const next = cur === id ? null : id
-    try { localStorage.setItem(HUB_OPEN_KEY, next ?? '') } catch { /* private mode */ }
-    return next
-  })
-
   // Live guild stats — refresh when any module syncs or the window regains focus
   const [stats, setStats] = useState<HubStats>(() => getHubStats())
-  const [prog, setProg]   = useState(() => loadProgression())
   useEffect(() => {
-    const refresh = () => { setStats(getHubStats()); setProg(loadProgression()) }
+    const refresh = () => setStats(getHubStats())
     refresh()
     window.addEventListener('warren:sync', refresh)
     window.addEventListener('focus', refresh)
@@ -521,23 +482,6 @@ function Dashboard({ displayName }: { displayName: string }) {
     gatedLevel(loadProgression().xp, loadProgression().quests).level,
     loadSettings().unlockAll,
   )
-
-  // What each shut bar says. Cheap on purpose — a summary that costs a module
-  // scan to render is a summary that makes the hub slower than the screen it
-  // replaced. `blocking` already carries the unfinished objectives, so the
-  // quest line needs no second pass over the record.
-  const lvl = gatedLevel(prog.xp, prog.quests)
-  const questLine = lvl.capped
-    ? `${t('LEVEL', 'УРОВЕНЬ')} ${lvl.level + 1} ${t('held', 'закрыт')} · ${lvl.blocking.length} ${t('to clear', 'осталось')}`
-    : `${t('LEVEL', 'УРОВЕНЬ')} ${lvl.level} → ${lvl.level + 1} · ${lvl.intoNext}/${lvl.needed} XP`
-
-  const running = prog.goals.filter(g => g.slot !== 'archived').length
-  const dreamLine = running === 0
-    ? t('No uplink yet', 'Нет активной цели')
-    : `${running} ${running === 1 ? t('uplink running', 'цель в работе') : t('uplinks running', 'цели в работе')}`
-
-  const streak = calcStreak(loadScrap7().tasks)
-  const standingLine = `${streak} ${t('day streak', 'дней подряд')} · ${stats.tasksDue} ${t('due', 'на сегодня')}`
 
   const tiles = [
     { label: t('Tasks due', 'Задачи на сегодня'),   value: String(stats.tasksDue),
@@ -560,64 +504,44 @@ function Dashboard({ displayName }: { displayName: string }) {
         </p>
       </div>
 
-      {/* TODAY — where the day is. Shut, it is the NOW card; open, it is what
-          else this hour could hold. The timeline lands in here next. */}
-      <HubBar tag={t('TODAY', 'СЕГОДНЯ')} tone={INF}
-        summary={<NowSummary now={nowState} />}
-        open={openBar === 'today'} onToggle={() => toggleBar('today')}
-        disabled={!orbitOpen}>
-        <NowExpanded now={nowState} />
-      </HubBar>
+      {/* Where you stand, and where the day is: the two things the hub is for.
+          The NOW card used to be gated on INFINITY-8 being its own module — it
+          isn't one any more, it's ORBIT's other half, so it follows ORBIT. */}
+      <WeekStrip tasks={loadScrap7().tasks} />
+      {orbitOpen && <NowCard />}
 
-      {/* QUEST — the guided line. */}
-      <HubBar tag={t('QUEST', 'КВЕСТ')} tone="#ffd700"
-        summary={<BarLine text={questLine} />}
-        open={openBar === 'quest'} onToggle={() => toggleBar('quest')}>
-        <div data-tour="quest-panel"><QuestPanel /></div>
-      </HubBar>
+      {/* The quest log lives where navigation lives */}
+      <div data-tour="quest-panel"><QuestPanel /></div>
 
-      {/* DREAM — the slots, and what is in them. */}
-      <HubBar tag={t('DREAM', 'МЕЧТА')} tone="#c084fc"
-        summary={<BarLine text={dreamLine} />}
-        open={openBar === 'dream'} onToggle={() => toggleBar('dream')}>
-        <div data-tour="bandwidth"><BandwidthStrip /></div>
-      </HubBar>
+      {/* Two uplinks, and what they're carrying */}
+      <div data-tour="bandwidth"><BandwidthStrip /></div>
 
-      {/* STANDING — the week behind you and the numbers, worth a glance rather
-          than a third of the screen. */}
-      <HubBar tag={t('STANDING', 'ПОЛОЖЕНИЕ')} tone="#00b4ff"
-        summary={<BarLine text={standingLine} />}
-        open={openBar === 'standing'} onToggle={() => toggleBar('standing')}>
-        <div style={{ marginTop: 9 }}>
-          <WeekStrip tasks={loadScrap7().tasks} />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-            {tiles.map(({ label, value, neon, icon, path }) => (
-              <button key={label} onClick={() => navigate(path)} style={{
-                padding: '10px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
-                background: 'rgba(13,24,48,0.5)',
-                border: '1px solid rgba(255,255,255,0.05)', transition: 'border-color 0.15s',
-              }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = `${neon}55`}
-                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <CyberIcon id={icon} size={14} color={neon} glow />
-                  <span style={{ fontSize: 17.5, fontWeight: 800, color: neon, textShadow: `0 0 8px ${neon}50` }}>
-                    {value}
-                  </span>
-                </div>
-                <p style={{ fontSize: 10.5, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  {label}
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-      </HubBar>
-
-      {/* Self-hiding: nothing tracked, no panel. Left outside the stack because
-          a bar that is usually absent is worse than a card that is. */}
+      {/* What's landing soon, from the titles already tracked */}
       <ReleaseRadar />
+
+      {/* Quick stats row — live, tap to open the module */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
+        {tiles.map(({ label, value, neon, icon, path }) => (
+          <button key={label} onClick={() => navigate(path)} style={{
+            padding: '10px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
+            background: 'rgba(13,24,48,0.5)',
+            border: '1px solid rgba(255,255,255,0.05)', transition: 'border-color 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = `${neon}55`}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <CyberIcon id={icon} size={14} color={neon} glow />
+              <span style={{ fontSize: 17.5, fontWeight: 800, color: neon, textShadow: `0 0 8px ${neon}50` }}>
+                {value}
+              </span>
+            </div>
+            <p style={{ fontSize: 10.5, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              {label}
+            </p>
+          </button>
+        ))}
+      </div>
 
     </div>
   )
