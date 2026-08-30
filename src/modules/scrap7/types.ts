@@ -221,6 +221,23 @@ export function weeklyDoneSet(tasks: Task[]): Set<string> {
 }
 
 /** Current consecutive-day streak across all habits + dailies */
+/**
+ * The first day this operator did anything the app tracks.
+ *
+ * The week strip used to draw a red miss on every past day that was not in the
+ * done set, which meant a profile one day old was told it had failed six days
+ * it could not have attended. A day before you arrived is not a day you missed.
+ */
+export function firstActiveDate(tasks: Task[]): string | null {
+  let first: string | null = null
+  for (const t of tasks) {
+    for (const d of [...(t.trackingHistory ?? []), ...(t.completionHistory ?? [])]) {
+      if (first === null || d < first) first = d
+    }
+  }
+  return first
+}
+
 export function calcStreak(tasks: Task[]): number {
   const allDates = new Set<string>()
   for (const t of tasks) {

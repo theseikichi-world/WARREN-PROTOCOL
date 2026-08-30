@@ -866,10 +866,22 @@ export default function Scrap7() {
         </div>
 
         {/* INFINITY-8 used to be the other tab here. It is the hub's TODAY
-            card now — tap it and the module maximizes over the hub — so a
-            second copy in ORBIT was the same duplication as the life-support
-            panel: one thing, two doors. ORBIT opens on the list it is for. */}
-        <div style={{ flex: 1 }} />
+            card now, so a second copy was the same duplication as the
+            life-support panel: one thing, two doors. What is left is a title,
+            because the bar looked abandoned without one.
+
+            TODAY, and not a single gamified name over the whole list: these
+            rows are deliberately three different kinds of thing — UPLINK work
+            that is scored, BASICS that hold the floor, and YOURS that just has
+            to happen. Every row says which on its own badge. What actually
+            unites them is the only thing the header claims: they are due
+            today, which is precisely what orbitTasks() filters for. */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', paddingLeft: 13 }}>
+          <span style={{
+            fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: 800,
+            letterSpacing: '0.2em', color: `${NEON}85`,
+          }}>{view === 'chat' ? tr('ORBIT', 'ORBIT') : tr('TODAY', 'СЕГОДНЯ')}</span>
+        </div>
 
         <button onClick={() => setModal({})} style={{
           padding: '9px 12px', fontFamily: 'var(--font)', fontSize: 20, fontWeight: 700,

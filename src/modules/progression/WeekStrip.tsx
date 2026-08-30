@@ -1,4 +1,4 @@
-import { thisWeekDates, weeklyDoneSet, calcStreak, todayKey, type Task } from '../scrap7/types'
+import { thisWeekDates, weeklyDoneSet, calcStreak, firstActiveDate, todayKey, type Task } from '../scrap7/types'
 import { t as tr, plural } from '../../i18n'
 
 // ─── ON TRACK — the week behind you, on the hub ───────────────────────────────
@@ -21,6 +21,8 @@ export function WeekStrip({ tasks }: { tasks: Task[] }) {
   const streak    = calcStreak(tasks)
   const todayStr  = todayKey()
   const doneCnt   = weekDates.filter(d => doneSet.has(d)).length
+  // Before your first tracked day there is nothing to have missed.
+  const since     = firstActiveDate(tasks)
 
   return (
     <div style={{ padding: '10px 13px', borderRadius: 10, marginBottom: 16,
@@ -36,22 +38,33 @@ export function WeekStrip({ tasks }: { tasks: Task[] }) {
         </span>
         {streak > 0 && <span style={{ fontSize: 16.5 }}>🔥</span>}
       </div>
-      <div style={{ flex: 1, display: 'flex', gap: 4, alignItems: 'center' }}>
+      {/* The seven cells share whatever is left rather than each demanding 24px.
+          Fixed widths meant the row needed 192px come what may, and once the
+          streak went above zero the flame pushed the last day past the card. */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 4, alignItems: 'center' }}>
         {weekDates.map((date, i) => {
           const done    = doneSet.has(date)
           const isToday = date === todayStr
+          // A miss is a day you were here for and did nothing. A day before you
+          // started is blank — the difference is the whole point of the strip.
+          const missed  = date < todayStr && since !== null && date >= since && !done
           const isPast  = date < todayStr
           return (
-            <div key={date} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <div key={date} style={{ flex: '1 1 0', minWidth: 0, maxWidth: 24,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
               <div style={{
-                width: 24, height: 24, borderRadius: 6,
+                width: '100%', aspectRatio: '1', borderRadius: 6,
                 background: done ? `${NEON}25` : isToday ? 'rgba(255,255,255,0.06)' : 'transparent',
-                border: `1px solid ${done ? NEON : isToday ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)'}`,
+                border: `1px solid ${done ? NEON
+                  : isToday ? 'rgba(255,255,255,0.15)'
+                  : missed  ? 'rgba(255,0,51,0.22)'
+                  : 'rgba(255,255,255,0.04)'}`,
+                opacity: !done && !isToday && !missed && isPast ? 0.45 : 1,
                 boxShadow: done ? `0 0 6px ${NEON}40` : 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
               }}>
                 {done && <div style={{ width: 8, height: 8, borderRadius: 3, background: NEON, boxShadow: `0 0 4px ${NEON}` }} />}
-                {!done && isPast && <div style={{ width: 4, height: 4, borderRadius: 2, background: 'rgba(255,0,51,0.35)' }} />}
+                {missed && <div style={{ width: 4, height: 4, borderRadius: 2, background: 'rgba(255,0,51,0.45)' }} />}
               </div>
               <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, letterSpacing: '0.04em',
                 color: isToday ? NEON : done ? `${NEON}70` : 'rgba(148,163,184,0.22)',
