@@ -83,6 +83,9 @@ export interface Settings {
   // Data sources (Galactic Pictures)
   tmdbApiKey:     string                    // themoviedb.org — movies/TV/posters
   rawgApiKey:     string                    // rawg.io — games with Metacritic
+  /** Shows the DEVELOPER tab: keys, model routing, sync plumbing, the wipe.
+   *  Off by default — none of it is what a person opens Settings for. */
+  devMode:        boolean
   /** City NIMBUS reads the sky for. Empty means it stays quiet. Open-Meteo
    *  needs no key, so this is the only thing the weather ever asks for. */
   weatherPlace:   string
@@ -120,6 +123,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tmdbApiKey:     '',
   rawgApiKey:     '',
   weatherPlace:   '',
+  devMode:        false,
   syncUrl:        '',
   syncPassphrase: '',
   syncBypass:     '',

@@ -86,6 +86,8 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
   const locale = useLocale()
   const [visible, setVisible] = useState(false)
   const [autostartLoading, setAutostartLoading] = useState(false)
+  /** Which half of Settings you are in. Only ever 'dev' while devMode is on. */
+  const [tab, setTab] = useState<'general' | 'dev'>('general')
   const [backupMsg, setBackupMsg] = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState('')
@@ -265,8 +267,30 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
           >×</button>
         </div>
 
+        {/* Two tabs, and only once you have asked for the second one. Keys,
+            model routing, sync plumbing and the wipe are not what a person
+            opens Settings for — they were most of the scroll and none of the
+            reason. */}
+        {settings.devMode && (
+          <div style={{ display: 'flex', flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            {([['general', t('SETTINGS', 'НАСТРОЙКИ')], ['dev', t('DEVELOPER', 'РАЗРАБОТКА')]] as const).map(([k, label]) => (
+              <button key={k} onClick={() => setTab(k)} style={{
+                flex: 1, padding: '9px 4px', cursor: 'pointer',
+                fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800,
+                letterSpacing: '0.14em',
+                color: tab === k ? acc : 'rgba(148,163,184,0.35)',
+                background: tab === k ? `${acc}0a` : 'transparent',
+                borderBottom: `2px solid ${tab === k ? acc : 'transparent'}`,
+                transition: 'all 0.15s',
+              }}>{label}</button>
+            ))}
+          </div>
+        )}
+
         {/* Content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 20px' }}>
+
+          {tab === 'general' && (<>
 
           {/* ── Language ── */}
           <Section label={t('Language', 'Язык')} />
@@ -392,13 +416,6 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
             </Row>
           )}
 
-          <Row
-            label={t('Open every module', 'Открыть все модули')}
-            sub={t('Ignore level locks. Quests and XP still run — this only unlocks the doors.',
-                   'Игнорировать уровни. Квесты и опыт работают — открываются только двери.')}>
-            <Toggle on={settings.unlockAll} onChange={v => update({ unlockAll: v })} accent={acc} />
-          </Row>
-
           <Row label={t('Replay the guided tours', 'Показать обучение заново')}
             sub={t('Step-by-step walkthrough on every screen, from the top', 'Пошаговое объяснение на каждом экране, с начала')}>
             <button onClick={() => {
@@ -499,6 +516,105 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
             {t('The guide anchors every routine cue inside these hours.',
                'Гид ставит якоря рутин внутри этих часов.')}
           </p>
+
+          {/* ── NIMBUS ── */}
+          <Section label={t('Sky', 'Небо')} />
+          <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
+            lineHeight: 1.6, marginBottom: 10, letterSpacing: '0.03em' }}>
+            {t('NIMBUS puts one line about the weather in your greeting, and an air-quality badge under it. Open-Meteo needs no key. Leave this empty and it stays quiet — the city is sent to open-meteo.com to look up the forecast.',
+               'NIMBUS добавит строку о погоде в приветствие и значок качества воздуха под ним. Open-Meteo работает без ключа. Оставьте пустым — и он промолчит; город уходит на open-meteo.com за прогнозом.')}
+          </p>
+          <div style={{ marginBottom: 12 }}>
+            <p style={{ fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 4, letterSpacing: '0.06em' }}>
+              {t('City', 'Город')} {settings.weatherPlace ? <span style={{ color: '#39ff14' }}>●</span> : null}
+            </p>
+            <input value={settings.weatherPlace} onChange={e => update({ weatherPlace: e.target.value })}
+              placeholder={t('e.g. Tbilisi', 'напр. Тбилиси')}
+              style={{ width: '100%', padding: '7px 10px', borderRadius: 5,
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                outline: 'none', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
+                color: 'rgba(220,240,255,0.8)', userSelect: 'text', WebkitUserSelect: 'text' }}
+              onFocus={e => e.target.style.borderColor = `${acc}50`}
+              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+            />
+          </div>
+
+          {/* ── Backup ── */}
+          <Section label={t('Backup', 'Резервная копия')} />
+          <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
+            lineHeight: 1.6, marginBottom: 10 }}>
+            {t('All Warren data lives on this machine. Export a backup file regularly — habits, goals, texts, journal, library, everything. API keys are never included in backups.',
+               'Все данные Warren хранятся на этой машине. Регулярно выгружайте резервную копию — привычки, цели, тексты, журнал, библиотека, всё. API-ключи в копию никогда не попадают.')}
+          </p>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+            <button onClick={() => { try { downloadBackup(); setBackupMsg('✓ Backup downloaded') } catch { setBackupMsg('Download failed — use Copy') } }}
+              style={{ flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
+                fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
+                color: acc, border: `1px solid ${acc}40`, background: `${acc}0c` }}>
+              ⬇ EXPORT FILE</button>
+            <button onClick={async () => {
+              try { await navigator.clipboard.writeText(exportAllJson()); setBackupMsg('✓ Copied to clipboard') }
+              catch { setBackupMsg('Clipboard blocked — use Export File') }
+            }}
+              style={{ flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
+                fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
+                color: 'rgba(220,240,255,0.6)', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent' }}>
+              ⧉ COPY JSON</button>
+            <button onClick={() => { setImportOpen(v => !v); setBackupMsg('') }}
+              style={{ flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
+                fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
+                color: importOpen ? '#ff6b00' : 'rgba(220,240,255,0.6)',
+                border: `1px solid ${importOpen ? 'rgba(255,107,0,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                background: importOpen ? 'rgba(255,107,0,0.08)' : 'transparent' }}>
+              ⬆ IMPORT</button>
+          </div>
+          {backupMsg && (
+            <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
+              color: backupMsg.startsWith('✓') ? '#39ff14' : '#ff6b00', marginBottom: 8 }}>{backupMsg}</p>
+          )}
+          {importOpen && (
+            <div style={{ marginBottom: 12 }}>
+              <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={4}
+                placeholder='Paste a Warren backup JSON here…'
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 6, resize: 'none',
+                  background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,107,0,0.25)', outline: 'none',
+                  fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(220,240,255,0.8)',
+                  boxSizing: 'border-box', userSelect: 'text', WebkitUserSelect: 'text' }}/>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(255,107,0,0.6)',
+                margin: '4px 0 6px', lineHeight: 1.5 }}>
+                ⚠ Restoring overwrites current data for every key in the backup, then reloads.
+              </p>
+              <button disabled={!importText.trim()} onClick={() => {
+                try {
+                  const n = importBackup(importText)
+                  setBackupMsg(`✓ Restored ${n} keys — reloading…`)
+                  setTimeout(() => window.location.reload(), 800)
+                } catch (e) {
+                  setBackupMsg(e instanceof Error ? e.message : 'Import failed')
+                }
+              }}
+                style={{ width: '100%', padding: '8px', borderRadius: 6,
+                  cursor: importText.trim() ? 'pointer' : 'default',
+                  fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800, letterSpacing: '0.1em',
+                  color: importText.trim() ? '#ff6b00' : 'rgba(148,163,184,0.3)',
+                  border: `1px solid ${importText.trim() ? 'rgba(255,107,0,0.45)' : 'rgba(255,255,255,0.06)'}`,
+                  background: importText.trim() ? 'rgba(255,107,0,0.1)' : 'transparent' }}>
+                RESTORE & RELOAD</button>
+            </div>
+          )}
+
+          {/* The way in. Quiet, at the bottom, and it says what it opens. */}
+          <Section label={t('Advanced', 'Дополнительно')} />
+          <Row label={t('Developer mode', 'Режим разработчика')}
+            sub={t('Adds a tab for API keys, per-task models, sync and the reset.',
+                   'Добавляет вкладку с ключами, моделями по задачам, синхронизацией и сбросом.')}>
+            <Toggle on={settings.devMode}
+              onChange={v => { update({ devMode: v }); if (!v) setTab('general') }} accent={acc} />
+          </Row>
+
+          </>)}
+
+          {tab === 'dev' && settings.devMode && (<>
 
           {/* ── AI ── */}
           <Section label={t('AI Assistant', 'ИИ-ассистент')} />
@@ -655,91 +771,13 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
             </div>
           ))}
 
-          {/* ── NIMBUS ── */}
-          <Section label={t('Sky', 'Небо')} />
-          <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
-            lineHeight: 1.6, marginBottom: 10, letterSpacing: '0.03em' }}>
-            {t('NIMBUS puts one line about the weather in your greeting, and an air-quality badge under it. Open-Meteo needs no key. Leave this empty and it stays quiet — the city is sent to open-meteo.com to look up the forecast.',
-               'NIMBUS добавит строку о погоде в приветствие и значок качества воздуха под ним. Open-Meteo работает без ключа. Оставьте пустым — и он промолчит; город уходит на open-meteo.com за прогнозом.')}
-          </p>
-          <div style={{ marginBottom: 12 }}>
-            <p style={{ fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.5)', fontFamily: 'var(--font)', marginBottom: 4, letterSpacing: '0.06em' }}>
-              {t('City', 'Город')} {settings.weatherPlace ? <span style={{ color: '#39ff14' }}>●</span> : null}
-            </p>
-            <input value={settings.weatherPlace} onChange={e => update({ weatherPlace: e.target.value })}
-              placeholder={t('e.g. Tbilisi', 'напр. Тбилиси')}
-              style={{ width: '100%', padding: '7px 10px', borderRadius: 5,
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                outline: 'none', fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)',
-                color: 'rgba(220,240,255,0.8)', userSelect: 'text', WebkitUserSelect: 'text' }}
-              onFocus={e => e.target.style.borderColor = `${acc}50`}
-              onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
-            />
-          </div>
 
-          {/* ── Backup ── */}
-          <Section label={t('Backup', 'Резервная копия')} />
-          <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.45)',
-            lineHeight: 1.6, marginBottom: 10 }}>
-            {t('All Warren data lives on this machine. Export a backup file regularly — habits, goals, texts, journal, library, everything. API keys are never included in backups.',
-               'Все данные Warren хранятся на этой машине. Регулярно выгружайте резервную копию — привычки, цели, тексты, журнал, библиотека, всё. API-ключи в копию никогда не попадают.')}
-          </p>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-            <button onClick={() => { try { downloadBackup(); setBackupMsg('✓ Backup downloaded') } catch { setBackupMsg('Download failed — use Copy') } }}
-              style={{ flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
-                fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
-                color: acc, border: `1px solid ${acc}40`, background: `${acc}0c` }}>
-              ⬇ EXPORT FILE</button>
-            <button onClick={async () => {
-              try { await navigator.clipboard.writeText(exportAllJson()); setBackupMsg('✓ Copied to clipboard') }
-              catch { setBackupMsg('Clipboard blocked — use Export File') }
-            }}
-              style={{ flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
-                fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
-                color: 'rgba(220,240,255,0.6)', border: '1px solid rgba(255,255,255,0.1)', background: 'transparent' }}>
-              ⧉ COPY JSON</button>
-            <button onClick={() => { setImportOpen(v => !v); setBackupMsg('') }}
-              style={{ flex: 1, padding: '8px', borderRadius: 6, cursor: 'pointer',
-                fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em',
-                color: importOpen ? '#ff6b00' : 'rgba(220,240,255,0.6)',
-                border: `1px solid ${importOpen ? 'rgba(255,107,0,0.4)' : 'rgba(255,255,255,0.1)'}`,
-                background: importOpen ? 'rgba(255,107,0,0.08)' : 'transparent' }}>
-              ⬆ IMPORT</button>
-          </div>
-          {backupMsg && (
-            <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
-              color: backupMsg.startsWith('✓') ? '#39ff14' : '#ff6b00', marginBottom: 8 }}>{backupMsg}</p>
-          )}
-          {importOpen && (
-            <div style={{ marginBottom: 12 }}>
-              <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={4}
-                placeholder='Paste a Warren backup JSON here…'
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 6, resize: 'none',
-                  background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,107,0,0.25)', outline: 'none',
-                  fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(220,240,255,0.8)',
-                  boxSizing: 'border-box', userSelect: 'text', WebkitUserSelect: 'text' }}/>
-              <p style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', color: 'rgba(255,107,0,0.6)',
-                margin: '4px 0 6px', lineHeight: 1.5 }}>
-                ⚠ Restoring overwrites current data for every key in the backup, then reloads.
-              </p>
-              <button disabled={!importText.trim()} onClick={() => {
-                try {
-                  const n = importBackup(importText)
-                  setBackupMsg(`✓ Restored ${n} keys — reloading…`)
-                  setTimeout(() => window.location.reload(), 800)
-                } catch (e) {
-                  setBackupMsg(e instanceof Error ? e.message : 'Import failed')
-                }
-              }}
-                style={{ width: '100%', padding: '8px', borderRadius: 6,
-                  cursor: importText.trim() ? 'pointer' : 'default',
-                  fontFamily: 'var(--font)', fontSize: 'var(--fs-xs)', fontWeight: 800, letterSpacing: '0.1em',
-                  color: importText.trim() ? '#ff6b00' : 'rgba(148,163,184,0.3)',
-                  border: `1px solid ${importText.trim() ? 'rgba(255,107,0,0.45)' : 'rgba(255,255,255,0.06)'}`,
-                  background: importText.trim() ? 'rgba(255,107,0,0.1)' : 'transparent' }}>
-                RESTORE & RELOAD</button>
-            </div>
-          )}
+          <Row
+            label={t('Open every module', 'Открыть все модули')}
+            sub={t('Ignore level locks. Quests and XP still run — this only unlocks the doors.',
+                   'Игнорировать уровни. Квесты и опыт работают — открываются только двери.')}>
+            <Toggle on={settings.unlockAll} onChange={v => update({ unlockAll: v })} accent={acc} />
+          </Row>
 
           {/* ── Sync ── */}
           {/* One blob, encrypted here, stored somewhere that cannot read it.
@@ -878,6 +916,9 @@ export default function SettingsPanel({ settings, onClose, onChange }: Props) {
               </div>
             </div>
           )}
+
+
+          </>)}
 
           {/* ── About ── */}
           <Section label={t('About', 'О программе')} />
