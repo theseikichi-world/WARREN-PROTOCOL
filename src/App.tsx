@@ -517,6 +517,23 @@ function Welcome({ displayName }: { displayName: string }) {
   })
   const air = aqiBand(sky?.aqi ?? null)
 
+  /**
+   * NIMBUS is silent until it has a city, which is right — it should not go
+   * asking the internet where you are on its own. But silent also meant
+   * invisible: the first question about the weather was "why do I not see any".
+   * So it says once that it could, and never again after you answer either way.
+   */
+  const [skyHint, setSkyHint] = useState(() => {
+    try {
+      return !loadSettings().weatherPlace?.trim()
+        && localStorage.getItem('warren_sky_hint_off') !== '1'
+    } catch { return false }
+  })
+  const hushSky = () => {
+    try { localStorage.setItem('warren_sky_hint_off', '1') } catch { /* private mode */ }
+    setSkyHint(false)
+  }
+
   return (
     <div style={{ marginBottom: 20 }}>
       <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.03em' }}>
@@ -545,6 +562,23 @@ function Welcome({ displayName }: { displayName: string }) {
             letterSpacing: '0.14em', color: `${air.color}d0` }}>
             {t('AIR', 'ВОЗДУХ')} {Math.round(sky!.aqi!)} · {air.label.toUpperCase()}
           </span>
+        </div>
+      )}
+
+      {skyHint && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+          <button onClick={() => { window.dispatchEvent(new CustomEvent('warren:settings')); hushSky() }}
+            style={{
+              cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 11,
+              letterSpacing: '0.06em', color: 'rgba(125,211,252,0.7)',
+              borderBottom: '1px dashed rgba(125,211,252,0.3)', padding: '1px 0',
+            }}>
+            {t('Add a city and I can read the sky too', 'Укажите город — и я буду читать небо')}
+          </button>
+          <button onClick={hushSky} title={t('Not interested', 'Не нужно')} style={{
+            cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 12,
+            color: 'rgba(148,163,184,0.35)', padding: '0 3px',
+          }}>×</button>
         </div>
       )}
 
@@ -1057,6 +1091,13 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
   const [intro, setIntro]       = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // Anything on the hub can send you to Settings without being handed a setter
+  // through four components.
+  useEffect(() => {
+    const open = () => setSettingsOpen(true)
+    window.addEventListener('warren:settings', open)
+    return () => window.removeEventListener('warren:settings', open)
+  }, [])
   const [initiated, setInitiated] = useState(() => !!loadProgression().initiatedAt)
   const [levelUp, setLevelUp] = useState<number | null>(null)
   const [level, setLevel] = useState(() => { const p = loadProgression(); return gatedLevel(p.xp, p.quests).level })
