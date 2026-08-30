@@ -30,8 +30,10 @@ import { gatherSuggestions, topSuggestion, type Suggestion } from './modules/inf
 import { getHubStats, type HubStats } from './hubStats'
 import { ReleaseRadar } from './modules/pictures/ReleaseRadar'
 import Uplinks from './modules/progression/Uplinks'
-import { BandwidthStrip } from './modules/progression/BandwidthStrip'
+import { DreamsSurface } from './modules/progression/DreamsSurface'
+import { loadLogState } from './modules/log/store'
 import { QuestPanel } from './modules/progression/QuestPanel'
+import { useSpotlight } from './modules/progression/questNav'
 import { WeekStrip } from './modules/progression/WeekStrip'
 import {
   loadState as loadScrap7, saveState as saveScrap7, orbitTasks, habitDoneToday, taskSource,
@@ -633,6 +635,67 @@ function TodayQuests() {
   )
 }
 
+// ─── DREAM — the room a goal comes from, minimized ────────────────────────────
+
+const DREAM_NEON = '#c084fc'
+
+function DreamCard() {
+  const read = () => {
+    let dreams = 0
+    try { dreams = loadLogState().dreams.length } catch { dreams = 0 }
+    return { dreams, running: loadProgression().goals.filter(g => g.slot !== 'archived').length }
+  }
+  const [n, setN] = useState(read)
+  useEffect(() => {
+    const refresh = () => setN(read())
+    refresh()
+    window.addEventListener('warren:sync', refresh)
+    window.addEventListener('focus', refresh)
+    return () => { window.removeEventListener('warren:sync', refresh); window.removeEventListener('focus', refresh) }
+  }, [])
+
+  const sentHere = useSpotlight('new-uplink')
+
+  const sub = n.dreams === 0
+    ? t('Write one — a goal starts here', 'Запишите — цель начинается здесь')
+    : n.running > 0
+      ? `${n.dreams} ${t('written', 'записано')} · ${n.running} ${t('running', 'в работе')}`
+      : `${n.dreams} ${t('written', 'записано')} · ${t('none promoted yet', 'ни одна не продвинута')}`
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <HubWindow tone={DREAM_NEON} label={t('DREAMS', 'МЕЧТЫ')} openWhen={sentHere}
+        minimized={
+          <div style={{
+            width: '100%', padding: '13px 15px', borderRadius: 10,
+            background: `linear-gradient(135deg, ${DREAM_NEON}12, rgba(13,24,48,0.4))`,
+            border: `1px solid ${DREAM_NEON}30`,
+            display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = `${DREAM_NEON}60`}
+            onMouseLeave={e => e.currentTarget.style.borderColor = `${DREAM_NEON}30`}
+          >
+            <CyberIcon id="log" size={18} color={DREAM_NEON} glow />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', color: `${DREAM_NEON}b0` }}>
+                {t('DREAMS', 'МЕЧТЫ')}
+              </p>
+              <p style={{ fontSize: 13.5, color: 'rgba(215,232,248,0.8)', letterSpacing: '0.02em', marginTop: 3,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</p>
+            </div>
+            <p style={{ fontSize: 18, fontWeight: 900, lineHeight: 1, flexShrink: 0,
+              color: n.dreams > 0 ? DREAM_NEON : 'rgba(148,163,184,0.35)',
+              textShadow: n.dreams > 0 ? `0 0 10px ${DREAM_NEON}70` : 'none' }}>
+              {n.dreams > 0 ? n.dreams : '+'}
+            </p>
+          </div>
+        }>
+        <DreamsSurface />
+      </HubWindow>
+    </div>
+  )
+}
+
 function Dashboard({ displayName }: { displayName: string }) {
   const now  = new Date()
   const hour = now.getHours()
@@ -671,7 +734,14 @@ function Dashboard({ displayName }: { displayName: string }) {
   ]
 
   return (
-    <div className="fade-in" style={{ height: '100%', overflowY: 'auto', padding: '20px 18px' }}>
+    // Two elements on purpose. A maximized card is `position: fixed` inside the
+    // `.fade-in`, and a fixed element under a transformed ancestor is really
+    // positioned against that ancestor — so when the ancestor is ALSO the
+    // scroller, the window slides away with the content. It was landing 209px
+    // above the hub after a scroll. The transform stays on the outer box, which
+    // never moves; the scrolling happens one level in.
+    <div className="fade-in" style={{ height: '100%', overflow: 'hidden' }}>
+    <div style={{ height: '100%', overflowY: 'auto', padding: '20px 18px' }}>
 
       {/* Greeting */}
       <div style={{ marginBottom: 22 }}>
@@ -692,8 +762,11 @@ function Dashboard({ displayName }: { displayName: string }) {
       {/* And under it, what the line costs you today */}
       <TodayQuests />
 
-      {/* Two uplinks, and what they're carrying */}
-      <div data-tour="bandwidth"><BandwidthStrip /></div>
+      {/* Where a goal comes from. This was BANDWIDTH — a slot count with no
+          picture of what fills it, and the same count UPLINKS already prints in
+          its own header. The card that belongs on a hub is the one that opens
+          the room a goal is born in. */}
+      <div data-tour="bandwidth"><DreamCard /></div>
 
       {/* What's landing soon, from the titles already tracked */}
       <ReleaseRadar />
@@ -722,6 +795,7 @@ function Dashboard({ displayName }: { displayName: string }) {
         ))}
       </div>
 
+    </div>
     </div>
   )
 }

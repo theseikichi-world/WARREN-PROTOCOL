@@ -228,7 +228,9 @@ describe('quest destinations', () => {
   it('routes every destination at a real module', () => {
     // Checked against the guild rather than string literals, so a module that
     // moves or is un-built breaks the test instead of the quest.
-    const shipped = new Set([...GUILD.filter(m => m.built).map(m => m.path), '/uplinks'])
+    // '/' is the hub, which is a real destination now that modules live on it
+    // as cards — DREAMS is one, and the card opens itself on arrival.
+    const shipped = new Set([...GUILD.filter(m => m.built).map(m => m.path), '/uplinks', '/'])
     for (const dest of Object.values(QUEST_DESTINATIONS)) {
       if (dest.path) expect(shipped).toContain(dest.path)
     }

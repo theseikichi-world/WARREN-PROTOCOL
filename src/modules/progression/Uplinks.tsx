@@ -9,9 +9,6 @@ import {
 } from './store'
 import { SkillTree } from './SkillTree'
 import { ShelfPanel } from './ShelfPanel'
-import { DreamsPanel } from './DreamsPanel'
-import { NewUplink } from './NewUplink'
-import type { Dream } from '../log/types'
 import { CharacterSheet } from './CharacterSheet'
 import { ChainForge } from './ChainForge'
 import { goalToDraft, type ChainDraft } from './draft'
@@ -25,7 +22,6 @@ import { play as playCue } from '../../sound'
 import { maxNodesFor, type Goal, type ProgressionState } from './types'
 
 const CYAN = '#00f5ff'
-const LOG_NEON = '#c084fc'   // DREAMS keeps PATHFINDER's colour — same thing, new home
 const GOLD = '#ffd700'
 const DIM  = 'rgba(148,163,184,0.55)'
 
@@ -37,9 +33,8 @@ export default function Uplinks() {
   const [state, setState] = useState<ProgressionState>(() => seedIfEmpty(loadProgression()))
   const [tasks, setTasks] = useState<Task[]>(() => loadScrap7().tasks)
   const [now, setNow]     = useState(() => new Date())
-  const [view, setView]   = useState<'dreams' | 'character' | 'primary' | 'secondary'>('character')
+  const [view, setView]   = useState<'character' | 'primary' | 'secondary'>('character')
   /** The dream being promoted. PATHFINDER used to own this; it is one screen now. */
-  const [promoting, setPromoting] = useState<Dream | null>(null)
   const [sums, setSums]   = useState<ModuleSummaries>(() => getModuleSummaries())
   const [toast, setToast] = useState('')
   const [forging, setForging]   = useState<ChainDraft | null>(null)
@@ -89,7 +84,6 @@ export default function Uplinks() {
   // A quest that points here also says which tab it meant
   useEffect(() => {
     const nav = location.state as { spotlight?: string } | null
-    if (nav?.spotlight === 'new-uplink') setView('dreams')
     if (nav?.spotlight === 'install-routine') setView(v => v === 'character' ? 'primary' : v)
   }, [location.state])
 
@@ -231,34 +225,11 @@ export default function Uplinks() {
           )
         })}
 
-        {/* Last on the bar on purpose. Writing a dream is something you do once
-            or twice, and then live with for months — it does not belong in the
-            place your eye lands every time you open this screen. */}
-        <button onClick={() => setView('dreams')} style={{
-          flex: 0.7, padding: '9px 6px', cursor: 'pointer',
-          background: view === 'dreams' ? `${LOG_NEON}0c` : 'transparent',
-          borderBottom: `2px solid ${view === 'dreams' ? LOG_NEON : 'transparent'}`,
-          fontFamily: 'var(--font)',
-        }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em',
-            color: view === 'dreams' ? `${LOG_NEON}b0` : 'rgba(148,163,184,0.35)' }}>
-            {tr('SOURCE', 'ИСТОК')}
-          </p>
-          <p style={{ fontSize: 13, fontWeight: 900, letterSpacing: '0.08em', marginTop: 3,
-            color: view === 'dreams' ? LOG_NEON : 'rgba(148,163,184,0.5)',
-            textShadow: view === 'dreams' ? `0 0 10px ${LOG_NEON}50` : 'none' }}>
-            {tr('DREAMS', 'МЕЧТЫ')}
-          </p>
-        </button>
+        {/* The DREAMS tab was here. It is a hub card now — writing a dream is
+            choosing, and this screen is for the goals already running. */}
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
-        {view === 'dreams' && (
-          <DreamsPanel
-            promotedIds={new Set(state.goals.map(g => g.sourceDreamId).filter((id): id is string => !!id))}
-            onPromote={d => setPromoting(d)} />
-        )}
-
         {view === 'character' && (
           <CharacterSheet goals={state.goals} tasks={tasks} xp={state.xp}
             sums={sums} name={loadSettings().displayName} quests={state.quests}
@@ -332,17 +303,8 @@ export default function Uplinks() {
         )}
       </div>
 
-      {/* Promote runs the interview, the read and the forge — one press, and it
-          lands on the tab next door rather than in another module. */}
-      {promoting && (
-        <NewUplink accent={CYAN} dream={promoting}
-          onClose={() => setPromoting(null)}
-          onCommitted={() => {
-            setPromoting(null)
-            setState(loadProgression())
-            setView('primary')
-          }} />
-      )}
+      {/* DREAMS and the promote flow moved to the hub card. Writing a dream is
+          choosing; this screen is for the goals already running. */}
 
       {forging && (
         <ChainForge draft={forging} accent={accent === GOLD ? GOLD : CYAN}

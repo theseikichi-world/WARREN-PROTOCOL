@@ -75,7 +75,9 @@ export const QUEST_DESTINATIONS: Record<QuestTarget, QuestDestination> = {
   journal:  { path: '/journal', label: 'OPEN THE JOURNAL',   ru: 'ОТКРЫТЬ ЖУРНАЛ' },
   solaris:  { path: '/solaris', label: 'OPEN THE KITCHEN',   ru: 'ОТКРЫТЬ КУХНЮ' },
   ardo:     { path: '/ardo',    label: 'OPEN A.R.D.O',       ru: 'ОТКРЫТЬ A.R.D.O' },
-  log:      { path: '/uplinks', label: 'OPEN YOUR DREAMS',   ru: 'ОТКРЫТЬ МЕЧТЫ' },
+  // DREAMS is a hub card now, not a tab in UPLINKS. The card opens itself when
+  // it sees the `new-uplink` spotlight arrive with you.
+  log:      { path: '/',        label: 'OPEN YOUR DREAMS',   ru: 'ОТКРЫТЬ МЕЧТЫ' },
   // Both land on UPLINKS, but they want different tabs and different advice
   character:{ path: '/uplinks', label: 'OPEN YOUR CHARACTER',ru: 'ОТКРЫТЬ ПЕРСОНАЖА' },
   scrap7:   { path: '/scrap7',  label: 'OPEN ORBIT',          ru: 'ОТКРЫТЬ ORBIT' },

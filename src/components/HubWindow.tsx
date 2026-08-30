@@ -22,7 +22,7 @@ const SHUT: Inset = { top: 0, left: 0, right: 0, bottom: 0 }
 const EASE = 'cubic-bezier(0.22, 0.9, 0.24, 1)'
 const MS   = 320
 
-export function HubWindow({ tone, label, minimized, children }: {
+export function HubWindow({ tone, label, minimized, children, openWhen = false }: {
   /** The module's neon, so the window is visibly the thing the card was. */
   tone: string
   /** Named on the window's own bar, once it is open. */
@@ -31,6 +31,8 @@ export function HubWindow({ tone, label, minimized, children }: {
   minimized: ReactNode
   /** The module. Rendered only while open. */
   children: ReactNode
+  /** Arrive here from a quest and the window opens itself. */
+  openWhen?: boolean
 }) {
   const holder = useRef<HTMLDivElement>(null)
   const [open,  setOpen]  = useState(false)
@@ -57,6 +59,9 @@ export function HubWindow({ tone, label, minimized, children }: {
     }
     setOpen(true)
   }
+
+  // A quest that sends you to a card means the card, not the screen behind it.
+  useEffect(() => { if (openWhen) maximize() }, [openWhen])
 
   // Leaving the starting rectangle has to happen AFTER the browser has painted
   // it, or there is nothing to animate from. Two frames does that — but a frame
