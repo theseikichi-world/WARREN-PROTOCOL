@@ -33,7 +33,11 @@ import Uplinks from './modules/progression/Uplinks'
 import { BandwidthStrip } from './modules/progression/BandwidthStrip'
 import { QuestPanel } from './modules/progression/QuestPanel'
 import { WeekStrip } from './modules/progression/WeekStrip'
-import { loadState as loadScrap7, orbitTasks, habitDoneToday, taskSource } from './modules/scrap7/store'
+import {
+  loadState as loadScrap7, saveState as saveScrap7, orbitTasks, habitDoneToday, taskSource,
+  completeTask, uncompleteTask, SOURCE_LABEL,
+} from './modules/scrap7/store'
+import { trackFromList } from './modules/progression/store'
 import type { Task } from './modules/scrap7/types'
 import { useLocale, t } from './i18n'
 import { CyberIcon } from './components/CyberIcon'
@@ -486,6 +490,10 @@ function NowCard() {
 // things it costs you today.
 
 const ORBIT_NEON = '#00b4ff'
+/** A row wears its source's colour — the same three ORBIT's badges use. */
+const SOURCE_TONE: Record<'uplink' | 'basic' | 'yours', string> = {
+  uplink: 'rgba(0,245,255,0.7)', basic: 'rgba(125,211,160,0.75)', yours: 'rgba(148,163,184,0.6)',
+}
 
 function TodayQuests() {
   const [tasks, setTasks] = useState<Task[]>(() => loadScrap7().tasks)
@@ -516,6 +524,39 @@ function TodayQuests() {
         : t('All clear for today', 'На сегодня всё'))
     : kinds.map(k => `${k.n} ${t(k.en, k.ru)}`).join(' · ')
 
+  const [flash, setFlash] = useState<string | null>(null)
+  useEffect(() => {
+    if (!flash) return
+    const id = setTimeout(() => setFlash(null), 1800)
+    return () => clearTimeout(id)
+  }, [flash])
+
+  /**
+   * Ticking a row from the card. The same shared path the list uses, so score,
+   * streak and XP move together — a tick here has to be worth exactly what a
+   * tick inside ORBIT is worth, or the card becomes a cheaper way to farm.
+   */
+  const tick = (task: Task) => {
+    if (task.taskType === 'habit') {
+      if (habitDoneToday(task)) return
+      const { gained, levelUp } = trackFromList(task.id)
+      setTasks(loadScrap7().tasks)
+      if (levelUp)     { setFlash(t(`LEVEL ${levelUp}`, `УРОВЕНЬ ${levelUp}`)); playCue('level') }
+      else if (gained) { setFlash(`+${gained} XP`); playCue('xp') }
+      else             playCue('check')
+      return
+    }
+    playCue(task.completed ? 'tick' : 'check')
+    const s7 = loadScrap7()
+    saveScrap7(task.completed ? uncompleteTask(s7, task.id) : completeTask(s7, task.id))
+    setTasks(loadScrap7().tasks)
+  }
+
+  // Enough to act on without opening, not so many that the card becomes the
+  // list. What is left over says so rather than being silently dropped.
+  const peek = shown.filter(x => !isDone(x)).slice(0, 4)
+  const more = open - peek.length
+
   return (
     <div style={{ marginBottom: 16 }}>
       <HubWindow tone={ORBIT_NEON} label={t('ORBIT · TODAY', 'ORBIT · СЕГОДНЯ')}
@@ -524,11 +565,12 @@ function TodayQuests() {
             width: '100%', padding: '13px 15px', borderRadius: 10,
             background: `linear-gradient(135deg, ${ORBIT_NEON}12, rgba(13,24,48,0.4))`,
             border: `1px solid ${ORBIT_NEON}30`,
-            display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.15s',
+            transition: 'border-color 0.15s',
           }}
             onMouseEnter={e => e.currentTarget.style.borderColor = `${ORBIT_NEON}60`}
             onMouseLeave={e => e.currentTarget.style.borderColor = `${ORBIT_NEON}30`}
           >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <CyberIcon id="scrap7" size={18} color={ORBIT_NEON} glow />
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', color: `${ORBIT_NEON}b0` }}>
@@ -541,14 +583,48 @@ function TodayQuests() {
               <p style={{ fontSize: 18, fontWeight: 900, lineHeight: 1,
                 color: open > 0 ? ORBIT_NEON : 'rgba(57,255,20,0.85)',
                 textShadow: `0 0 10px ${open > 0 ? `${ORBIT_NEON}70` : 'rgba(57,255,20,0.4)'}` }}>
-                {open > 0 ? open : '✓'}
+                {flash ?? (open > 0 ? open : '✓')}
               </p>
-              {done > 0 && (
+              {done > 0 && !flash && (
                 <p style={{ fontSize: 10, color: 'rgba(148,163,184,0.5)', marginTop: 3 }}>
                   {done} {t('done', 'готово')}
                 </p>
               )}
             </div>
+            </div>
+
+            {/* The rows. Ticking one never opens the window — finishing
+                something without going anywhere is the whole point. */}
+            {peek.length > 0 && (
+              <div style={{ marginTop: 11, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {peek.map(task => (
+                  <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); tick(task) }}
+                      title={t('Mark done', 'Отметить выполненным')}
+                      style={{
+                        width: 26, height: 26, flexShrink: 0, borderRadius: '50%', cursor: 'pointer',
+                        border: `1.5px solid ${SOURCE_TONE[taskSource(task)]}`,
+                        background: 'transparent', transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = `${SOURCE_TONE[taskSource(task)]}33` }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                    />
+                    <p style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'rgba(225,240,255,0.9)',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.text}</p>
+                    <span style={{ flexShrink: 0, fontSize: 9.5, fontWeight: 800, letterSpacing: '0.12em',
+                      color: SOURCE_TONE[taskSource(task)] }}>
+                      {t(SOURCE_LABEL[taskSource(task)].en, SOURCE_LABEL[taskSource(task)].ru)}
+                    </span>
+                  </div>
+                ))}
+                {more > 0 && (
+                  <p style={{ fontSize: 11, color: 'rgba(148,163,184,0.45)', marginTop: 4, marginLeft: 36 }}>
+                    +{more} {t('more', 'ещё')}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         }>
         <Scrap7 />
@@ -893,9 +969,10 @@ export default function App() {
         }}>
           {/* Settings is an overlay on top of the module, so going anywhere
               dismisses it — otherwise it hides the screen you just asked for. */}
-          {/* The hub button used to sit here, a second Warren mark on a screen
-              that already has one in the title bar. The mark up there is the
-              way home now — one logo, one meaning. */}
+          {/* Kept, and the mark in the title bar navigates home as well now.
+              Two ways back is not the same fault as two ways in: the sidebar
+              is where the thumb already is. */}
+          <SidebarBtn iconId="hub" neon="var(--accent)" active={location.pathname === '/'} title="Warren Hub" onClick={() => go('/')} />
           <SidebarBtn iconId="uplink" neon="#00f5ff" active={location.pathname.startsWith('/uplinks')}
             title={t('Uplinks — goals & bandwidth', 'Каналы — цели и полоса')} onClick={() => go('/uplinks')} />
           <div style={{ width: 28, height: 1, background: 'var(--border)', margin: '2px 0' }} />

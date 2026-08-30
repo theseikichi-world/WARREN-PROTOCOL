@@ -90,11 +90,19 @@ export function HubWindow({ tone, label, minimized, children }: {
 
   return (
     <div ref={holder}>
-      <button onClick={maximize} aria-expanded={open} style={{
-        display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
-      }}>
+      {/* Not a <button>: the card can hold its own controls — a checkbox you
+          tick without opening anything — and a button inside a button is
+          invalid and unclickable. role + key handling keep it operable from a
+          keyboard; the controls inside stop the click from reaching here. */}
+      <div role="button" tabIndex={0} aria-expanded={open}
+        onClick={maximize}
+        onKeyDown={e => {
+          if (e.target !== e.currentTarget) return
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); maximize() }
+        }}
+        style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}>
         {minimized}
-      </button>
+      </div>
 
       {open && (
         <div role="dialog" aria-label={label} style={{
