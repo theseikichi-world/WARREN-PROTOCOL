@@ -46,6 +46,7 @@ import {
 import { trackFromList } from './modules/progression/store'
 import type { Task } from './modules/scrap7/types'
 import { useLocale, t } from './i18n'
+import { sessionDaysAway, greetingFor, briefFor } from './greeting'
 import { CyberIcon } from './components/CyberIcon'
 import { HubWindow } from './components/HubWindow'
 
@@ -375,18 +376,13 @@ const SUGGEST_TONE: Record<Suggestion['tone'], string> = {
   play: '#ff8a4c', grow: '#8b9bff', care: '#ffd76b',
 }
 function NowCard() {
-  const navigate = useNavigate()
   const [snap, setSnap] = useState(() => getNowSnapshot())
   const [nowMin, setNowMin] = useState(() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes() })
-  const [suggest, setSuggest] = useState<Suggestion | null>(null)
 
   useEffect(() => {
     const refresh = () => {
-      const s = getNowSnapshot()
-      setSnap(s)
+      setSnap(getNowSnapshot())
       const d = new Date(); setNowMin(d.getHours() * 60 + d.getMinutes())
-      const free = !s.awake || !s.current || s.current.kind === 'free' || s.current.kind === 'break'
-      setSuggest(free ? topSuggestion(gatherSuggestions(), s.freeMinutes) : null)
     }
     refresh()
     const id = setInterval(refresh, 30000)
@@ -399,7 +395,6 @@ function NowCard() {
   // "Free" only counts when nothing is scheduled AND nothing is still open —
   // unfinished quests mean the day isn't yours yet.
   const idleNow    = !snap.awake || !cur || cur.kind === 'free' || cur.kind === 'break'
-  const isFreeNow  = idleNow && snap.pendingCount === 0
   const headline = !snap.awake ? t('Off the clock', 'Вне графика')
     : !idleNow ? cur!.label
     : snap.pendingCount > 0
@@ -459,33 +454,92 @@ function NowCard() {
       <Infinity8 />
     </HubWindow>
 
-    {/* The guild's invitation for the free time at hand */}
-    {isFreeNow && suggest && (
-      <button onClick={() => navigate(suggest.path)} style={{
-        width: '100%', textAlign: 'left', cursor: 'pointer', marginTop: 6,
-        padding: '8px 12px', borderRadius: 9,
-        background: `${SUGGEST_TONE[suggest.tone]}10`,
-        border: `1px solid ${SUGGEST_TONE[suggest.tone]}38`,
-        display: 'flex', alignItems: 'center', gap: 10, transition: 'border-color 0.15s',
-      }}
-        onMouseEnter={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}70`}
-        onMouseLeave={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}38`}
-      >
-        <span style={{ fontSize: 20, flexShrink: 0 }}>{suggest.icon}</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: '0.16em',
-            color: `${SUGGEST_TONE[suggest.tone]}b0` }}>{t('THE GUILD SUGGESTS', 'ГИЛЬДИЯ СОВЕТУЕТ')}</p>
-          <p style={{ fontSize: 14.5, fontWeight: 700, color: 'rgba(225,250,255,0.95)', marginTop: 1,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.label}</p>
-          {suggest.detail && (
-            <p style={{ fontSize: 10.5, color: 'rgba(148,163,184,0.6)', marginTop: 1,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.detail}</p>
-          )}
-        </div>
-        <span style={{ fontSize: 10.5, color: `${SUGGEST_TONE[suggest.tone]}cc`, flexShrink: 0 }}>~{fmtDur(suggest.minutes)}</span>
-      </button>
-    )}
+    {/* The invitation moved into the welcome block, above the week strip.
+        Under the NOW card it read as a footnote to the clock rather than as
+        part of what the app has to say when it sees you. */}
    </div>
+  )
+}
+
+// ─── The welcome — what an assistant would say on seeing you ──────────────────
+// The greeting, one line of where things stand, and the single invitation the
+// guild has for the time you actually have. It sits above the week strip
+// because it is the sentence the rest of the hub is the detail of.
+
+function Welcome({ displayName }: { displayName: string }) {
+  const navigate = useNavigate()
+
+  // Measured once per session, not per mount — see sessionDaysAway.
+  const away = sessionDaysAway()
+
+  const [snap, setSnap] = useState(() => getNowSnapshot())
+  const [tasks, setTasks] = useState<Task[]>(() => loadScrap7().tasks)
+  const [suggest, setSuggest] = useState<Suggestion | null>(null)
+  useEffect(() => {
+    const refresh = () => {
+      const s = getNowSnapshot()
+      setSnap(s)
+      setTasks(loadScrap7().tasks)
+      setSuggest(topSuggestion(gatherSuggestions(), s.freeMinutes))
+    }
+    refresh()
+    const id = setInterval(refresh, 60_000)
+    window.addEventListener('warren:sync', refresh)
+    window.addEventListener('focus', refresh)
+    return () => { clearInterval(id); window.removeEventListener('warren:sync', refresh); window.removeEventListener('focus', refresh) }
+  }, [])
+
+  const isDone = (t2: Task) => t2.taskType === 'habit' ? habitDoneToday(t2) : t2.completed
+  const due    = orbitTasks(tasks).filter(x => !isDone(x)).length
+
+  const hour = new Date().getHours()
+  const head = greetingFor(hour, away)
+  const brief = briefFor({
+    days: away, due, freeMin: snap.freeMinutes, awake: snap.awake,
+    // The sky goes here once SUNNY KANA exists — the slot is deliberate.
+    weather: null,
+  })
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.03em' }}>
+        {head}{displayName ? `, ${displayName}` : ''}{' '}
+        <span style={{ color: 'var(--accent)', textShadow: '0 0 10px var(--accent-dim)' }}>👋</span>
+      </p>
+
+      {brief && (
+        <p style={{ fontSize: 13, color: 'rgba(148,163,184,0.75)', lineHeight: 1.55, marginTop: 5 }}>
+          {brief}
+        </p>
+      )}
+
+      {/* One invitation, and only for time you actually have. It used to sit
+          under the NOW card, which made it a footnote to the clock rather than
+          part of what the app has to say to you. */}
+      {suggest && (
+        <button onClick={() => navigate(suggest.path)} style={{
+          width: '100%', textAlign: 'left', cursor: 'pointer', marginTop: 10,
+          padding: '9px 12px', borderRadius: 9,
+          background: `${SUGGEST_TONE[suggest.tone]}10`,
+          border: `1px solid ${SUGGEST_TONE[suggest.tone]}38`,
+          display: 'flex', alignItems: 'center', gap: 10, transition: 'border-color 0.15s',
+        }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}70`}
+          onMouseLeave={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}38`}
+        >
+          <span style={{ fontSize: 18, flexShrink: 0 }}>{suggest.icon}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 13.5, fontWeight: 700, color: 'rgba(225,250,255,0.92)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.label}</p>
+            {suggest.detail && (
+              <p style={{ fontSize: 10.5, color: 'rgba(148,163,184,0.6)', marginTop: 1,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.detail}</p>
+            )}
+          </div>
+          <span style={{ fontSize: 10.5, color: `${SUGGEST_TONE[suggest.tone]}cc`, flexShrink: 0 }}>~{fmtDur(suggest.minutes)}</span>
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -898,10 +952,6 @@ function todaySolaris(): string {
 }
 
 function Dashboard({ displayName }: { displayName: string }) {
-  const now  = new Date()
-  const hour = now.getHours()
-  const greeting = hour < 5 ? t('still up?', 'ещё не спите?') : hour < 12 ? t('good morning', 'доброе утро') : hour < 17 ? t('good afternoon', 'добрый день') : t('good evening', 'добрый вечер')
-  const name = displayName || null
   // The hub stopped keeping its own counters: every card reads the store it is
   // about, and refreshes itself on warren:sync.
   const orbitOpen = moduleUnlocked(
@@ -921,12 +971,8 @@ function Dashboard({ displayName }: { displayName: string }) {
     <div className="fade-in" style={{ height: '100%', overflow: 'hidden' }}>
     <div style={{ height: '100%', overflowY: 'auto', padding: '20px 18px' }}>
 
-      {/* Greeting */}
-      <div style={{ marginBottom: 22 }}>
-        <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.03em' }}>
-          {greeting}{name ? `, ${name}` : ''} <span style={{ color: 'var(--accent)', textShadow: '0 0 10px var(--accent-dim)' }}>👋</span>
-        </p>
-      </div>
+      {/* Greeting, where things stand, and the one invitation that fits */}
+      <Welcome displayName={displayName} />
 
       {/* Where you stand, and where the day is: the two things the hub is for.
           The NOW card used to be gated on INFINITY-8 being its own module — it
