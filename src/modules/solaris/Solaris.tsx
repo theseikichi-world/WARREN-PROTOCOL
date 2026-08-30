@@ -16,6 +16,7 @@ import {
 } from './store'
 import { loadSettings, aiJson, aiVisionJson, modelForTask, type ImageInput } from '../../settings'
 import { fileToImageInput } from './image'
+import { matchMeal } from './foods'
 import { solarisUsage, solarisTier, solarisNext, solarisHas } from '../progression/tools'
 import { t as tr } from '../../i18n'
 
@@ -1015,7 +1016,13 @@ Identify each distinct food/drink item and estimate its nutrition realistically 
 Respond with ONLY a JSON array, no prose, no markdown fences. Each item:
 {"name": string, "slot": "breakfast"|"lunch"|"dinner"|"snack", "calories": number, "protein": number, "carbs": number, "fat": number}
 Numbers are grams except calories (kcal). Group obvious sub-parts into one dish when natural.
-Choosing the slot: go by MEAL ORDER, not the wall clock. The user tells you which slots are already logged today — if NONE are, this is their first meal of the day, so use "breakfast" even if it's logged late. Otherwise pick the next sensible cycle (or "snack" for light bites). All items in one submission usually share the same slot unless clearly different meals.`
+Choosing the slot: go by MEAL ORDER, not the wall clock. The user tells you which slots are already logged today — if NONE are, this is their first meal of the day, so use "breakfast" even if it's logged late. Otherwise pick the next sensible cycle (or "snack" for light bites). All items in one submission usually share the same slot unless clearly different meals.
+
+IF THE PHOTO IS A NUTRITION LABEL OR AN INGREDIENTS PANEL, READ IT — DO NOT ESTIMATE. That is the whole reason someone photographs a packet.
+- Labels are usually stated PER 100 g / 100 ml. Scale to the portion actually eaten: if the pack says 450 kcal per 100 g and the bar is 40 g, that is 180 kcal, not 450.
+- Use the pack's net weight or serving size when it is visible. If neither the weight nor the portion can be read, assume ONE serving as the label defines it and say so in the name.
+- Watch for energy in kJ rather than kcal — divide by 4.184.
+- Name the item from the pack where you can read it, so the entry is recognisable later.`
 
 function MealLogPanel({ defaultSlot, loggedSlots, onAccept, onClose }: {
   defaultSlot: MealSlot
@@ -1041,6 +1048,14 @@ function MealLogPanel({ defaultSlot, loggedSlots, onAccept, onClose }: {
 
   const parse = useCallback(async () => {
     if (!text.trim() && !image) { setError(tr('Describe a meal or attach a photo first.', 'Сначала опишите блюдо или прикрепите фото.')); return }
+
+    // The shelf first. Most days are the same dozen foods, and a request that
+    // does not have to be made is the cheapest one there is.
+    if (!image) {
+      const local = matchMeal(text, defaultSlot)
+      if (local) { setItems(local); setError(null); return }
+    }
+
     setLoading(true); setError(null)
     try {
       const settings = loadSettings()

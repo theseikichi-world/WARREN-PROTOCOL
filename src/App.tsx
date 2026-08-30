@@ -27,11 +27,15 @@ import Vigilante from './modules/vigilante/Vigilante'
 import BigScreen from './modules/bigscreen/BigScreen'
 import { getNowSnapshot, fmtClock, fmtDur } from './modules/infinity8/store'
 import { gatherSuggestions, topSuggestion, type Suggestion } from './modules/infinity8/suggestions'
-import { getHubStats, type HubStats } from './hubStats'
 import { ReleaseRadar } from './modules/pictures/ReleaseRadar'
 import Uplinks from './modules/progression/Uplinks'
 import { DreamsSurface } from './modules/progression/DreamsSurface'
 import { loadLogState } from './modules/log/store'
+import {
+  loadSolarisState, saveSolarisState, activeMember, getDay, getDrinks, addEntry, addDrink,
+} from './modules/solaris/store'
+import { computeTargets, recommendedWaterMl, effectiveHydration, sumDay } from './modules/solaris/types'
+import { matchMeal } from './modules/solaris/foods'
 import { QuestPanel } from './modules/progression/QuestPanel'
 import { useSpotlight } from './modules/progression/questNav'
 import { WeekStrip } from './modules/progression/WeekStrip'
@@ -696,42 +700,203 @@ function DreamCard() {
   )
 }
 
+// ─── FUEL — SOLARIS, minimized ────────────────────────────────────────────────
+// This replaced four tiles that each showed one number and explained none of
+// them: TASKS DUE and BEST STREAK duplicated cards directly above, DREAMS
+// duplicated the card next to it, and KCAL LEFT was the only one carrying
+// anything the hub did not already say — with none of the context that makes a
+// calorie number mean something.
+
+const FUEL_NEON = '#ffb13c'
+
+function FuelCard() {
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const refresh = () => setTick(n => n + 1)
+    window.addEventListener('warren:sync', refresh)
+    window.addEventListener('focus', refresh)
+    return () => { window.removeEventListener('warren:sync', refresh); window.removeEventListener('focus', refresh) }
+  }, [])
+  void tick
+
+  const state  = loadSolarisState()
+  const member = activeMember(state)
+  const [line, setLine] = useState('')
+  const [note, setNote] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!note) return
+    const id = setTimeout(() => setNote(null), 2400)
+    return () => clearTimeout(id)
+  }, [note])
+
+  // No crew profile yet, so there are no targets to report. The card still
+  // earns its place by being the door to making one — a hub that silently
+  // omits a module is a hub with a hole in it.
+  if (!member) {
+    return (
+      <div style={{ marginBottom: 16 }}>
+        <HubWindow tone={FUEL_NEON} label={t('SOLARIS · FUEL', 'SOLARIS · ТОПЛИВО')}
+          minimized={
+            <div style={{
+              width: '100%', padding: '13px 15px', borderRadius: 10,
+              background: `linear-gradient(135deg, ${FUEL_NEON}0a, rgba(13,24,48,0.35))`,
+              border: `1px dashed ${FUEL_NEON}35`,
+              display: 'flex', alignItems: 'center', gap: 12,
+            }}>
+              <CyberIcon id="pomu" size={18} color={FUEL_NEON} glow />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', color: `${FUEL_NEON}b0` }}>
+                  {t('FUEL', 'ТОПЛИВО')}
+                </p>
+                <p style={{ fontSize: 13.5, color: 'rgba(215,232,248,0.75)', marginTop: 3 }}>
+                  {t('Set up the kitchen to track it', 'Настройте кухню, чтобы считать')}
+                </p>
+              </div>
+              <span style={{ fontSize: 18, fontWeight: 900, color: `${FUEL_NEON}70`, flexShrink: 0 }}>+</span>
+            </div>
+          }>
+          <Solaris />
+        </HubWindow>
+      </div>
+    )
+  }
+
+  const targets = computeTargets(member.profile)
+  const totals  = sumDay(getDay(state, member.id))
+  const waterMl = effectiveHydration(getDrinks(state, member.id))
+  const waterGoal = recommendedWaterMl(member.profile)
+
+  const kcalLeft  = Math.max(0, targets.calories - totals.calories)
+  const waterLeft = Math.max(0, waterGoal - waterMl)
+
+  /** Log a line from the card. The shelf answers most of them for free. */
+  const log = () => {
+    const text = line.trim()
+    if (!text) return
+    const hits = matchMeal(text, 'snack')
+    if (!hits) {
+      setNote(t('Not on the shelf — open FUEL to read it', 'Нет в списке — откройте FUEL, чтобы разобрать'))
+      return
+    }
+    let next = loadSolarisState()
+    for (const hit of hits) next = addEntry(next, member.id, todaySolaris(), hit)
+    saveSolarisState(next)
+    setLine('')
+    const kcal = hits.reduce((n, h) => n + h.calories, 0)
+    setNote(`+${kcal} kcal`)
+    playCue('check')
+    window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'solaris' } }))
+  }
+
+  const water = (ml: number) => {
+    saveSolarisState(addDrink(loadSolarisState(), member.id, todaySolaris(), 'water', ml))
+    setNote(`+${ml} ${t('ml', 'мл')}`)
+    playCue('tick')
+    window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'solaris' } }))
+  }
+
+  const macro = (label: string, have: number, want: number, tone: string) => (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+        <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.12em', color: 'rgba(148,163,184,0.55)' }}>{label}</span>
+        <span style={{ fontSize: 10, color: `${tone}c0`, fontVariantNumeric: 'tabular-nums' }}>{Math.round(have)}/{want}</span>
+      </div>
+      <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+        <div style={{ height: '100%', borderRadius: 2, background: tone,
+          width: `${Math.min(100, want > 0 ? (have / want) * 100 : 0)}%`, transition: 'width 0.5s ease' }} />
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <HubWindow tone={FUEL_NEON} label={t('SOLARIS · FUEL', 'SOLARIS · ТОПЛИВО')}
+        minimized={
+          <div style={{
+            width: '100%', padding: '13px 15px', borderRadius: 10,
+            background: `linear-gradient(135deg, ${FUEL_NEON}10, rgba(13,24,48,0.4))`,
+            border: `1px solid ${FUEL_NEON}30`, transition: 'border-color 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = `${FUEL_NEON}60`}
+            onMouseLeave={e => e.currentTarget.style.borderColor = `${FUEL_NEON}30`}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <CyberIcon id="pomu" size={18} color={FUEL_NEON} glow />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', color: `${FUEL_NEON}b0` }}>
+                  {t('FUEL', 'ТОПЛИВО')}
+                </p>
+                <p style={{ fontSize: 13.5, color: 'rgba(215,232,248,0.8)', marginTop: 3,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {note ?? `${waterLeft > 0
+                    ? `${(waterLeft / 1000).toFixed(1)}L ${t('water left', 'воды осталось')}`
+                    : t('water done', 'вода выпита')}`}
+                </p>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <p style={{ fontSize: 18, fontWeight: 900, lineHeight: 1, color: FUEL_NEON,
+                  textShadow: `0 0 10px ${FUEL_NEON}70`, fontVariantNumeric: 'tabular-nums' }}>{kcalLeft}</p>
+                <p style={{ fontSize: 10, color: 'rgba(148,163,184,0.5)', marginTop: 3 }}>{t('kcal left', 'ккал осталось')}</p>
+              </div>
+            </div>
+
+            {/* The three that decide whether the calories were any good */}
+            <div style={{ display: 'flex', gap: 10, marginTop: 11 }}>
+              {macro(t('PROTEIN', 'БЕЛКИ'), totals.protein, targets.protein, '#4ade80')}
+              {macro(t('FAT', 'ЖИРЫ'),      totals.fat,     targets.fat,     '#ffb13c')}
+              {macro(t('CARBS', 'УГЛЕВОДЫ'), totals.carbs,   targets.carbs,   '#00b4ff')}
+            </div>
+
+            {/* Logging without leaving. The shelf answers eggs and rice for
+                nothing; anything it does not know says so and sends you in. */}
+            <div style={{ display: 'flex', gap: 7, marginTop: 11 }} onClick={e => e.stopPropagation()}>
+              <input value={line} onChange={e => setLine(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') log() }}
+                placeholder={t('3 eggs, 200 rice…', '2 яйца, 200 риса…')}
+                style={{
+                  flex: 1, minWidth: 0, padding: '8px 11px', borderRadius: 8,
+                  background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'var(--text)', fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', outline: 'none',
+                }} />
+              <button onClick={log} title={t('Log it', 'Записать')} style={{
+                width: 40, flexShrink: 0, borderRadius: 8, cursor: 'pointer',
+                border: `1px solid ${FUEL_NEON}45`, background: `${FUEL_NEON}12`,
+                color: FUEL_NEON, fontFamily: 'var(--font)', fontSize: 15, fontWeight: 800,
+              }}>▸</button>
+              <button onClick={() => water(250)} title={`+250 ${t('ml water', 'мл воды')}`} style={{
+                width: 40, flexShrink: 0, borderRadius: 8, cursor: 'pointer',
+                border: '1px solid rgba(0,180,255,0.35)', background: 'rgba(0,180,255,0.1)',
+                fontSize: 14,
+              }}>💧</button>
+            </div>
+          </div>
+        }>
+        <Solaris />
+      </HubWindow>
+    </div>
+  )
+}
+
+/** SOLARIS keys its day in local time, the same way its own screens do. */
+function todaySolaris(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function Dashboard({ displayName }: { displayName: string }) {
   const now  = new Date()
   const hour = now.getHours()
   const greeting = hour < 5 ? t('still up?', 'ещё не спите?') : hour < 12 ? t('good morning', 'доброе утро') : hour < 17 ? t('good afternoon', 'добрый день') : t('good evening', 'добрый вечер')
   const name = displayName || null
-  const navigate = useNavigate()
-
-  // Live guild stats — refresh when any module syncs or the window regains focus
-  const [stats, setStats] = useState<HubStats>(() => getHubStats())
-  useEffect(() => {
-    const refresh = () => setStats(getHubStats())
-    refresh()
-    window.addEventListener('warren:sync', refresh)
-    window.addEventListener('focus', refresh)
-    return () => { window.removeEventListener('warren:sync', refresh); window.removeEventListener('focus', refresh) }
-  }, [])
-
-  // Icons come from the app's own set, keyed by module, so a tile and its
-  // sidebar button are visibly the same thing. The animal emoji these replaced
-  // were left over from the guild-of-mascots era and no longer matched anything.
+  // The hub stopped keeping its own counters: every card reads the store it is
+  // about, and refreshes itself on warren:sync.
   const orbitOpen = moduleUnlocked(
     'scrap7',
     gatedLevel(loadProgression().xp, loadProgression().quests).level,
     loadSettings().unlockAll,
   )
 
-  const tiles = [
-    { label: t('Tasks due', 'Задачи на сегодня'),   value: String(stats.tasksDue),
-      neon: '#00b4ff', icon: 'scrap7' as const, path: '/scrap7' },
-    { label: t('Dreams', 'Мечты'),                  value: String(stats.activeGoals),
-      neon: '#c084fc', icon: 'log' as const,    path: '/log' },
-    { label: t('Kcal left', 'Ккал осталось'),       value: stats.caloriesLeft === null ? '—' : String(stats.caloriesLeft),
-      neon: '#ffb13c', icon: 'pomu' as const,   path: '/solaris' },
-    { label: t('Best streak', 'Лучшая серия'),      value: String(stats.streak),
-      neon: '#ff6b00', icon: 'uplink' as const, path: '/uplinks' },
-  ]
 
   return (
     // Two elements on purpose. A maximized card is `position: fixed` inside the
@@ -771,29 +936,12 @@ function Dashboard({ displayName }: { displayName: string }) {
       {/* What's landing soon, from the titles already tracked */}
       <ReleaseRadar />
 
-      {/* Quick stats row — live, tap to open the module */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
-        {tiles.map(({ label, value, neon, icon, path }) => (
-          <button key={label} onClick={() => navigate(path)} style={{
-            padding: '10px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
-            background: 'rgba(13,24,48,0.5)',
-            border: '1px solid rgba(255,255,255,0.05)', transition: 'border-color 0.15s',
-          }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = `${neon}55`}
-            onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <CyberIcon id={icon} size={14} color={neon} glow />
-              <span style={{ fontSize: 17.5, fontWeight: 800, color: neon, textShadow: `0 0 8px ${neon}50` }}>
-                {value}
-              </span>
-            </div>
-            <p style={{ fontSize: 10.5, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              {label}
-            </p>
-          </button>
-        ))}
-      </div>
+      {/* FUEL replaces the four stat tiles. Three of them repeated cards
+          directly above — TASKS DUE and BEST STREAK and DREAMS — and the
+          fourth, KCAL LEFT, was a number with none of the context that makes a
+          calorie mean anything. This says what is left, what it is made of,
+          and takes a line of food without leaving the hub. */}
+      <FuelCard />
 
     </div>
     </div>
