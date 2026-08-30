@@ -33,7 +33,8 @@ import Uplinks from './modules/progression/Uplinks'
 import { BandwidthStrip } from './modules/progression/BandwidthStrip'
 import { QuestPanel } from './modules/progression/QuestPanel'
 import { WeekStrip } from './modules/progression/WeekStrip'
-import { loadState as loadScrap7 } from './modules/scrap7/store'
+import { loadState as loadScrap7, orbitTasks, habitDoneToday, taskSource } from './modules/scrap7/store'
+import type { Task } from './modules/scrap7/types'
 import { useLocale, t } from './i18n'
 import { CyberIcon } from './components/CyberIcon'
 import { HubWindow } from './components/HubWindow'
@@ -56,11 +57,23 @@ const WARREN_OS_ENABLED = false
 const INSTRUMENT_ORDER: ModuleId[] = ['pomu', 'scrap7', 'hoot', 'log']
 
 const built = GUILD.filter(m => m.built)
+/**
+ * Modules you reach by maximizing their card on the hub rather than by
+ * travelling to them. They keep their route, their XP and everything else —
+ * they just do not also need a button in the sidebar, which is the same
+ * one-thing-two-doors duplication the timeline tab was.
+ *
+ * INFINITY-8 is absent for a different reason (`built: false`), and flipping
+ * ORBIT the same way would also switch off its suggestions and its boot line.
+ */
+const ON_HUB = new Set<ModuleId>(['scrap7'])
+
 const NAV_ORDER = INSTRUMENT_ORDER
   .map(id => built.find(m => m.id === id))
   .filter((m): m is GuildMember => !!m)
   // anything built, an instrument, and not hand-placed still gets a slot
   .concat(built.filter(m => m.group === 'instrument' && !INSTRUMENT_ORDER.includes(m.id)))
+  .filter(m => !ON_HUB.has(m.id))
 const NAV_UTILITIES = built.filter(m => m.group === 'utility')
 
 function IntroScreen({ onDone, displayName }: { onDone: () => void; displayName: string }) {
@@ -226,17 +239,18 @@ function TitleBar() {
         background: 'rgba(6,11,22,0.5)',
       }}
     >
-      {/* Left: logo */}
+      {/* Left: logo — and the way back to the hub, now that the sidebar's
+          duplicate of it is gone. */}
       <div data-tauri-drag-region style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 26, height: 26, borderRadius: 7,
+        <button onClick={() => navigate('/')} title={t('Warren Hub', 'Хаб Warren')} style={{
+          width: 26, height: 26, borderRadius: 7, cursor: 'pointer', flexShrink: 0,
           background: 'linear-gradient(135deg, rgba(0,245,255,0.15), rgba(0,245,255,0.04))',
           border: '1px solid rgba(0,245,255,0.3)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 14.5, fontWeight: 900, color: '#00f5ff',
           textShadow: '0 0 10px #00f5ff',
           boxShadow: '0 0 12px rgba(0,245,255,0.15)',
-        }}>W</div>
+        }}>W</button>
         <div>
           <p style={{ fontSize: 13.5, fontWeight: 800, letterSpacing: '0.22em', color: 'rgba(0,245,255,0.8)', textTransform: 'uppercase' }}>
             Warren
@@ -465,6 +479,84 @@ function NowCard() {
   )
 }
 
+// ─── TODAY'S QUESTS — ORBIT, minimized ────────────────────────────────────────
+// The same arrangement as the NOW card: what the module would tell you at a
+// glance, and the whole module one tap underneath. It sits under MAIN QUEST
+// because that is the order the day reads in — the line you are on, then the
+// things it costs you today.
+
+const ORBIT_NEON = '#00b4ff'
+
+function TodayQuests() {
+  const [tasks, setTasks] = useState<Task[]>(() => loadScrap7().tasks)
+  useEffect(() => {
+    const refresh = () => setTasks(loadScrap7().tasks)
+    refresh()
+    window.addEventListener('warren:sync', refresh)
+    window.addEventListener('focus', refresh)
+    return () => { window.removeEventListener('warren:sync', refresh); window.removeEventListener('focus', refresh) }
+  }, [])
+
+  const shown = orbitTasks(tasks)
+  const isDone = (t: Task) => t.taskType === 'habit' ? habitDoneToday(t) : t.completed
+  const done   = shown.filter(isDone).length
+  const open   = shown.length - done
+
+  // Names the mix rather than repeating the number: three of the same kind and
+  // three of three kinds are very different days.
+  const kinds = [
+    { n: shown.filter(t => taskSource(t) === 'uplink' && !isDone(t)).length, en: 'uplink', ru: 'по цели' },
+    { n: shown.filter(t => taskSource(t) === 'basic'  && !isDone(t)).length, en: 'basic',  ru: 'основа' },
+    { n: shown.filter(t => taskSource(t) === 'yours'  && !isDone(t)).length, en: 'yours',  ru: 'своё' },
+  ].filter(k => k.n > 0)
+
+  const sub = open === 0
+    ? (shown.length === 0
+        ? t('Nothing due today', 'На сегодня ничего')
+        : t('All clear for today', 'На сегодня всё'))
+    : kinds.map(k => `${k.n} ${t(k.en, k.ru)}`).join(' · ')
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <HubWindow tone={ORBIT_NEON} label={t('ORBIT · TODAY', 'ORBIT · СЕГОДНЯ')}
+        minimized={
+          <div style={{
+            width: '100%', padding: '13px 15px', borderRadius: 10,
+            background: `linear-gradient(135deg, ${ORBIT_NEON}12, rgba(13,24,48,0.4))`,
+            border: `1px solid ${ORBIT_NEON}30`,
+            display: 'flex', alignItems: 'center', gap: 12, transition: 'border-color 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = `${ORBIT_NEON}60`}
+            onMouseLeave={e => e.currentTarget.style.borderColor = `${ORBIT_NEON}30`}
+          >
+            <CyberIcon id="scrap7" size={18} color={ORBIT_NEON} glow />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', color: `${ORBIT_NEON}b0` }}>
+                {t("TODAY'S QUESTS", 'ЗАДАНИЯ НА СЕГОДНЯ')}
+              </p>
+              <p style={{ fontSize: 13.5, color: 'rgba(215,232,248,0.8)', letterSpacing: '0.02em', marginTop: 3,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</p>
+            </div>
+            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+              <p style={{ fontSize: 18, fontWeight: 900, lineHeight: 1,
+                color: open > 0 ? ORBIT_NEON : 'rgba(57,255,20,0.85)',
+                textShadow: `0 0 10px ${open > 0 ? `${ORBIT_NEON}70` : 'rgba(57,255,20,0.4)'}` }}>
+                {open > 0 ? open : '✓'}
+              </p>
+              {done > 0 && (
+                <p style={{ fontSize: 10, color: 'rgba(148,163,184,0.5)', marginTop: 3 }}>
+                  {done} {t('done', 'готово')}
+                </p>
+              )}
+            </div>
+          </div>
+        }>
+        <Scrap7 />
+      </HubWindow>
+    </div>
+  )
+}
+
 function Dashboard({ displayName }: { displayName: string }) {
   const now  = new Date()
   const hour = now.getHours()
@@ -520,6 +612,9 @@ function Dashboard({ displayName }: { displayName: string }) {
 
       {/* The quest log lives where navigation lives */}
       <div data-tour="quest-panel"><QuestPanel /></div>
+
+      {/* And under it, what the line costs you today */}
+      <TodayQuests />
 
       {/* Two uplinks, and what they're carrying */}
       <div data-tour="bandwidth"><BandwidthStrip /></div>
@@ -798,8 +893,9 @@ export default function App() {
         }}>
           {/* Settings is an overlay on top of the module, so going anywhere
               dismisses it — otherwise it hides the screen you just asked for. */}
-          {/* Hub */}
-          <SidebarBtn iconId="hub" neon="var(--accent)" active={location.pathname === '/'} title="Warren Hub" onClick={() => go('/')} />
+          {/* The hub button used to sit here, a second Warren mark on a screen
+              that already has one in the title bar. The mark up there is the
+              way home now — one logo, one meaning. */}
           <SidebarBtn iconId="uplink" neon="#00f5ff" active={location.pathname.startsWith('/uplinks')}
             title={t('Uplinks — goals & bandwidth', 'Каналы — цели и полоса')} onClick={() => go('/uplinks')} />
           <div style={{ width: 28, height: 1, background: 'var(--border)', margin: '2px 0' }} />
