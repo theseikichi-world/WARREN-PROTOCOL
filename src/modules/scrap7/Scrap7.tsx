@@ -11,7 +11,6 @@ import {
   type NewTaskData,
 } from './store'
 import { parseCommand } from './commandParser'
-import Infinity8 from '../infinity8/Infinity8'
 import { t as tr } from '../../i18n'
 import { loadSettings, aiJson, modelForTask, type AiMessage } from '../../settings'
 import { trackFromList } from '../progression/store'
@@ -550,7 +549,6 @@ export default function Scrap7() {
   const [view, setView]     = useState<ViewKey>('tasks')
   // The day on a line is the first thing you should see — the list is the same
   // day with the shape taken out of it.
-  const [timeline, setTimeline] = useState(true)
   const [input, setInput]   = useState('')
   const [thinking, setThinking] = useState(false)
   const [lastReply, setLastReply] = useState<string | null>(null)
@@ -846,47 +844,32 @@ export default function Scrap7() {
             <button key={v} onClick={() => setView(v)} style={{
               padding: '9px 11px', fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
               fontWeight: 700, letterSpacing: '0.08em', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
               color: view === v ? NEON : 'rgba(148,163,184,0.3)',
               background: view === v ? `${NEON}08` : 'transparent',
               borderBottom: view === v ? `2px solid ${NEON}` : '2px solid transparent',
               transition: 'all 0.15s',
-            }}>{v === 'tasks' ? '≡' : '💬'}</button>
+            }}>
+              {v === 'tasks' ? '≡' : '💬'}
+              {/* The count used to ride on the LIST tab. That tab is gone, but
+                  knowing how much is open without reading the list is not. */}
+              {v === 'tasks' && activeTasks.length > 0 && (
+                <span style={{ minWidth: 16, height: 15, borderRadius: 7, padding: '0 4px',
+                  background: view === v ? `${NEON}20` : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${view === v ? `${NEON}35` : 'rgba(255,255,255,0.08)'}`,
+                  fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: 'var(--font)',
+                  color: view === v ? NEON : 'rgba(148,163,184,0.35)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{activeTasks.length}</span>
+              )}
+            </button>
           ))}
         </div>
 
-        {/* The day, two ways: what has to happen, and when it lands. The
-            timeline owns no tasks of its own — it reads these — so it was never
-            a second module, only the other half of this one. */}
-        {view === 'tasks' && (
-          <div style={{ display: 'flex', flex: 1 }}>
-            {([true, false] as const).map(tl => {
-              const on = timeline === tl
-              return (
-                <button key={String(tl)} onClick={() => setTimeline(tl)} style={{
-                  flex: 1, padding: '9px 4px', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', gap: 6,
-                  fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)', fontWeight: on ? 700 : 400,
-                  letterSpacing: '0.1em', cursor: 'pointer', background: 'transparent',
-                  color: on ? NEON : 'rgba(148,163,184,0.4)',
-                  textShadow: on ? `0 0 8px ${NEON}` : 'none',
-                  borderBottom: on ? `2px solid ${NEON}` : '2px solid transparent',
-                  transition: 'all 0.15s',
-                }}>
-                  {tl ? '∞' : '≡'} {tl ? tr('TIMELINE', 'ТАЙМЛАЙН') : tr('LIST', 'СПИСОК')}
-                  {!tl && activeTasks.length > 0 && (
-                    <span style={{ minWidth: 16, height: 15, borderRadius: 7, padding: '0 4px',
-                      background: on ? `${NEON}20` : 'rgba(255,255,255,0.06)',
-                      border: `1px solid ${on ? `${NEON}35` : 'rgba(255,255,255,0.08)'}`,
-                      fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: 'var(--font)',
-                      color: on ? NEON : 'rgba(148,163,184,0.35)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{activeTasks.length}</span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        )}
-
+        {/* INFINITY-8 used to be the other tab here. It is the hub's TODAY
+            card now — tap it and the module maximizes over the hub — so a
+            second copy in ORBIT was the same duplication as the life-support
+            panel: one thing, two doors. ORBIT opens on the list it is for. */}
+        <div style={{ flex: 1 }} />
 
         <button onClick={() => setModal({})} style={{
           padding: '9px 12px', fontFamily: 'var(--font)', fontSize: 20, fontWeight: 700,
@@ -898,13 +881,8 @@ export default function Scrap7() {
         >+</button>
       </div>
 
-      {/* ── The day on a line ── */}
-      {view === 'tasks' && timeline && (
-        <div style={{ flex: 1, overflow: 'hidden' }}><Infinity8 /></div>
-      )}
-
       {/* ── Tasks ── */}
-      {view === 'tasks' && !timeline && (
+      {view === 'tasks' && (
         <div style={{ flex: 1, overflowY: 'auto' }}>
 
           {/* The fortnight behind you — repeating work is the only thing with a

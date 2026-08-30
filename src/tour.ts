@@ -74,14 +74,14 @@ export const TOURS: Record<string, Tour> = {
     id: 'scrap7',
     steps: [
       { title: 'ORBIT — WHAT COMES ROUND', titleRu: 'ORBIT — ЧТО ВОЗВРАЩАЕТСЯ',
-        body: 'One list: things that have to happen. Some come back — mark them REPEATS and they return when you complete them. Nothing here is scored and nothing here builds you; that lives in UPLINKS.',
-        bodyRu: 'Один список: то, что должно случиться. Часть возвращается — отметьте ПОВТОРЯЕТСЯ, и задача вернётся после выполнения. Здесь ничего не оценивается и не строит вас — это в UPLINKS.' },
+        body: 'One list: things that have to happen. Some come back — mark them REPEATS and they return when you complete them. The goal work that builds you lives in UPLINKS; the basics that hold it up are right here.',
+        bodyRu: 'Один список: то, что должно случиться. Часть возвращается — отметьте ПОВТОРЯЕТСЯ, и задача вернётся после выполнения. Работа над целью живёт в UPLINKS, а основы, на которых она держится, — здесь.' },
       { anchor: 'life-support', title: 'BASICS', titleRu: 'ОСНОВЫ',
         body: 'The floor: sleep, daylight, moving. They sit in this list like anything else — the BASICS line is where you add one. Slots open as you level, because eight basics added at once is a list you abandon by Thursday.',
         bodyRu: 'Основа: сон, свет, движение. Они в этом же списке — строка ОСНОВЫ добавляет новую. Слоты открываются с уровнями: восемь основ сразу превращаются в список, брошенный к четвергу.' },
       { title: 'AND WHEN IT LANDS', titleRu: 'И КОГДА ЭТО ЛЯЖЕТ',
-        body: 'TIMELINE lays the same list across your actual waking hours and shows the free time left over. It owns nothing — it is this list, seen as a day.',
-        bodyRu: 'ТАЙМЛАЙН раскладывает тот же список по вашим реальным часам бодрствования и показывает свободное время. Он ничем не владеет — это тот же список, но как день.' },
+        body: 'The same list laid across your waking hours lives on the hub — tap the TODAY card and it opens full screen. It owns nothing; it is this list, seen as a day.',
+        bodyRu: 'Тот же список, разложенный по часам бодрствования, живёт на хабе — нажмите карточку СЕГОДНЯ, и он раскроется во весь экран. Он ничем не владеет — это тот же список, но как день.' },
     ],
   },
 

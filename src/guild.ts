@@ -32,9 +32,9 @@ export const GUILD: GuildMember[] = [
   },
   {
     id: 'scrap7', group: 'instrument' as GuildGroup, name: 'ORBIT',        unit: 'ORB', animal: 'Raccoon',
-    role: 'What comes round, and when',
+    role: 'What comes round, and what holds you up',
     neon: '#00b4ff', path: '/scrap7', free: true, built: true,
-    desc: 'What has to happen, and when it lands. The raccoon keeps the day; nothing here builds you — that lives in UPLINKS.',
+    desc: 'What has to happen today, and the basics underneath it. The raccoon keeps the day; the goal work that builds you lives in UPLINKS.',
   },
   {
     id: 'log', group: 'instrument' as GuildGroup,   name: 'PATHFINDER',    unit: 'PTH', animal: 'Beaver',
