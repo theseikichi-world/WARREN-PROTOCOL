@@ -48,6 +48,7 @@
 @media (max-width: 520px) {
   .titlebar-clock  { display: none; }
   .weekstrip-count { display: none; }
+  .suggest-detail  { display: none; }
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

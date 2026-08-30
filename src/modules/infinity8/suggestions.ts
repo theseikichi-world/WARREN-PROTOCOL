@@ -198,7 +198,8 @@ function journalSuggestions(): Suggestion[] {
   return [{
     id: 'journal-today', module: 'journal', icon: '🦉',
     label: tr("Write today's page", 'Написать сегодняшнюю страницу'),
-    detail: tr('the owl is waiting — tonight is still blank', 'сова ждёт — сегодня ещё пусто'),
+    // The owl was the mascot-era voice. The fact is what is useful.
+    detail: tr('tonight is still blank', 'сегодня ещё пусто'),
     minutes: 15, path: '/journal', tone: 'care', weight: 7,
   }]
 }
@@ -215,7 +216,7 @@ function journalSuggestions(): Suggestion[] {
 // route, which redirects to /uplinks.
 
 /** Which guild member each invitation actually comes from. */
-const SUGGEST_MODULE: Record<Suggestion['module'], ModuleId> = {
+export const SUGGEST_MODULE: Record<Suggestion['module'], ModuleId> = {
   pictures: 'foxy',
   ardo:     'ardo',
   log:      'log',

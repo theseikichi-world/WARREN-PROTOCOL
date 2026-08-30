@@ -26,7 +26,7 @@ import Journal   from './modules/journal/Journal'
 import Vigilante from './modules/vigilante/Vigilante'
 import BigScreen from './modules/bigscreen/BigScreen'
 import { getNowSnapshot, fmtClock, fmtDur } from './modules/infinity8/store'
-import { gatherSuggestions, topSuggestion, type Suggestion } from './modules/infinity8/suggestions'
+import { gatherSuggestions, topSuggestion, SUGGEST_MODULE, type Suggestion } from './modules/infinity8/suggestions'
 import { ReleaseRadar } from './modules/pictures/ReleaseRadar'
 import Uplinks from './modules/progression/Uplinks'
 import { DreamsSurface } from './modules/progression/DreamsSurface'
@@ -548,30 +548,35 @@ function Welcome({ displayName }: { displayName: string }) {
         </div>
       )}
 
-      {/* One invitation, and only for time you actually have. It used to sit
-          under the NOW card, which made it a footnote to the clock rather than
-          part of what the app has to say to you. */}
+      {/* One invitation, and only for time you actually have.
+
+          A line rather than a card. Boxed, with an emoji owl on it, it read as
+          a fifth widget competing with the four below — but it is not a widget,
+          it is the last thing the assistant says. The icon comes from the app's
+          own set, keyed by the module it points at, the same way every other
+          icon in Warren does since the mascots went. */}
       {suggest && (
         <button onClick={() => navigate(suggest.path)} style={{
-          width: '100%', textAlign: 'left', cursor: 'pointer', marginTop: 10,
-          padding: '9px 12px', borderRadius: 9,
-          background: `${SUGGEST_TONE[suggest.tone]}10`,
-          border: `1px solid ${SUGGEST_TONE[suggest.tone]}38`,
-          display: 'flex', alignItems: 'center', gap: 10, transition: 'border-color 0.15s',
+          width: '100%', textAlign: 'left', cursor: 'pointer',
+          marginTop: 9, padding: '3px 1px',
+          display: 'flex', alignItems: 'center', gap: 9,
         }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}70`}
-          onMouseLeave={e => e.currentTarget.style.borderColor = `${SUGGEST_TONE[suggest.tone]}38`}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.75'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
         >
-          <span style={{ fontSize: 18, flexShrink: 0 }}>{suggest.icon}</span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 13.5, fontWeight: 700, color: 'rgba(225,250,255,0.92)',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.label}</p>
+          <CyberIcon id={SUGGEST_MODULE[suggest.module]} size={13}
+            color={SUGGEST_TONE[suggest.tone]} glow />
+          <p style={{ flex: 1, minWidth: 0, fontSize: 13, lineHeight: 1.5,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'rgba(230,245,255,0.92)' }}>{suggest.label}</span>
+            {/* Dropped on a phone (see index.css). The label is the useful
+                half; the detail truncated mid-word is worse than absent. */}
             {suggest.detail && (
-              <p style={{ fontSize: 10.5, color: 'rgba(148,163,184,0.6)', marginTop: 1,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{suggest.detail}</p>
+              <span className="suggest-detail" style={{ color: 'rgba(148,163,184,0.55)' }}> — {suggest.detail}</span>
             )}
-          </div>
-          <span style={{ fontSize: 10.5, color: `${SUGGEST_TONE[suggest.tone]}cc`, flexShrink: 0 }}>~{fmtDur(suggest.minutes)}</span>
+          </p>
+          <span style={{ fontSize: 10.5, flexShrink: 0,
+            color: `${SUGGEST_TONE[suggest.tone]}aa` }}>~{fmtDur(suggest.minutes)}</span>
         </button>
       )}
     </div>
