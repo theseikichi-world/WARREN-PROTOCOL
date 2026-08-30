@@ -1024,13 +1024,15 @@ IF THE PHOTO IS A NUTRITION LABEL OR AN INGREDIENTS PANEL, READ IT — DO NOT ES
 - Watch for energy in kJ rather than kcal — divide by 4.184.
 - Name the item from the pack where you can read it, so the entry is recognisable later.`
 
-function MealLogPanel({ defaultSlot, loggedSlots, onAccept, onClose }: {
+function MealLogPanel({ defaultSlot, loggedSlots, onAccept, onClose, initialText = '' }: {
   defaultSlot: MealSlot
   loggedSlots: MealSlot[]
   onAccept: (d: NewFoodData) => void
   onClose: () => void
+  /** Carried in from the hub card when the shelf could not read the line. */
+  initialText?: string
 }) {
-  const [text, setText]       = useState('')
+  const [text, setText]       = useState(initialText)
   const [image, setImage]     = useState<ImageInput | null>(null)
   const [imgName, setImgName] = useState('')
   const [loading, setLoading] = useState(false)
@@ -1607,13 +1609,15 @@ const slotNow = (): MealSlot => {
   return h < 11 ? 'breakfast' : h < 15 ? 'lunch' : h < 21 ? 'dinner' : 'snack'
 }
 
-export default function Solaris({ openLog = false }: {
+export default function Solaris({ openLog = false, initialText = '' }: {
   /**
    * Open straight on the meal panel — where you write what you ate and attach
    * the photo. The hub's FUEL card uses it so the camera is one tap from the
    * hub instead of three, without a second copy of the parser living there.
    */
   openLog?: boolean
+  /** Text to open the meal panel with, when something else already typed it. */
+  initialText?: string
 } = {}) {
   const [state, setState]   = useState<SolarisState>(() => loadSolarisState())
   const [screen, setScreen] = useState<Screen>(openLog ? { type: 'log' } : { type: 'dashboard' })
@@ -1719,6 +1723,7 @@ export default function Solaris({ openLog = false }: {
     return (
       <MealLogPanel
         defaultSlot={defaultSlot}
+        initialText={initialText}
         loggedSlots={loggedSlots}
         onAccept={m => persistWith(s => addEntry(s, member.id, today, m))}
         onClose={() => setScreen({ type: 'dashboard' })}

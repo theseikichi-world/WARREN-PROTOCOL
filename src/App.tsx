@@ -911,7 +911,12 @@ function FuelCard() {
     if (!text) return
     const hits = matchMeal(text, 'snack')
     if (!hits) {
-      setNote(t('Not on the shelf — open FUEL to read it', 'Нет в списке — откройте FUEL, чтобы разобрать'))
+      // A shelf miss is a HAND-OFF, not a refusal. The card used to say "open
+      // FUEL to read it" while being FUEL, and left you to retype the line
+      // somewhere else. It carries the text into the meal panel instead, which
+      // is where the model that CAN read it already lives.
+      setNote(t('Reading it…', 'Разбираю…'))
+      setWantLog(true)
       return
     }
     let next = loadSolarisState()
@@ -947,7 +952,7 @@ function FuelCard() {
   return (
     <div style={{ marginBottom: 16 }}>
       <HubWindow tone={FUEL_NEON} label={t('SOLARIS · FUEL', 'SOLARIS · ТОПЛИВО')}
-        openWhen={wantLog} onClosed={() => setWantLog(false)}
+        openWhen={wantLog} onClosed={() => { setWantLog(false); setLine('') }}
         minimized={
           <div style={{
             width: '100%', padding: '13px 15px', borderRadius: 10,
@@ -1013,7 +1018,7 @@ function FuelCard() {
             </div>
           </div>
         }>
-        <Solaris openLog={wantLog} />
+        <Solaris openLog={wantLog} initialText={wantLog ? line : ''} />
       </HubWindow>
     </div>
   )

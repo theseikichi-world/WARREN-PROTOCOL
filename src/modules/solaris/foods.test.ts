@@ -42,6 +42,19 @@ describe('the local shelf', () => {
     expect(matchFood('', 'dinner')).toBeNull()
   })
 
+  it('knows the staples that sent the first real line to the model', () => {
+    // "3 eggs, 200 gr oatmeal, 100 gr peaches" came back unreadable because the
+    // shelf had neither oatmeal nor peaches, and one miss forfeits the line.
+    const meal = matchMeal('3 eggs, 200 gr oatmeal, 100 gr peaches', 'breakfast')!
+    expect(meal).toHaveLength(3)
+    expect(meal.map(m => m.name)).toEqual(['Egg ×3', 'Oats, dry, 200g', 'Peach, 100g'])
+    expect(meal.reduce((n, m) => n + m.calories, 0)).toBe(216 + 778 + 39)
+  })
+
+  it('reads "gr" as grams, not as a count', () => {
+    expect(matchFood('200 gr oatmeal', 'breakfast')!.name).toBe('Oats, dry, 200g')
+  })
+
   it('splits a line, and refuses the whole line if one part is unknown', () => {
     const known = matchMeal('3 eggs and 200 rice', 'breakfast')!
     expect(known).toHaveLength(2)
