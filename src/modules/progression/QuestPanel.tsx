@@ -6,7 +6,7 @@ import { getModuleSummaries } from '../bigscreen/moduleStats'
 import { loadProgression, saveProgression, syncQuests } from './store'
 import { gatedLevel } from './xp'
 import {
-  stageState, questCta, QUEST_DESTINATIONS, LAST_GATED_STAGE,
+  stageState, questCta, QUEST_DESTINATIONS,
   type Quest, type QuestContext,
 } from './quests'
 import { questNav } from './questNav'
@@ -113,27 +113,27 @@ export function QuestPanel() {
 
       {celebrating && <QuestCleared quest={celebrating} />}
 
+      {/* The header used to also carry STAGE n/5 and cleared/total. The stage
+          number is the current level wearing a different name, and the tally is
+          what the bar's own label says two lines further down. */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
         <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.2em',
           color: `${GOLD}b0` }}>
           ⚑ {stage.stage === 1 ? tr('SETUP', 'НАСТРОЙКА') : tr('MAIN QUEST', 'ОСНОВНОЙ КВЕСТ')}
         </span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM }}>
-          {tr('STAGE', 'ЭТАП')} {stage.stage}/{LAST_GATED_STAGE}
-        </span>
-        <span style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 700, color: `${GOLD}c0`,
-          marginLeft: 'auto' }}>{stage.cleared}/{stage.total}</span>
       </div>
 
-      {/* What the stage is holding — stated, never implied by a stuck bar */}
-      <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, lineHeight: 1.6, marginTop: 6,
-        color: lvl.capped ? `${GOLD}c0` : 'rgba(200,220,240,0.6)' }}>
-        {lvl.capped
-          ? tr(`Level ${lvl.level + 1} is held until this stage is clear — ${stage.total - stage.cleared} left. XP alone does not advance you.`,
-               `Уровень ${lvl.level + 1} закрыт, пока этап не пройден — осталось ${stage.total - stage.cleared}. Один опыт не продвигает.`)
-          : tr(`Finish all ${stage.total} to reach level ${lvl.level + 1}.`,
-               `Пройдите все ${stage.total}, чтобы достичь уровня ${lvl.level + 1}.`)}
-      </p>
+      {/* Only when the bar would lie. A full XP bar that does not level you up
+          is the worst screen in the app, so that case still gets a sentence —
+          but "finish all 2 to reach level 2" next to a bar labelled 0/2 and
+          LEVEL 1 → 2 was saying it for the third time. */}
+      {lvl.capped && (
+        <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, lineHeight: 1.6, marginTop: 6,
+          color: `${GOLD}c0` }}>
+          {tr(`Level ${lvl.level + 1} is held until this stage is clear — ${stage.total - stage.cleared} left. XP alone does not advance you.`,
+              `Уровень ${lvl.level + 1} закрыт, пока этап не пройден — осталось ${stage.total - stage.cleared}. Один опыт не продвигает.`)}
+        </p>
+      )}
 
       {/* The bar that the stage actually fills. A gated level costs exactly what
           its stage pays, so this reaching the end and the stage finishing are the
@@ -154,9 +154,13 @@ export function QuestPanel() {
         </span>
       </div>
 
+      {/* The brief belongs to the objective you are about to act on. The ones
+          queued behind it are titles until their turn comes — three paragraphs
+          of instruction stacked at once is what made this read like a manual. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 9 }}>
-        {stage.quests.map(p => {
+        {stage.quests.map((p, i) => {
           const cleared = !!state.quests[p.quest.id]
+          const nextUp  = i === stage.quests.findIndex(q => !state.quests[q.quest.id])
           const cta = questCta(p.quest, hasUplink)
           return (
             <button key={p.quest.id} onClick={() => !cleared && go(p.quest)}
@@ -191,10 +195,12 @@ export function QuestPanel() {
 
               {!cleared && (
                 <>
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 10, lineHeight: 1.6, marginTop: 5,
-                    marginLeft: 20, color: 'rgba(215,232,248,0.72)' }}>
-                    {tr(p.quest.brief, p.quest.briefRu)}
-                  </p>
+                  {nextUp && (
+                    <p style={{ fontFamily: 'var(--font)', fontSize: 10, lineHeight: 1.6, marginTop: 5,
+                      marginLeft: 20, color: 'rgba(215,232,248,0.72)' }}>
+                      {tr(p.quest.brief, p.quest.briefRu)}
+                    </p>
+                  )}
                   <p style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
                     letterSpacing: '0.12em', color: GOLD, marginTop: 6, marginLeft: 20 }}>
                     {tr(cta.en, cta.ru)} →

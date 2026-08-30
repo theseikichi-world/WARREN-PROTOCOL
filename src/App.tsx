@@ -403,12 +403,14 @@ function NowCard() {
       <span style={{ fontSize: 22, filter: `drop-shadow(0 0 8px ${INF})`,
         animation: 'pulse 2.4s ease-in-out infinite' }}>∞</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em',
-          color: isFreeNow ? 'rgba(57,255,20,0.7)' : idleNow ? 'rgba(255,215,0,0.75)' : INF }}>
-          {isFreeNow ? t('● FREE NOW', '● СЕЙЧАС СВОБОДНО')
-            : idleNow ? t('● QUESTS OPEN', '● ЕСТЬ ЗАДАНИЯ')
-            : t('● HAPPENING NOW', '● ИДЁТ СЕЙЧАС')}
-        </p>
+        {/* Only when it says something the headline does not. "● FREE NOW"
+            over "Free time", and "● QUESTS OPEN" over "3 quests still open",
+            were labels for the line underneath them. */}
+        {!idleNow && (
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', color: INF }}>
+            {t('● HAPPENING NOW', '● ИДЁТ СЕЙЧАС')}
+          </p>
+        )}
         <p style={{ fontSize: 16.5, fontWeight: 800, color: 'rgba(225,250,255,0.95)',
           letterSpacing: '0.02em', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {headline}
@@ -418,7 +420,7 @@ function NowCard() {
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
         <p style={{ fontSize: 18, fontWeight: 900, color: '#39ff14', lineHeight: 1,
           textShadow: '0 0 10px rgba(57,255,20,0.4)' }}>{fmtDur(snap.freeMinutes)}</p>
-        <p style={{ fontSize: 11.5, color: 'rgba(57,255,20,0.5)', letterSpacing: '0.1em', marginTop: 2 }}>{t('FREE LEFT', 'СВОБОДНО ОСТАЛОСЬ')}</p>
+        <p style={{ fontSize: 11.5, color: 'rgba(57,255,20,0.5)', letterSpacing: '0.1em', marginTop: 2 }}>{t('LEFT', 'ОСТАЛОСЬ')}</p>
         {snap.committedCount > 0 && (
           <p style={{ fontSize: 10, color: `${INF}70`, marginTop: 3 }}>{snap.doneCount}/{snap.committedCount} {t('done', 'готово')}</p>
         )}
@@ -500,9 +502,6 @@ function Dashboard({ displayName }: { displayName: string }) {
         <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', letterSpacing: '0.03em' }}>
           {greeting}{name ? `, ${name}` : ''} <span style={{ color: 'var(--accent)', textShadow: '0 0 10px var(--accent-dim)' }}>👋</span>
         </p>
-        <p style={{ fontSize: 11.5, color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: 4, textTransform: 'uppercase' }}>
-          {t('Warren hub · select a module →', 'Хаб Warren · выберите модуль →')}
-        </p>
       </div>
 
       {/* Where you stand, and where the day is: the two things the hub is for.
@@ -544,15 +543,6 @@ function Dashboard({ displayName }: { displayName: string }) {
         ))}
       </div>
 
-      {/* Status */}
-      <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(57,255,20,0.04)', border: '1px solid rgba(57,255,20,0.1)' }}>
-        <p style={{ fontSize: 11.5, color: 'rgba(57,255,20,0.6)', letterSpacing: '0.1em', fontWeight: 700 }}>
-          <span className="pulse">●</span> {t('ALL SYSTEMS NOMINAL', 'ВСЕ СИСТЕМЫ В НОРМЕ')}
-        </p>
-        <p style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: 3, letterSpacing: '0.06em' }}>
-          {t('Warren is running · modules can be accessed from the sidebar →', 'Warren работает · модули доступны на боковой панели →')}
-        </p>
-      </div>
     </div>
   )
 }

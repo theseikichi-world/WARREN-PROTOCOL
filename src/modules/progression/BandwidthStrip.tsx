@@ -58,11 +58,15 @@ export function BandwidthStrip() {
           </span>
         </div>
 <p style={{ fontSize: 11.5, color: 'rgba(215,232,248,0.72)', lineHeight: 1.6, marginTop: 7 }}>
+          {/* This used to go on to explain that a goal starts as a dream and
+              to send you to PATHFINDER — a module that has not existed since
+              it became the DREAMS tab. The button below already says where to
+              go, and the quest card above already teaches the mechanic. */}
           {secondOpen
-            ? t('Both slots are open. A goal starts as a dream — write one in PATHFINDER and promote it.',
-                'Оба слота свободны. Цель начинается с мечты — запишите её в PATHFINDER и продвиньте.')
-            : t(`One slot now, the second at level ${SECOND_SLOT_LEVEL}. A goal starts as a dream — write one in PATHFINDER and promote it.`,
-                `Сейчас один слот, второй — на уровне ${SECOND_SLOT_LEVEL}. Цель начинается с мечты — запишите её в PATHFINDER и продвиньте.`)}
+            ? t('Both slots are open.',
+                'Оба слота свободны.')
+            : t(`One slot now, the second at level ${SECOND_SLOT_LEVEL}.`,
+                `Сейчас один слот, второй — на уровне ${SECOND_SLOT_LEVEL}.`)}
         </p>
         <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: CYAN, marginTop: 8 }}>
           {t('OPEN YOUR DREAMS', 'ОТКРЫТЬ МЕЧТЫ')} →

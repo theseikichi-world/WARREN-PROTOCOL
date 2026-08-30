@@ -218,8 +218,8 @@ function DreamModal({ initial, onSave, onCancel }: {
           style={{ ...field, resize: 'none', lineHeight: 1.6 }} />
 
         <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, color: DIM, lineHeight: 1.5 }}>
-          {tr('PATHFINDER works out the area, the acts and what to do first when it reads this.',
-              'PATHFINDER определит область, акты и первые шаги, когда прочитает это.')}
+          {tr('The guide works out the area, the acts and what to do first when it reads this.',
+              'Гид определит область, акты и первые шаги, когда прочитает это.')}
         </p>
 
         <div style={{ display: 'flex', gap: 8 }}>
