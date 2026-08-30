@@ -22,7 +22,7 @@ const SHUT: Inset = { top: 0, left: 0, right: 0, bottom: 0 }
 const EASE = 'cubic-bezier(0.22, 0.9, 0.24, 1)'
 const MS   = 320
 
-export function HubWindow({ tone, label, minimized, children, openWhen = false }: {
+export function HubWindow({ tone, label, minimized, children, openWhen = false, onClosed }: {
   /** The module's neon, so the window is visibly the thing the card was. */
   tone: string
   /** Named on the window's own bar, once it is open. */
@@ -33,6 +33,8 @@ export function HubWindow({ tone, label, minimized, children, openWhen = false }
   children: ReactNode
   /** Arrive here from a quest and the window opens itself. */
   openWhen?: boolean
+  /** Minimized. Lets whatever asked for the window clear its request. */
+  onClosed?: () => void
 }) {
   const holder = useRef<HTMLDivElement>(null)
   const [open,  setOpen]  = useState(false)
@@ -78,10 +80,11 @@ export function HubWindow({ tone, label, minimized, children, openWhen = false }
   }, [open, reduced])
 
   const minimize = useCallback(() => {
+    onClosed?.()
     if (reduced) { setOpen(false); return }
     setGrown(false)
     setTimeout(() => setOpen(false), MS)
-  }, [reduced])
+  }, [reduced, onClosed])
 
   // Escape on a desktop; the button is the only way in on a phone.
   useEffect(() => {
@@ -147,6 +150,11 @@ export function HubWindow({ tone, label, minimized, children, openWhen = false }
               scaled with it, which would smear its type for a third of a second. */}
           <div style={{
             flex: 1, minHeight: 0, overflow: 'hidden',
+            // The positioning context for whatever the module puts inside. A
+            // panel using `position: absolute; inset: 0` — SOLARIS' meal panel
+            // does — would otherwise resolve against the whole window and cover
+            // its own title bar and minimize button.
+            position: 'relative',
             opacity: grown ? 1 : 0,
             transition: reduced ? 'none' : `opacity ${MS * 0.7}ms ease ${MS * 0.3}ms`,
           }}>

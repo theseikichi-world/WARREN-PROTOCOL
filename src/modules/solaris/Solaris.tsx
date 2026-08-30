@@ -1607,9 +1607,16 @@ const slotNow = (): MealSlot => {
   return h < 11 ? 'breakfast' : h < 15 ? 'lunch' : h < 21 ? 'dinner' : 'snack'
 }
 
-export default function Solaris() {
+export default function Solaris({ openLog = false }: {
+  /**
+   * Open straight on the meal panel — where you write what you ate and attach
+   * the photo. The hub's FUEL card uses it so the camera is one tap from the
+   * hub instead of three, without a second copy of the parser living there.
+   */
+  openLog?: boolean
+} = {}) {
   const [state, setState]   = useState<SolarisState>(() => loadSolarisState())
-  const [screen, setScreen] = useState<Screen>({ type: 'dashboard' })
+  const [screen, setScreen] = useState<Screen>(openLog ? { type: 'log' } : { type: 'dashboard' })
   const [addSlot, setAddSlot] = useState<MealSlot | null>(null)
 
   const persist = useCallback((s: SolarisState) => { saveSolarisState(s); setState(s) }, [])

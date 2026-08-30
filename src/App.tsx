@@ -76,7 +76,7 @@ const built = GUILD.filter(m => m.built)
  * INFINITY-8 is absent for a different reason (`built: false`), and flipping
  * ORBIT the same way would also switch off its suggestions and its boot line.
  */
-const ON_HUB = new Set<ModuleId>(['scrap7'])
+const ON_HUB = new Set<ModuleId>(['scrap7', 'pomu'])
 
 const NAV_ORDER = INSTRUMENT_ORDER
   .map(id => built.find(m => m.id === id))
@@ -723,6 +723,13 @@ function FuelCard() {
   const member = activeMember(state)
   const [line, setLine] = useState('')
   const [note, setNote] = useState<string | null>(null)
+  /**
+   * The camera does not get a second parser on the card. It opens SOLARIS
+   * already on its meal panel, which is where writing and attaching a photo
+   * already live — including reading a nutrition label, which is the accurate
+   * path and the one worth being one tap away.
+   */
+  const [wantLog, setWantLog] = useState(false)
 
   useEffect(() => {
     if (!note) return
@@ -812,6 +819,7 @@ function FuelCard() {
   return (
     <div style={{ marginBottom: 16 }}>
       <HubWindow tone={FUEL_NEON} label={t('SOLARIS · FUEL', 'SOLARIS · ТОПЛИВО')}
+        openWhen={wantLog} onClosed={() => setWantLog(false)}
         minimized={
           <div style={{
             width: '100%', padding: '13px 15px', borderRadius: 10,
@@ -864,6 +872,11 @@ function FuelCard() {
                 border: `1px solid ${FUEL_NEON}45`, background: `${FUEL_NEON}12`,
                 color: FUEL_NEON, fontFamily: 'var(--font)', fontSize: 15, fontWeight: 800,
               }}>▸</button>
+              <button onClick={() => setWantLog(true)} title={t('Photo — a plate or a label', 'Фото — тарелка или этикетка')} style={{
+                width: 40, flexShrink: 0, borderRadius: 8, cursor: 'pointer',
+                border: `1px solid ${FUEL_NEON}45`, background: `${FUEL_NEON}12`,
+                fontSize: 14,
+              }}>📷</button>
               <button onClick={() => water(250)} title={`+250 ${t('ml water', 'мл воды')}`} style={{
                 width: 40, flexShrink: 0, borderRadius: 8, cursor: 'pointer',
                 border: '1px solid rgba(0,180,255,0.35)', background: 'rgba(0,180,255,0.1)',
@@ -872,7 +885,7 @@ function FuelCard() {
             </div>
           </div>
         }>
-        <Solaris />
+        <Solaris openLog={wantLog} />
       </HubWindow>
     </div>
   )
