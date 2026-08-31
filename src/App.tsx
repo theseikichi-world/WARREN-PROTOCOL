@@ -467,7 +467,7 @@ function NowCard() {
 // guild has for the time you actually have. It sits above the week strip
 // because it is the sentence the rest of the hub is the detail of.
 
-function Welcome({ displayName }: { displayName: string }) {
+function Welcome({ displayName, weatherPlace }: { displayName: string; weatherPlace: string }) {
   const navigate = useNavigate()
 
   // Measured once per session, not per mount — see sessionDaysAway.
@@ -481,8 +481,12 @@ function Welcome({ displayName }: { displayName: string }) {
   // silent when no place is set — the app should not start asking the internet
   // where you are on its own.
   const [sky, setSky] = useState<Sky | null>(() => readCachedSky())
+  // Keyed on the place, not on mount. Welcome is rendered UNDERNEATH the
+  // onboarding overlay, so at mount the city is still empty — a `[]` effect
+  // read that emptiness once and never looked again, and a new operator who
+  // typed a city on the first screen got no weather until they restarted.
   useEffect(() => {
-    const place = loadSettings().weatherPlace?.trim()
+    const place = weatherPlace.trim()
     if (!place) { setSky(null); return }
     const cached = readCachedSky()
     if (cached) setSky(cached)
@@ -491,7 +495,7 @@ function Welcome({ displayName }: { displayName: string }) {
     fetchSky(place).then(s2 => { if (alive) setSky(s2) })
       .catch(() => { /* the line simply does not appear */ })
     return () => { alive = false }
-  }, [])
+  }, [weatherPlace])
   useEffect(() => {
     const refresh = () => {
       const s = getNowSnapshot()
@@ -523,15 +527,14 @@ function Welcome({ displayName }: { displayName: string }) {
    * invisible: the first question about the weather was "why do I not see any".
    * So it says once that it could, and never again after you answer either way.
    */
-  const [skyHint, setSkyHint] = useState(() => {
-    try {
-      return !loadSettings().weatherPlace?.trim()
-        && localStorage.getItem('warren_sky_hint_off') !== '1'
-    } catch { return false }
+  const [hushed, setHushed] = useState(() => {
+    try { return localStorage.getItem('warren_sky_hint_off') === '1' } catch { return true }
   })
+  // Derived rather than frozen at mount — same reason as the effect above.
+  const skyHint = !weatherPlace.trim() && !hushed
   const hushSky = () => {
     try { localStorage.setItem('warren_sky_hint_off', '1') } catch { /* private mode */ }
-    setSkyHint(false)
+    setHushed(true)
   }
 
   return (
@@ -1030,7 +1033,7 @@ function todaySolaris(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function Dashboard({ displayName }: { displayName: string }) {
+function Dashboard({ displayName, weatherPlace }: { displayName: string; weatherPlace: string }) {
   // The hub stopped keeping its own counters: every card reads the store it is
   // about, and refreshes itself on warren:sync.
   const orbitOpen = moduleUnlocked(
@@ -1051,7 +1054,7 @@ function Dashboard({ displayName }: { displayName: string }) {
     <div style={{ height: '100%', overflowY: 'auto', padding: '20px 18px' }}>
 
       {/* Greeting, where things stand, and the one invitation that fits */}
-      <Welcome displayName={displayName} />
+      <Welcome displayName={displayName} weatherPlace={weatherPlace} />
 
       {/* Where you stand, and where the day is: the two things the hub is for.
           The NOW card used to be gated on INFINITY-8 being its own module — it
@@ -1306,7 +1309,7 @@ export default function App() {
           <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
           {lockedRoute && <Navigate to="/" replace />}
           <Routes>
-            <Route path="/" element={<Dashboard displayName={settings.displayName} />} />
+            <Route path="/" element={<Dashboard displayName={settings.displayName} weatherPlace={settings.weatherPlace} />} />
             <Route path="/scrap7/*"    element={<Scrap7 />} />
             {/* PATHFINDER folded into UPLINKS as the DREAMS tab — a door is not
                 a room (rule 17). The route redirects rather than 404s, because

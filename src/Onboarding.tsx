@@ -42,6 +42,7 @@ export function Onboarding({ settings, onDone }: {
   const [gender, setGender] = useState<Gender>(settings.gender)
   const [wake,  setWake]  = useState(settings.wakeTime  || '07:00')
   const [sleep, setSleep] = useState(settings.sleepTime || '23:00')
+  const [city,  setCity]  = useState(settings.weatherPlace || '')
 
   const type  = chronotype(sleep, wake)
   const hours = sleepDuration(sleep, wake)
@@ -75,8 +76,8 @@ export function Onboarding({ settings, onDone }: {
         </p>
         <p style={{ fontFamily: 'var(--font)', fontSize: 11, lineHeight: 1.7, color: 'rgba(200,222,240,0.7)',
           marginTop: 8 }}>
-          {tr('Four questions, once. Everything here is measured off one specific person, and the hours decide where your routines can actually sit.',
-              'Четыре вопроса, один раз. Всё здесь измеряет одного конкретного человека, а часы решают, куда вообще можно поставить рутины.')}
+          {tr('Asked once. Everything here is measured off one specific person, and the hours decide where your routines can actually sit.',
+              'Спрашиваем один раз. Всё здесь измеряет одного конкретного человека, а часы решают, куда вообще можно поставить рутины.')}
         </p>
 
         <div style={{ marginTop: 20 }}>
@@ -126,9 +127,24 @@ export function Onboarding({ settings, onDone }: {
           </p>
         </div>
 
+        {/* Optional, and last, because it is the only question here that is not
+            about you. Asked now because NIMBUS is silent without it, and a
+            weather feature you have to go and find in Settings is one you will
+            not know exists. */}
+        <div style={{ marginTop: 16 }}>
+          <p style={label}>{tr('CITY', 'ГОРОД')} <span style={{ color: DIM }}>· {tr('optional', 'необязательно')}</span></p>
+          <input value={city} onChange={e => setCity(e.target.value)} maxLength={64}
+            placeholder={tr('for weather and air — e.g. Tbilisi', 'для погоды и воздуха — напр. Тбилиси')} style={field} />
+          <p style={{ fontFamily: 'var(--font)', fontSize: 10, lineHeight: 1.6, color: DIM, marginTop: 5 }}>
+            {tr('One line in your greeting. No account, no key — the city goes to open-meteo.com to find the forecast. Leave it blank and nothing is sent.',
+                'Одна строка в приветствии. Ни аккаунта, ни ключа — город уходит на open-meteo.com за прогнозом. Оставьте пустым — ничего не отправится.')}
+          </p>
+        </div>
+
         <button
           onClick={() => ready && onDone({
             displayName: name.trim(), gender, wakeTime: wake, sleepTime: sleep,
+            weatherPlace: city.trim(),
             onboardedAt: new Date().toISOString(),
           })}
           disabled={!ready}
