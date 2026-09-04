@@ -5,7 +5,11 @@ import { loadLogState, saveLogState, setDreamRead, setDreamInterview } from '../
 import type { Dream } from '../log/types'
 import { loadProgression, saveProgression, syncChain, commitDraft } from './store'
 import { blankDraft, type ChainDraft } from './draft'
-import { askInterview, readDream, readToDraft, type Interview } from './spine'
+import {
+  askInterview, readDream, readToDraft, normalizeRead,
+  type Interview, type DreamRead,
+} from './spine'
+import { matchShape, shapeToRead } from './shapes'
 import { operatorRecord, recordBrief } from './record'
 import { loadState as loadScrap7 } from '../scrap7/store'
 import { ChainForge } from './ChainForge'
@@ -31,6 +35,30 @@ type Stage =
   | { kind: 'proposing'; dream: Dream }
   | { kind: 'forge';     draft: ChainDraft }
 
+/**
+ * The guide's read, or the shape's when there is no guide to ask.
+ *
+ * A dream matched to a shape always has a spine: real acts, real pressure, and
+ * the datable proofs that end them. What it does not have is routines — those
+ * are specific to one person's week, and inventing generic ones would be
+ * filling the screen rather than helping. You write them in the forge, or the
+ * guide does once it has a key.
+ *
+ * A dream matching no shape and no key is the one case with nothing to offer,
+ * and it says so rather than opening an empty editor.
+ */
+async function readOrShape(
+  d: Dream, interview: Interview | null, record: string,
+): Promise<DreamRead> {
+  try {
+    return await readDream(d, { interview, record })
+  } catch (e) {
+    const shape = matchShape(d)
+    if (!shape) throw e
+    return normalizeRead(shapeToRead(shape, d), d)
+  }
+}
+
 export function NewUplink({ accent, dream, onClose, onCommitted }: {
   accent: string
   /** Skip the picker and go straight to proposing for this dream. */
@@ -49,7 +77,7 @@ export function NewUplink({ accent, dream, onClose, onCommitted }: {
     setError('')
     setStage({ kind: 'proposing', dream: d })
     try {
-      const read = await readDream(d, { interview, record: record() })
+      const read = await readOrShape(d, interview, record())
       // One read, both surfaces. The spine goes to the forge and the same read
       // is persisted on the dream, so the shelf in UPLINKS holds the tasks,
       // basics and proofs the protocol has no room for. They used to be separate
@@ -78,6 +106,9 @@ export function NewUplink({ accent, dream, onClose, onCommitted }: {
    */
   const begin = useCallback(async (d: Dream) => {
     setError('')
+    // No key means no interview to have. Going straight to the shape skips two
+    // calls that would only fail, and lands you on a real spine either way.
+    if (!loadSettings().aiApiKey) { void propose(d, null); return }
     setStage({ kind: 'asking', dream: d })
     try {
       const interview = await askInterview(d, record())

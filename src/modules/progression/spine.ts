@@ -28,6 +28,7 @@ import type { Goal, NodeTier } from './types'
 import { TIER_META, PRIMARY_MAX_NODES } from './types'
 import { blankDraft, slugify, uniqueKey, type ChainDraft, type DraftNode } from './draft'
 import { parseAnchor } from './anchor'
+import { matchShape, shapeBrief } from './shapes'
 
 export const SPINE_TASK_ID = 'uplink.protocol'
 
@@ -519,11 +520,16 @@ export async function readDream(
   context: { interview?: Interview | null; record?: string } = {},
 ): Promise<DreamRead> {
   const settings = loadSettings()
+  // The shape goes in as the skeleton. Adapting four acts is a smaller and far
+  // more reliable ask than inventing the structure and the subject at once —
+  // and it is the same skeleton the no-key path uses, so the two agree.
+  const shape = matchShape(dream)
   // The operator's hours are a hard constraint on where cues can sit — a chain
   // anchored to 6am for a night owl fails for reasons unrelated to willpower.
   const brief = [
     profileBrief(dayShape(settings.sleepTime, settings.wakeTime)),
     dreamBrief(dream),
+    shape ? shapeBrief(shape) : '',
     interviewBrief(context.interview),
     context.record ?? '',
   ].filter(Boolean).join('\n\n')
