@@ -128,6 +128,13 @@ export interface ProgressionState {
   initiatedAt?: string | null
   /** Highest level already celebrated, so the moment fires once per threshold. */
   celebratedLevel?: number
+  /**
+   * What the parallel lane has already paid out today, and which day that was.
+   * One day, one number: the cap is the only thing standing between "errands
+   * count" and "errands are the cheap way to level", so it has to survive a
+   * reload. Rolls over on its own the first time a new date is seen.
+   */
+  errands?: { date: string; xp: number }
 }
 
 // ─── Slot rules ───────────────────────────────────────────────────────────────

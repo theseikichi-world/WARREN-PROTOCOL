@@ -9,12 +9,16 @@ import {
 import { applyDraft, draftToGoal, type ChainDraft } from './draft'
 import { baselineTaskId, customTaskId, lifeSupportSlots, type LifeSupportTemplate } from './lifeSupport'
 import { evaluateUnlocks, isUnlocked, nodeScore, routineTaskId } from './chain'
-import { awardXp, awardBaselineXp, gatedLevel, type XpEvent } from './xp'
+import { awardXp, awardBaselineXp, awardErrandXp, baseXp, gatedLevel, type XpEvent } from './xp'
 import { evaluateQuests, questFloorXp, type Quest, type QuestContext } from './quests'
 import {
   loadState as loadScrap7, saveState as saveScrap7, createExternalTask, trackHabit,
+  completeTask,
 } from '../scrap7/store'
-import { isBaseline, isOrphanHabit, taskOrigin } from '../scrap7/types'
+import {
+  isBaseline, isErrand, isOrphanHabit, taskOrigin, todayKey as dayKey,
+  type Priority, type Task,
+} from '../scrap7/types'
 
 const KEY = 'warren_progression_v1'
 
@@ -38,6 +42,8 @@ export function loadProgression(): ProgressionState {
       quests,
       initiatedAt: typeof parsed.initiatedAt === 'string' ? parsed.initiatedAt : null,
       celebratedLevel: typeof parsed.celebratedLevel === 'number' ? parsed.celebratedLevel : 1,
+      errands: (parsed.errands && typeof parsed.errands.date === 'string'
+        && typeof parsed.errands.xp === 'number') ? parsed.errands : undefined,
     }
   } catch {
     return structuredClone(INITIAL)
@@ -548,6 +554,95 @@ export function trackFromList(taskId: string): { gained: number; levelUp: number
   saveProgression(reward.state)
   window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'orbit' } }))
   return { gained: reward.gained, levelUp: reward.levelUp }
+}
+
+// ─── The parallel lane ────────────────────────────────────────────────────────
+
+/**
+ * Bank a cleared errand.
+ *
+ * Flat, capped, and deliberately outside every goal mechanic: no slot rate (it
+ * belongs to no uplink), no tier (a one-off never automates), no fuel. Once the
+ * day's cap is reached it pays zero and says so through `capped` — a reward
+ * that silently stops paying is worse than one that never paid.
+ */
+export function recordErrand(
+  state: ProgressionState, priority: Priority, now = new Date(),
+): RunReward & { capped: boolean } {
+  const today  = dayKey(now)
+  const ledger = state.errands?.date === today ? state.errands : { date: today, xp: 0 }
+  const spent  = ledger.xp
+
+  const event: XpEvent = { kind: 'errand.done', priority }
+  const gained = awardErrandXp(event, spent)
+
+  const levelBefore = gatedLevel(state.xp, state.quests).level
+  const next: ProgressionState = {
+    ...state,
+    xp: state.xp + gained,
+    errands: { date: today, xp: spent + gained },
+  }
+  const levelAfter = gatedLevel(next.xp, next.quests).level
+
+  return {
+    state: next,
+    gained,
+    events: [event],
+    levelUp: levelAfter > levelBefore ? levelAfter : null,
+    capped: gained < baseXp(event),
+  }
+}
+
+/**
+ * Clear a one-off from wherever it is shown, and bank what it was worth.
+ *
+ * The same shared-path argument `trackFromList` was built on: ORBIT's list, the
+ * hub card and the assistant all complete tasks, and a tick that pays in one
+ * place and not another makes the cheaper surface the correct one to use.
+ *
+ * Un-completing does NOT refund. The work happened; ticking it off and on again
+ * is not a way to farm it either, because the ledger only ever moves forward.
+ */
+export function completeFromList(taskId: string): { gained: number; levelUp: number | null; capped: boolean } {
+  const s7   = loadScrap7()
+  const task = s7.tasks.find(t => t.id === taskId)
+  const none = { gained: 0, levelUp: null, capped: false }
+  if (!task || task.completed) return none
+
+  saveScrap7(completeTask(s7, taskId))
+  window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'orbit' } }))
+
+  if (!isErrand(task)) return none
+
+  const reward = recordErrand(loadProgression(), task.priority ?? 'medium')
+  saveProgression(reward.state)
+  return { gained: reward.gained, levelUp: reward.levelUp, capped: reward.capped }
+}
+
+/**
+ * Bank several one-offs that have already been cleared elsewhere.
+ *
+ * ORBIT's assistant clears a batch inside one state fold and persists once, so
+ * it cannot route each row through `completeFromList` without fighting its own
+ * save. This is the same economy reached from the other side — and going
+ * through it is what stops "mark these three done" from being the free way to
+ * clear a list.
+ */
+export function bankErrands(tasks: Task[]): { gained: number; levelUp: number | null } {
+  const errands = tasks.filter(isErrand)
+  if (errands.length === 0) return { gained: 0, levelUp: null }
+
+  let state = loadProgression()
+  let gained = 0
+  let levelUp: number | null = null
+  for (const t of errands) {
+    const reward = recordErrand(state, t.priority ?? 'medium')
+    state  = reward.state
+    gained += reward.gained
+    levelUp = reward.levelUp ?? levelUp
+  }
+  saveProgression(state)
+  return { gained, levelUp }
 }
 
 export interface RunReward {

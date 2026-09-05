@@ -13,7 +13,7 @@ import {
 import { parseCommand } from './commandParser'
 import { t as tr } from '../../i18n'
 import { loadSettings, aiJson, modelForTask, type AiMessage } from '../../settings'
-import { trackFromList } from '../progression/store'
+import { trackFromList, completeFromList, bankErrands } from '../progression/store'
 import {
   installLifeSupport, installCustomLifeSupport, deleteLifeSupport, recordBaselineRun,
   loadProgression, saveProgression,
@@ -617,10 +617,17 @@ export default function Scrap7() {
 
     try {
       const parsed = parseCommand(raw, s.tasks)
+      const cleared: Task[] = []
       if (parsed) {
         for (const action of parsed.actions) {
-          if (action.type === 'complete_task' && action.task_id)
+          if (action.type === 'complete_task' && action.task_id) {
+            // Collected, not banked yet: this fold persists once at the end, so
+            // paying here would race its own save. Rows are read before the
+            // fold clears them — a task already done pays nothing twice.
+            const target = s.tasks.find(x => x.id === action.task_id && !x.completed)
+            if (target) cleared.push(target)
             s = completeTask(s, action.task_id)
+          }
           // 'track_habit' is deliberately unhandled. Habits live in UPLINKS, and
           // tracking one from here would move its score without awarding the XP
           // that recordRun/recordBaselineRun attach to a run — a silent economy
@@ -648,6 +655,10 @@ export default function Scrap7() {
         }
         s = addMessage(s, { text: parsed.text, sender: 'scrap7' })
         persist(s)
+        // Banked after the fold has saved, so the two writes never race.
+        const banked = bankErrands(cleared)
+        if (banked.levelUp)     { setFlashMsg(tr(`LEVEL ${banked.levelUp}`, `УРОВЕНЬ ${banked.levelUp}`)); playCue('level') }
+        else if (banked.gained) { setFlashMsg(`+${banked.gained} XP`); playCue('xp') }
         setLastReply(parsed.text)
         setThinking(false)
         return
@@ -757,9 +768,17 @@ export default function Scrap7() {
       else              playCue('check')
       return
     }
-    // Un-checking is the same gesture undone, so it gets the lighter cue.
+    // Un-checking is the same gesture undone, so it gets the lighter cue — and
+    // it never refunds. The ledger only moves forward, or ticking a row off and
+    // on again would be the cheapest XP in the app.
     playCue(t.completed ? 'tick' : 'check')
-    persist(t.completed ? uncompleteTask(state, t.id) : completeTask(state, t.id))
+    if (t.completed) { persist(uncompleteTask(state, t.id)); return }
+
+    const { gained, levelUp, capped } = completeFromList(t.id)
+    setState(loadState())
+    if (levelUp)      { setFlashMsg(tr(`LEVEL ${levelUp}`, `УРОВЕНЬ ${levelUp}`)); playCue('level') }
+    else if (gained)  { setFlashMsg(`+${gained} XP`); playCue('xp') }
+    else if (capped)  setFlashMsg(tr('DAY CAPPED', 'ЛИМИТ ДНЯ'))
   }
 
   // ── Life support, where the basics actually live ──────────────────────────

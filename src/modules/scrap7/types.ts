@@ -95,6 +95,17 @@ export function taskOrigin(t: Pick<Task, 'origin' | 'logMission' | 'logDream'>):
   return (t.logMission || t.logDream) ? 'log' : 'manual'
 }
 
+/**
+ * A ONE-OFF you set yourself — the only thing the parallel lane pays for.
+ *
+ * A repeating task is uncapped and unscored, so paying per tick would turn a
+ * recurring chore into an XP faucet; anything carrying a system's provenance
+ * earns through that system, or deliberately doesn't. What is left is the work
+ * that belongs to no dream and still costs you a day.
+ */
+export const isErrand = (t: Pick<Task, 'taskType' | 'origin' | 'logMission' | 'logDream'>): boolean =>
+  t.taskType === 'todo' && taskOrigin(t) === 'manual'
+
 /** Routines and life support earn; a hand-made task or a L.O.G sync does not. */
 export function feedsProgression(t: Pick<Task, 'origin' | 'logMission' | 'logDream'>): boolean {
   const o = taskOrigin(t)

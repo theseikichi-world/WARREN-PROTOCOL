@@ -7,6 +7,7 @@
 // congratulate. This app has one user and he knows when he's being flattered.
 
 import type { GoalSlot, NodeTier } from './types'
+import type { Priority } from '../scrap7/types'
 import { xpRateForSlot } from './types'
 import { LAST_GATED_STAGE, stageComplete, stageQuests, stageXp, type Quest } from './quests'
 import { SLOT_GATES } from './lifeSupport'
@@ -22,6 +23,7 @@ export type XpEvent =
   | { kind: 'tool.tier' }                           // an instrument deepened
   | { kind: 'baseline.run' }                        // a LIFE SUPPORT habit, once a day
   | { kind: 'baseline.automatic' }                  // a LIFE SUPPORT habit crossed 0.70
+  | { kind: 'errand.done'; priority: Priority }     // a one-off you set yourself, cleared
 
 /** Base award before slot rate and fuel. Tier weights the effort a run costs. */
 export function baseXp(e: XpEvent): number {
@@ -36,7 +38,44 @@ export function baseXp(e: XpEvent): number {
     // should register, and it must never become the efficient way to level.
     case 'baseline.run':       return 3
     case 'baseline.automatic': return 25
+    case 'errand.done':        return ERRAND_XP[e.priority]
   }
+}
+
+// ─── The parallel lane ────────────────────────────────────────────────────────
+// Not everything you do serves a dream. A licence, a visa, taxes, the cupboard
+// you have been meaning to clear — that work is real, it costs a day, and it
+// belonged to no system, so it earned nothing. A tree where the only progress
+// is goal progress quietly says the rest of your life is not progress.
+//
+// The weight was already authored: ORBIT has had a priority on every to-do
+// since it shipped, and it only ever coloured a label. This is that field
+// finally meaning something.
+//
+// TWO RULES KEEP IT HONEST, and both come from the same place as the life
+// support fraction:
+//
+//   · Only a ONE-OFF pays. A repeating task is uncapped and unscored — paying
+//     per tick would make "water the plants, daily" an XP faucet.
+//   · The day is capped. You can write yourself a hundred errands; the tenth
+//     hard one pays nothing and says so. Clearing your list is worth about one
+//     good routine run, never a level.
+
+export const ERRAND_XP: Record<Priority, number> = {
+  trivial: 2, easy: 4, medium: 8, hard: 16,
+}
+
+/**
+ * The most the parallel lane can pay in one day — roughly a single tier-3
+ * routine run. It has to register, and it must never become the efficient way
+ * to level: a day of errands is a day you did not train anything.
+ */
+export const ERRAND_DAILY_CAP = 24
+
+/** What an errand actually pays, given what today has already paid out. */
+export function awardErrandXp(e: XpEvent, spentToday: number): number {
+  const room = Math.max(0, ERRAND_DAILY_CAP - Math.max(0, spentToday))
+  return Math.min(baseXp(e), room)
 }
 
 /**

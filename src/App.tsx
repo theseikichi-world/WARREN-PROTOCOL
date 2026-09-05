@@ -41,9 +41,9 @@ import { useSpotlight } from './modules/progression/questNav'
 import { WeekStrip } from './modules/progression/WeekStrip'
 import {
   loadState as loadScrap7, saveState as saveScrap7, orbitTasks, habitDoneToday, taskSource,
-  completeTask, uncompleteTask, SOURCE_LABEL,
+  uncompleteTask, SOURCE_LABEL,
 } from './modules/scrap7/store'
-import { trackFromList } from './modules/progression/store'
+import { trackFromList, completeFromList } from './modules/progression/store'
 import type { Task } from './modules/scrap7/types'
 import { useLocale, t } from './i18n'
 import { sessionDaysAway, greetingFor, briefFor } from './greeting'
@@ -683,10 +683,20 @@ function TodayQuests() {
       else             playCue('check')
       return
     }
+    // Un-checking is the same gesture undone, so it gets the lighter cue — and
+    // it never refunds: the ledger only moves forward, or ticking a row off and
+    // on again would be the cheapest XP in the app.
     playCue(task.completed ? 'tick' : 'check')
-    const s7 = loadScrap7()
-    saveScrap7(task.completed ? uncompleteTask(s7, task.id) : completeTask(s7, task.id))
+    if (task.completed) {
+      saveScrap7(uncompleteTask(loadScrap7(), task.id))
+      setTasks(loadScrap7().tasks)
+      return
+    }
+    const { gained, levelUp, capped } = completeFromList(task.id)
     setTasks(loadScrap7().tasks)
+    if (levelUp)     { setFlash(t(`LEVEL ${levelUp}`, `УРОВЕНЬ ${levelUp}`)); playCue('level') }
+    else if (gained) { setFlash(`+${gained} XP`); playCue('xp') }
+    else if (capped) setFlash(t('DAY CAPPED', 'ЛИМИТ ДНЯ'))
   }
 
   // Enough to act on without opening, not so many that the card becomes the
