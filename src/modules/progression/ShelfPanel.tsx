@@ -128,8 +128,9 @@ export function ShelfPanel({ goal, accent, onChanged }: {
   // This is also the first consumer `activeChapter` has ever had. It could not
   // usefully have one before: a chapter carrying a breach could never complete,
   // so it never moved off chapter 1 (see `clearBreach`).
-  const tasks   = loadScrap7().tasks
-  const current = activeChapter(goal, tasks)
+  const tasks     = loadScrap7().tasks
+  const current   = activeChapter(goal, tasks)
+  const chapterOf = (actKey: string) => goal.chapters.find(c => c.key === actKey) ?? null
 
   /**
    * Write one act's routines, against the scores the operator actually has.
@@ -257,6 +258,7 @@ export function ShelfPanel({ goal, accent, onChanged }: {
                     same sentence, because nothing in the app could write it. */}
                 {mine.length === 0 && (
                   <ActGap
+                    past={!!current && current.index > (chapterOf(act.key)?.index ?? 0)}
                     reached={current?.key === act.key}
                     busy={deepening === act.key}
                     blocked={deepening !== null && deepening !== act.key}
@@ -290,7 +292,8 @@ export function ShelfPanel({ goal, accent, onChanged }: {
  * write because there is no key. Only the first is an action, and only the last
  * is a wall — and a wall says what opens it (rule 30).
  */
-function ActGap({ reached, busy, blocked, hasKey, accent, onDeepen }: {
+function ActGap({ past, reached, busy, blocked, hasKey, accent, onDeepen }: {
+  past:     boolean
   reached:  boolean
   busy:     boolean
   blocked:  boolean
@@ -303,6 +306,13 @@ function ActGap({ reached, busy, blocked, hasKey, accent, onDeepen }: {
       color: 'rgba(148,163,184,0.35)', letterSpacing: '0.06em' }}>{text}</p>
   )
 
+  // An act you finished is not an act you have yet to reach. Telling someone to
+  // clear the act before one they already cleared is the app losing track of
+  // where they are — the exact failure everything else here is fixing.
+  if (past) {
+    return line('\u2713 ' + tr('behind you — this act is done',
+                                'позади — акт пройден'))
+  }
   if (!reached) {
     return line('\u2298 ' + tr('written when you reach it — clear the act before it first',
                                 'пишется, когда дойдёте — сначала закройте предыдущий акт'))
@@ -319,7 +329,8 @@ function ActGap({ reached, busy, blocked, hasKey, accent, onDeepen }: {
         color: 'rgba(148,163,184,0.45)', letterSpacing: '0.05em' }}>
         {busy
           ? tr('writing it against your real scores...', 'пишем по вашим реальным показателям...')
-          : tr('you are here — this act has no routines yet', 'вы здесь — у акта ещё нет рутин')}
+          : tr('you are here — the shelf has nothing for this act',
+               'вы здесь — на полке для этого акта пусто')}
       </span>
       <button onClick={onDeepen} disabled={off}
         style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800, letterSpacing: '0.12em',

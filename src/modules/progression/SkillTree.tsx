@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { t as tr } from '../../i18n'
 import { getHabitTier, type Task } from '../scrap7/types'
-import { nodeScore, unlockRequirements, nodeState, chapterState, type NodeState } from './chain'
+import {
+  nodeScore, unlockRequirements, nodeState, chapterState, activeChapter, type NodeState,
+} from './chain'
 import { layoutTree, fitScale, NODE_W, NODE_H, BAND_HEAD, type Placed } from './layout'
 import { TIER_META, estimateDays, THRESHOLD_UNLOCK_AT, type ChainNode, type Goal } from './types'
 import { bandColor, countdown, scheduleLine } from './deadline'
@@ -158,6 +160,12 @@ function Breaches({ goal, tasks, accent, onClear }: {
   const withBoss = goal.chapters.filter(c => c.boss)
   if (withBoss.length === 0) return null
 
+  // Every act is listed, because seeing what is coming is the point of naming
+  // the whole story up front. Only the act you are IN can be cleared: act four's
+  // event has not happened on day one, and offering the button there is a
+  // 300-XP misclick dressed as an affordance. Same rule as writing an act.
+  const current = activeChapter(goal, tasks)
+
   return (
     <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
       {withBoss.map(c => {
@@ -166,6 +174,7 @@ function Breaches({ goal, tasks, accent, onClear }: {
         const count   = boss.due ? countdown(boss.due) : null
         const late    = scheduleLine(c, goal, tasks)
         const st      = chapterState(c, goal, tasks)
+        const here    = current?.index === c.index
         const color   = cleared ? GOLD : count ? bandColor(count.band) : DIM
 
         return (
@@ -208,20 +217,25 @@ function Breaches({ goal, tasks, accent, onClear }: {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 6 }}>
                   {/* Readiness informs, it does not gate — see `clearBreach`. */}
                   <span style={{ fontFamily: 'var(--font)', fontSize: 9.5, letterSpacing: '0.08em',
-                    color: st.breachReady ? accent : 'rgba(148,163,184,0.55)', flex: 1, minWidth: 0 }}>
-                    {st.breachReady
-                      ? tr('PREPARED', 'ПОДГОТОВЛЕН')
-                      : tr(`${st.atThreshold}/${st.total} routines at ${st.minScore.toFixed(2)}`,
-                           `${st.atThreshold}/${st.total} рутин на ${st.minScore.toFixed(2)}`)}
+                    color: here && st.breachReady ? accent : 'rgba(148,163,184,0.55)',
+                    flex: 1, minWidth: 0 }}>
+                    {!here
+                      ? tr('AHEAD OF YOU', 'ВПЕРЕДИ')
+                      : st.breachReady
+                        ? tr('PREPARED', 'ПОДГОТОВЛЕН')
+                        : tr(`${st.atThreshold}/${st.total} routines at ${st.minScore.toFixed(2)}`,
+                             `${st.atThreshold}/${st.total} рутин на ${st.minScore.toFixed(2)}`)}
                   </span>
-                  <button onClick={() => onClear(c.index)}
-                    title={tr('mark this event as having happened', 'отметить, что событие состоялось')}
-                    style={{ fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 800,
-                      letterSpacing: '0.14em', padding: '4px 10px', borderRadius: 5,
-                      cursor: 'pointer', flexShrink: 0, color: GOLD,
-                      background: `${GOLD}12`, border: `1px solid ${GOLD}45` }}>
-                    {tr('IT HAPPENED', 'ЭТО СЛУЧИЛОСЬ')}
-                  </button>
+                  {here && (
+                    <button onClick={() => onClear(c.index)}
+                      title={tr('mark this event as having happened', 'отметить, что событие состоялось')}
+                      style={{ fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 800,
+                        letterSpacing: '0.14em', padding: '4px 10px', borderRadius: 5,
+                        cursor: 'pointer', flexShrink: 0, color: GOLD,
+                        background: `${GOLD}12`, border: `1px solid ${GOLD}45` }}>
+                      {tr('IT HAPPENED', 'ЭТО СЛУЧИЛОСЬ')}
+                    </button>
+                  )}
                 </div>
               </>
             )}
