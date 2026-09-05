@@ -117,6 +117,18 @@ export interface Goal {
   lastSlotChangeAt: string
   /** The L.O.G dream this uplink was promoted from, when it came from one. */
   sourceDreamId?:   string | null
+  /**
+   * When the last chapter's breach was cleared.
+   *
+   * A goal used to have three states, and none of them was WON: 'archived' is a
+   * parking bay for something you stopped doing. So nothing in the app could
+   * ever finish — no dream had an end, and a system where nothing resolves has
+   * no reason to be a game rather than a list.
+   *
+   * A finished goal releases its bandwidth like an archived one, because the
+   * work really is over. What it does not do is read as abandonment.
+   */
+  completedAt?:     string | null
 }
 
 export interface ProgressionState {

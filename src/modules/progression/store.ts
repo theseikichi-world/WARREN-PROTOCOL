@@ -8,7 +8,7 @@ import {
 } from './types'
 import { applyDraft, draftToGoal, type ChainDraft } from './draft'
 import { baselineTaskId, customTaskId, lifeSupportSlots, type LifeSupportTemplate } from './lifeSupport'
-import { evaluateUnlocks, isUnlocked, nodeScore, routineTaskId } from './chain'
+import { evaluateUnlocks, goalComplete, isUnlocked, nodeScore, routineTaskId } from './chain'
 import { awardXp, awardBaselineXp, awardErrandXp, baseXp, gatedLevel, type XpEvent } from './xp'
 import { evaluateQuests, questFloorXp, type Quest, type QuestContext } from './quests'
 import {
@@ -535,10 +535,22 @@ export function recordBaselineRun(state: ProgressionState, before: number, after
  * be completable from the row you are looking at, and the score, the streak and
  * the XP all move together wherever the tap happened.
  */
-export function trackFromList(taskId: string): { gained: number; levelUp: number | null } {
+export function trackFromList(taskId: string): {
+  gained: number
+  levelUp: number | null
+  /**
+   * The run just carried this routine past 0.70.
+   *
+   * Worth reporting separately from the XP because it is the moment the app has
+   * least excuse to be vague about: a routine at 0.70 is permanent capability
+   * that costs nothing to keep, and it hands back the training slot it was
+   * using. "+90 XP" describes none of that.
+   */
+  integrated: boolean
+} {
   const s7     = loadScrap7()
   const task   = s7.tasks.find(t => t.id === taskId)
-  if (!task || task.taskType !== 'habit') return { gained: 0, levelUp: null }
+  if (!task || task.taskType !== 'habit') return { gained: 0, levelUp: null, integrated: false }
 
   const before = task.score ?? 0
   const { state: next } = trackHabit(s7, taskId, 1)
@@ -553,7 +565,11 @@ export function trackFromList(taskId: string): { gained: number; levelUp: number
 
   saveProgression(reward.state)
   window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'orbit' } }))
-  return { gained: reward.gained, levelUp: reward.levelUp }
+  return {
+    gained: reward.gained,
+    levelUp: reward.levelUp,
+    integrated: reward.events.some(e => e.kind === 'routine.integrated'),
+  }
 }
 
 // ─── The parallel lane ────────────────────────────────────────────────────────
@@ -668,7 +684,9 @@ export function recordRun(
   const node = goal?.nodes.find(n => n.scrapTaskId === taskId)
   if (!goal || !node) return { state, gained: 0, events: [], levelUp: null }
 
-  const events: XpEvent[] = [{ kind: 'routine.run', tier: node.tier }]
+  // The score going IN is what the run cost — see `runXp`. Using the score
+  // after would discount a run by the very progress that run just made.
+  const events: XpEvent[] = [{ kind: 'routine.run', tier: node.tier, score: before }]
   if (before < 0.65 && after >= 0.65) events.push({ kind: 'routine.strong' })
   if (before < THRESHOLD_UNLOCK_AT && after >= THRESHOLD_UNLOCK_AT) events.push({ kind: 'routine.integrated' })
 
@@ -678,6 +696,74 @@ export function recordRun(
   const levelAfter = gatedLevel(next.xp, next.quests).level
 
   return { state: next, gained, events, levelUp: levelAfter > levelBefore ? levelAfter : null }
+}
+
+// ─── The breach ───────────────────────────────────────────────────────────────
+
+export interface BreachReward extends RunReward {
+  /** True when that was the last chapter — the whole uplink is finished. */
+  goalDone: boolean
+}
+
+/**
+ * Mark a chapter's breach as happened, and bank the largest award in the game.
+ *
+ * Nothing set `completedAt` before this. The consequence ran deep: a chapter
+ * with a boss could never complete, so `activeChapter` sat on chapter one
+ * forever, `breach.cleared` (200 XP — more than two days of routine income)
+ * never fired, and no goal could ever be finished.
+ *
+ * It is NOT gated on the routines being trained. The breach is a real external
+ * event; if it happened, it happened, and the app does not get to disagree with
+ * reality because a habit is at 0.4. Readiness is still shown beforehand,
+ * because knowing you are not ready is the point of showing it.
+ *
+ * Clearing the LAST chapter finishes the uplink: it is stamped `completedAt`
+ * and releases its bandwidth. A finished goal is not an abandoned one, and the
+ * slot it held was the whole cost of pursuing it.
+ */
+export function clearBreach(
+  state: ProgressionState, goalId: string, chapterIndex: number, tasks: Task[], now = new Date(),
+): BreachReward {
+  const goal = state.goals.find(g => g.id === goalId)
+  const chapter = goal?.chapters.find(c => c.index === chapterIndex)
+  const none: BreachReward = { state, gained: 0, events: [], levelUp: null, goalDone: false }
+  if (!goal || !chapter?.boss || chapter.boss.completedAt) return none
+
+  const chapters = goal.chapters.map(c =>
+    c.index === chapterIndex && c.boss
+      ? { ...c, boss: { ...c.boss, completedAt: now.toISOString() } }
+      : c)
+
+  let next: Goal = { ...goal, chapters }
+  const goalDone = goalComplete(next, tasks)
+  // The slot is released the moment the work is over, so the bandwidth a
+  // finished goal was holding goes back without an extra decision to make.
+  if (goalDone) next = { ...next, completedAt: now.toISOString(), slot: 'archived',
+                         lastSlotChangeAt: now.toISOString() }
+
+  // Finishing pays on top of the last breach, not instead of it. The final act
+  // is still an act; what the extra award is for is the thing above it ending,
+  // which is the one moment this app has never had.
+  const events: XpEvent[] = [{ kind: 'breach.cleared' }]
+  if (goalDone) events.push({ kind: 'uplink.complete' })
+  // Awarded at the slot the goal held while the work was done, not at the
+  // 'archived' it may have just moved to.
+  const gained = events.reduce((sum, e) => sum + awardXp(e, goal.slot), 0)
+
+  const levelBefore = gatedLevel(state.xp, state.quests).level
+  const banked: ProgressionState = {
+    ...state,
+    xp: state.xp + gained,
+    goals: state.goals.map(g => g.id === next.id ? next : g),
+  }
+  const levelAfter = gatedLevel(banked.xp, banked.quests).level
+
+  return {
+    state: banked, gained, events,
+    levelUp: levelAfter > levelBefore ? levelAfter : null,
+    goalDone,
+  }
 }
 
 /**

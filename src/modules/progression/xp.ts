@@ -15,24 +15,54 @@ import { modulesOpenedAt } from '../../moduleAccess'
 import type { ModuleId } from '../../guild'
 
 export type XpEvent =
-  | { kind: 'routine.run';       tier: NodeTier }   // a routine performed today
+  /**
+   * A routine performed today. `score` is the automatism it had going IN, which
+   * is what the run actually cost you — see `runXp`. Absent means a fresh one.
+   */
+  | { kind: 'routine.run';       tier: NodeTier; score?: number }
   | { kind: 'threshold.raised' }                    // moved up the ladder
   | { kind: 'routine.strong' }                      // crossed into `strong`
   | { kind: 'routine.integrated' }                  // crossed 0.70
   | { kind: 'breach.cleared' }                      // a chapter's real-world event
+  | { kind: 'uplink.complete' }                     // every act done — the goal is finished
   | { kind: 'tool.tier' }                           // an instrument deepened
   | { kind: 'baseline.run' }                        // a LIFE SUPPORT habit, once a day
   | { kind: 'baseline.automatic' }                  // a LIFE SUPPORT habit crossed 0.70
   | { kind: 'errand.done'; priority: Priority }     // a one-off you set yourself, cleared
 
+/**
+ * What one run of a routine is worth.
+ *
+ * TIER WEIGHTS THE EFFORT; AUTOMATISM DISCOUNTS IT. A routine on day one is
+ * expensive to perform and pays full; the same routine at 0.70 costs you
+ * noticeably less and pays 0.65 of it; a fully automatic one pays half.
+ *
+ * The flat rate this replaces made the level curve a measure of attendance
+ * rather than progress: over a hundred days a routine paid 1600 XP for showing
+ * up and 150 for the two crossings that meant something — 9% of its lifetime
+ * income reflected any actual advance. Tapering the run does not punish
+ * consistency (the habit still pays, forever); it stops mastery from being the
+ * most efficient thing to farm, which is the same argument the slot cap makes.
+ */
+export const runXp = (tier: NodeTier, score: number): number =>
+  Math.round(8 * tier * (1 - 0.5 * Math.min(1, Math.max(0, score))))
+
 /** Base award before slot rate and fuel. Tier weights the effort a run costs. */
 export function baseXp(e: XpEvent): number {
   switch (e.kind) {
-    case 'routine.run':        return 8 * e.tier
+    case 'routine.run':        return runXp(e.tier, e.score ?? 0)
     case 'threshold.raised':   return 40
     case 'routine.strong':     return 60
     case 'routine.integrated': return 90
-    case 'breach.cleared':     return 200
+    // The two rarest events in the app, and the only ones that answer to
+    // something outside it. A breach is worth more than a week of the heaviest
+    // routine because it is a real thing that really happened; finishing an
+    // uplink is worth about a mid-game level because it is months of them.
+    //
+    // They are also the only awards that cannot be farmed at all: a goal has
+    // three to five acts in its entire life, and exactly one ending.
+    case 'breach.cleared':     return 300
+    case 'uplink.complete':    return 500
     case 'tool.tier':          return 50
     // Life support pays a fraction of the cheapest routine (8) on purpose. It
     // should register, and it must never become the efficient way to level.

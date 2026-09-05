@@ -676,11 +676,14 @@ function TodayQuests() {
   const tick = (task: Task) => {
     if (task.taskType === 'habit') {
       if (habitDoneToday(task)) return
-      const { gained, levelUp } = trackFromList(task.id)
+      const { gained, levelUp, integrated } = trackFromList(task.id)
       setTasks(loadScrap7().tasks)
-      if (levelUp)     { setFlash(t(`LEVEL ${levelUp}`, `УРОВЕНЬ ${levelUp}`)); playCue('level') }
-      else if (gained) { setFlash(`+${gained} XP`); playCue('xp') }
-      else             playCue('check')
+      // Naming what was earned beats naming what was paid. Crossing 0.70 is the
+      // one moment where the number is the least interesting part.
+      if (levelUp)        { setFlash(t(`LEVEL ${levelUp}`, `УРОВЕНЬ ${levelUp}`)); playCue('level') }
+      else if (integrated){ setFlash(t('✦ INTEGRATED · SLOT FREED', '✦ ОСВОЕНО · СЛОТ СВОБОДЕН')); playCue('level') }
+      else if (gained)    { setFlash(`+${gained} XP`); playCue('xp') }
+      else                playCue('check')
       return
     }
     // Un-checking is the same gesture undone, so it gets the lighter cue — and

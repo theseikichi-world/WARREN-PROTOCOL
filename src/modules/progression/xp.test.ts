@@ -19,8 +19,8 @@ describe('xp awards', () => {
   })
 
   it('applies the fuel multiplier on top', () => {
-    expect(awardXp({ kind: 'breach.cleared' }, 'primary', 1.2)).toBe(240)
-    expect(awardXp({ kind: 'breach.cleared' }, 'primary', 0.8)).toBe(160)
+    expect(awardXp({ kind: 'breach.cleared' }, 'primary', 1.2)).toBe(360)
+    expect(awardXp({ kind: 'breach.cleared' }, 'primary', 0.8)).toBe(240)
   })
 })
 

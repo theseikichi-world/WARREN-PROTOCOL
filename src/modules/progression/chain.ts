@@ -78,6 +78,15 @@ export interface ChapterState {
 /**
  * A chapter is gated on ALL of its routines reaching the threshold — no node
  * count, because a hand-written chapter is exactly as long as the goal needs.
+ *
+ * WHEN THERE IS A BREACH, THE BREACH DECIDES. That is the entire reason an act
+ * ends on a real external event rather than on a number: the routines are the
+ * preparation, the event is the verdict. Requiring both meant an operator who
+ * sat the exam and passed it stayed stuck in act one because a mock-test habit
+ * was at 0.4 — the app refusing to believe something that actually happened.
+ *
+ * `breachReady` still says whether the preparation is done, because that is
+ * worth knowing before you walk in. It is no longer a gate.
  */
 export function chapterState(chapter: Chapter, goal: Goal, tasks: Task[]): ChapterState {
   const nodes    = chapter.nodeIds.map(id => goal.nodes.find(n => n.id === id)).filter((n): n is ChainNode => !!n)
@@ -91,9 +100,13 @@ export function chapterState(chapter: Chapter, goal: Goal, tasks: Task[]): Chapt
     atThreshold,
     minScore,
     breachReady,
-    complete:    breachReady && (chapter.boss ? chapter.boss.completedAt !== null : true),
+    complete:    chapter.boss ? chapter.boss.completedAt !== null : breachReady,
   }
 }
+
+/** Every chapter done. What makes a goal finishable at all. */
+export const goalComplete = (goal: Goal, tasks: Task[]): boolean =>
+  goal.chapters.length > 0 && goal.chapters.every(c => chapterState(c, goal, tasks).complete)
 
 /** The chapter you're actually working in — the first one not yet complete. */
 export function activeChapter(goal: Goal, tasks: Task[]): Chapter | null {

@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { t as tr } from '../../i18n'
+import { t as tr, plural } from '../../i18n'
 import {
   loadProgression, saveProgression, seedIfEmpty, syncChain, installNode, recordRun, syncQuests,
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
   cooldownRemaining, promoteSecondary, assignPrimary, assignSecondary, archiveGoal,
-  trainingCount, hasCapacity, commitDraft,
+  trainingCount, hasCapacity, commitDraft, clearBreach,
 } from './store'
 import { SkillTree } from './SkillTree'
 import { ShelfPanel } from './ShelfPanel'
@@ -111,6 +111,26 @@ export default function Uplinks() {
     flash(tr('◆ ROUTINE INSTALLED', '◆ РУТИНА УСТАНОВЛЕНА'))
   }, [state])
 
+  /**
+   * The act's real-world event happened.
+   *
+   * The largest single award in the game, and the only one that comes from
+   * outside the app — everything else is the app watching itself. Clearing the
+   * last chapter finishes the uplink, which until now nothing could do.
+   */
+  const handleClearBreach = useCallback((goalId: string, chapterIndex: number) => {
+    const reward = clearBreach(state, goalId, chapterIndex, tasks)
+    if (reward.gained === 0 && !reward.goalDone) return
+    saveProgression(reward.state)
+    setState(reward.state)
+    playCue('level')
+    if (reward.goalDone)      flash(tr('✦ UPLINK COMPLETE', '✦ КАНАЛ ЗАВЕРШЁН'))
+    else if (reward.levelUp)  flash(tr(`LEVEL ${reward.levelUp}`, `УРОВЕНЬ ${reward.levelUp}`))
+    else                      flash(tr(`⚑ BREACH CLEARED · +${reward.gained} XP`,
+                                       `⚑ ПРОРЫВ ПРОЙДЕН · +${reward.gained} XP`))
+    window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'uplinks' } }))
+  }, [state, tasks])
+
   const handleTrack = useCallback((taskId: string) => {
     const s7     = loadScrap7()
     const before = s7.tasks.find(t => t.id === taskId)?.score ?? 0
@@ -121,7 +141,9 @@ export default function Uplinks() {
     setState(prev => {
       const reward = recordRun(prev, taskId, before, after)
       saveProgression(reward.state)
+      const integrated = reward.events.some(e => e.kind === 'routine.integrated')
       if (reward.levelUp) flash(tr(`LEVEL ${reward.levelUp}`, `УРОВЕНЬ ${reward.levelUp}`))
+      else if (integrated) flash(tr('✦ INTEGRATED · SLOT FREED', '✦ ОСВОЕНО · СЛОТ СВОБОДЕН'))
       else if (reward.gained) flash(`+${reward.gained} XP`)
       return reward.state
     })
@@ -151,7 +173,11 @@ export default function Uplinks() {
 
   const primary   = primaryGoal(state)
   const secondary = secondaryGoal(state)
+  // A goal that ended and a goal that was put down both sit in 'archived'.
+  // Only one of them is an achievement.
   const archived  = archivedGoals(state)
+  const completed = archived.filter(g => g.completedAt)
+  const frozen    = archived.filter(g => !g.completedAt)
   const cooldown  = cooldownRemaining(state, now)
   /** The two tabs that show a protocol. DREAMS and CHARACTER own their own body. */
   const isSlotView = view === 'primary' || view === 'secondary'
@@ -239,7 +265,8 @@ export default function Uplinks() {
         {isSlotView && shown ? (
           <>
             <SkillTree goal={shown} tasks={tasks} accent={accent}
-              onInstall={handleInstall} onTrack={handleTrack} />
+              onInstall={handleInstall} onTrack={handleTrack}
+              onClearBreach={i => handleClearBreach(shown.id, i)} />
 
             {/* A protocol holds routines and nothing else. The bookings, the
                 gear, the basics and the datable proofs the read found live
@@ -274,13 +301,41 @@ export default function Uplinks() {
         ) : null}
 
         {/* Frozen goals — recoverable, never deleted */}
-        {archived.length > 0 && (
+        {/* FINISHED — kept, and kept apart.
+            A completed uplink released its bandwidth exactly as a frozen one
+            does, so listing them together said the same thing about a goal you
+            saw through and a goal you walked away from. There is no ALLOCATE
+            here: every act is cleared, and there is nothing left to run. */}
+        {completed.length > 0 && (
+          <>
+            <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, color: GOLD,
+              letterSpacing: '0.2em', margin: '18px 0 7px' }}>
+              {tr('COMPLETE', 'ЗАВЕРШЕНО')} · {completed.length}
+            </p>
+            {completed.map(g => (
+              <div key={g.id} style={{ marginBottom: 5, padding: '9px 11px', borderRadius: 8,
+                background: `${GOLD}0c`, border: `1px solid ${GOLD}2e`,
+                display: 'flex', alignItems: 'center', gap: 9 }}>
+                <span style={{ fontSize: 12, flexShrink: 0, color: GOLD }}>✦</span>
+                <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 12,
+                  fontWeight: 800, color: GOLD }}>{g.title}</span>
+                <span style={{ fontFamily: 'var(--font)', fontSize: 10, letterSpacing: '0.1em',
+                  color: `${GOLD}99`, flexShrink: 0 }}>
+                  {g.chapters.length} {tr('acts', plural(g.chapters.length, 'акт', 'акта', 'актов'))}
+                  {' · '}{g.completedAt!.slice(0, 10)}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
+
+        {frozen.length > 0 && (
           <>
             <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, color: DIM,
               letterSpacing: '0.2em', margin: '18px 0 7px' }}>
-              {tr('FROZEN', 'ЗАМОРОЖЕНО')} · {archived.length}
+              {tr('FROZEN', 'ЗАМОРОЖЕНО')} · {frozen.length}
             </p>
-            {archived.map(g => (
+            {frozen.map(g => (
               <div key={g.id} style={{ marginBottom: 5, padding: '9px 11px', borderRadius: 8,
                 background: 'rgba(13,24,48,0.4)', border: '1px solid rgba(255,255,255,0.06)',
                 display: 'flex', alignItems: 'center', gap: 9 }}>

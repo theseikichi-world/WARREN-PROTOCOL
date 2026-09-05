@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { t as tr } from '../../i18n'
 import { getHabitTier, type Task } from '../scrap7/types'
-import { nodeScore, unlockRequirements, nodeState, type NodeState } from './chain'
+import { nodeScore, unlockRequirements, nodeState, chapterState, type NodeState } from './chain'
 import { layoutTree, fitScale, NODE_W, NODE_H, BAND_HEAD, type Placed } from './layout'
 import { TIER_META, estimateDays, THRESHOLD_UNLOCK_AT, type ChainNode, type Goal } from './types'
 import { bandColor, countdown, scheduleLine } from './deadline'
@@ -19,12 +19,14 @@ const STATE_GLYPH: Record<NodeState, string> = {
   locked: '🔒', available: '◈', training: '◆', integrated: '✦',
 }
 
-export function SkillTree({ goal, tasks, accent, onInstall, onTrack }: {
+export function SkillTree({ goal, tasks, accent, onInstall, onTrack, onClearBreach }: {
   goal:      Goal
   tasks:     Task[]
   accent:    string
   onInstall: (nodeId: string) => void
   onTrack:   (taskId: string) => void
+  /** The act's real-world event happened. See `clearBreach`. */
+  onClearBreach: (chapterIndex: number) => void
 }) {
   const [selected, setSelected] = useState<string | null>(null)
   // The live tree draws its acts as bands too — the forge and the thing it
@@ -114,7 +116,7 @@ export function SkillTree({ goal, tasks, accent, onInstall, onTrack }: {
           to fit, and a schedule warning rendered at 0.6x is a warning nobody
           reads. This is also the first place an ACT is legible as a thing — the
           band labels name them, but the middle layer was never on screen. */}
-      <Schedule goal={goal} tasks={tasks} accent={accent} />
+      <Breaches goal={goal} tasks={tasks} accent={accent} onClear={onClearBreach} />
 
       {/* Detail panel — the perk description, only when you ask for it */}
       {sel && (
@@ -132,50 +134,96 @@ export function SkillTree({ goal, tasks, accent, onInstall, onTrack }: {
 }
 
 /**
- * Every chapter that carries a date, and whether its routines project to arrive
- * before it. Silent when no breach has a date — most don't, and an empty
- * "SCHEDULE" heading would just be furniture.
+ * THE BREACHES — every act that ends on a real external event.
+ *
+ * This used to list only the DATED ones, which quietly hid the middle layer of
+ * the whole system: most breaches carry no date, so most goals showed no acts
+ * at all, and the only thing on screen was a grid of routines. An act is the
+ * unit a goal is actually made of, so all of them are here.
+ *
+ * Each row carries the three things that decide what to do next — is the
+ * preparation done, how long is left, and what will not be ready in time — and
+ * the one action that was missing from the app entirely.
  *
  * It reports; it never blocks. A routine that cannot mature in time is still
  * installed, still trained and still worth XP: which one to drop, and whether to
  * move the date instead, is a judgement about the goal.
  */
-function Schedule({ goal, tasks, accent }: { goal: Goal; tasks: Task[]; accent: string }) {
-  const dated = goal.chapters.filter(c => c.boss?.due)
-  if (dated.length === 0) return null
+function Breaches({ goal, tasks, accent, onClear }: {
+  goal:    Goal
+  tasks:   Task[]
+  accent:  string
+  onClear: (chapterIndex: number) => void
+}) {
+  const withBoss = goal.chapters.filter(c => c.boss)
+  if (withBoss.length === 0) return null
 
   return (
     <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {dated.map(c => {
-        const count = countdown(c.boss!.due!)
-        const late  = scheduleLine(c, goal, tasks)
-        const cleared = c.boss!.completedAt !== null
-        const color = cleared ? GOLD : count ? bandColor(count.band) : DIM
+      {withBoss.map(c => {
+        const boss    = c.boss!
+        const cleared = boss.completedAt !== null
+        const count   = boss.due ? countdown(boss.due) : null
+        const late    = scheduleLine(c, goal, tasks)
+        const st      = chapterState(c, goal, tasks)
+        const color   = cleared ? GOLD : count ? bandColor(count.band) : DIM
 
         return (
           <div key={c.index} style={{ padding: '7px 9px', borderRadius: 8,
-            background: 'rgba(8,16,28,0.45)', border: `1px solid ${color}2e` }}>
+            background: cleared ? `${GOLD}0c` : 'rgba(8,16,28,0.45)',
+            border: `1px solid ${color}2e` }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
               <span style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
                 letterSpacing: '0.16em', color: `${accent}85`, flexShrink: 0 }}>
                 {String(c.index).padStart(2, '0')}
               </span>
               <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 700,
-                color: 'rgba(230,242,255,0.88)', flex: 1, minWidth: 0,
+                color: cleared ? GOLD : 'rgba(230,242,255,0.88)', flex: 1, minWidth: 0,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                ⚑ {c.boss!.title}
+                ⚑ {boss.title}
               </span>
-              <span style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
-                letterSpacing: '0.1em', color, flexShrink: 0 }}>
-                {cleared ? tr('CLEARED', 'ПРОЙДЕН') : tr(count?.en ?? '', count?.ru ?? '')}
-              </span>
+              {count && !cleared && (
+                <span style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
+                  letterSpacing: '0.1em', color, flexShrink: 0 }}>
+                  {tr(count.en, count.ru)}
+                </span>
+              )}
             </div>
-            {/* A cleared breach has no schedule left to miss. */}
-            {!cleared && late && (
-              <p style={{ fontFamily: 'var(--font)', fontSize: 10, lineHeight: 1.55,
-                color: 'rgba(148,163,184,0.7)', margin: '5px 0 0' }}>
-                ⚠ {tr(late.en, late.ru)}
+
+            {/* A cleared breach has no schedule left to miss and nothing left to
+                prepare — it says what happened and when, and stops. */}
+            {cleared ? (
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10, letterSpacing: '0.1em',
+                color: GOLD, margin: '5px 0 0' }}>
+                ✦ {tr('CLEARED', 'ПРОЙДЕН')} · {boss.completedAt!.slice(0, 10)}
               </p>
+            ) : (
+              <>
+                {late && (
+                  <p style={{ fontFamily: 'var(--font)', fontSize: 10, lineHeight: 1.55,
+                    color: 'rgba(148,163,184,0.7)', margin: '5px 0 0' }}>
+                    ⚠ {tr(late.en, late.ru)}
+                  </p>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 6 }}>
+                  {/* Readiness informs, it does not gate — see `clearBreach`. */}
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 9.5, letterSpacing: '0.08em',
+                    color: st.breachReady ? accent : 'rgba(148,163,184,0.55)', flex: 1, minWidth: 0 }}>
+                    {st.breachReady
+                      ? tr('PREPARED', 'ПОДГОТОВЛЕН')
+                      : tr(`${st.atThreshold}/${st.total} routines at ${st.minScore.toFixed(2)}`,
+                           `${st.atThreshold}/${st.total} рутин на ${st.minScore.toFixed(2)}`)}
+                  </span>
+                  <button onClick={() => onClear(c.index)}
+                    title={tr('mark this event as having happened', 'отметить, что событие состоялось')}
+                    style={{ fontFamily: 'var(--font)', fontSize: 9.5, fontWeight: 800,
+                      letterSpacing: '0.14em', padding: '4px 10px', borderRadius: 5,
+                      cursor: 'pointer', flexShrink: 0, color: GOLD,
+                      background: `${GOLD}12`, border: `1px solid ${GOLD}45` }}>
+                    {tr('IT HAPPENED', 'ЭТО СЛУЧИЛОСЬ')}
+                  </button>
+                </div>
+              </>
             )}
           </div>
         )

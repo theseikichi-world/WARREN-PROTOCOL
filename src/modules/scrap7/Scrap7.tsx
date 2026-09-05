@@ -761,11 +761,12 @@ export default function Scrap7() {
   const checkOff = (t: Task) => {
     if (t.taskType === 'habit') {
       if (isDone(t)) return                     // a dose already met is not undone here
-      const { gained, levelUp } = trackFromList(t.id)
+      const { gained, levelUp, integrated } = trackFromList(t.id)
       setState(loadState())
-      if (levelUp)      { setFlashMsg(tr(`LEVEL ${levelUp}`, `УРОВЕНЬ ${levelUp}`)); playCue('level') }
-      else if (gained)  { setFlashMsg(`+${gained} XP`); playCue('xp') }
-      else              playCue('check')
+      if (levelUp)        { setFlashMsg(tr(`LEVEL ${levelUp}`, `УРОВЕНЬ ${levelUp}`)); playCue('level') }
+      else if (integrated){ setFlashMsg(tr('✦ INTEGRATED · SLOT FREED', '✦ ОСВОЕНО · СЛОТ СВОБОДЕН')); playCue('level') }
+      else if (gained)    { setFlashMsg(`+${gained} XP`); playCue('xp') }
+      else                playCue('check')
       return
     }
     // Un-checking is the same gesture undone, so it gets the lighter cue — and
