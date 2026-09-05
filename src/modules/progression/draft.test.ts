@@ -216,3 +216,36 @@ describe('templates', () => {
     expect(g.nodes[0].id).toBe(nodeId('goal-mine', t.nodes[0].key))
   })
 })
+
+describe('a breach with a date', () => {
+  const dated = (boss: string | null, due: string | null): ChainDraft =>
+    draft([node('a')], { chapters: [{ title: 'One', keys: ['a'], boss, due }] })
+
+  it('stores the date on the milestone', () => {
+    const goal = draftToGoal(dated('The exam', '2026-06-12'), [])
+    expect(goal.chapters[0].boss).toMatchObject({ title: 'The exam', due: '2026-06-12' })
+  })
+
+  it('drops a half-typed one, so a stored date is always a real day', () => {
+    const goal = draftToGoal(dated('The exam', '2026-06'), [])
+    expect(goal.chapters[0].boss?.due).toBeUndefined()
+  })
+
+  it('keeps no date without an event — a deadline for nothing is nothing', () => {
+    const goal = draftToGoal(dated(null, '2026-06-12'), [])
+    expect(goal.chapters[0].boss).toBeNull()
+  })
+
+  it('survives the round trip back into the forge', () => {
+    const goal = draftToGoal(dated('The exam', '2026-06-12'), [])
+    expect(goalToDraft(goal).chapters[0].due).toBe('2026-06-12')
+  })
+
+  it('lets the date move without un-clearing an event that happened', () => {
+    const goal = draftToGoal(dated('The exam', '2026-06-12'), [])
+    const sat  = { ...goal, chapters: [{ ...goal.chapters[0],
+      boss: { ...goal.chapters[0].boss!, completedAt: '2026-06-12T09:00:00Z' } }] }
+    const moved = applyDraft(sat, dated('The exam', '2026-07-01')).goal
+    expect(moved.chapters[0].boss).toMatchObject({ due: '2026-07-01', completedAt: '2026-06-12T09:00:00Z' })
+  })
+})

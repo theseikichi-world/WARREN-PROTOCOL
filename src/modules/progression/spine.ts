@@ -28,6 +28,7 @@ import type { Goal, NodeTier } from './types'
 import { TIER_META, PRIMARY_MAX_NODES } from './types'
 import { blankDraft, slugify, uniqueKey, type ChainDraft, type DraftNode } from './draft'
 import { parseAnchor } from './anchor'
+import { isDueDate } from './deadline'
 import { matchShape, shapeBrief } from './shapes'
 
 export const SPINE_TASK_ID = 'uplink.protocol'
@@ -53,6 +54,12 @@ export interface SpineAct {
   intent:   string
   /** A real, datable, external event, or nothing. Score states are not bosses. */
   boss:     string | null
+  /**
+   * The date that event lands on, `YYYY-MM-DD`, when the dream actually names
+   * one. Never inferred: "in June" is a month, and a made-up 15th would be a
+   * fact the operator never supplied.
+   */
+  due:      string | null
 }
 
 export interface Candidate {
@@ -140,7 +147,7 @@ Respond with ONLY a valid JSON object — no markdown, no code fences, no explan
   "category": "one word naming the life area — inferred from the dream, never asked",
   "acts": [
     { "key": "fluency", "title": "Act name (2-4 words)", "pressure": "critical",
-      "intent": "one line: what finishing this act buys", "boss": "A self-tape shot and submitted" }
+      "intent": "one line: what finishing this act buys", "boss": "A self-tape shot and submitted", "due": null }
   ],
   "shelf": [
     { "key": "shadow", "kind": "routine", "act": "fluency", "title": "Shadow one English scene",
@@ -156,6 +163,7 @@ ACTS — 3 to 5, in order.
 - "key": short lowercase ascii slug, unique.
 - "pressure": EXACTLY ONE act is "critical" — the bottleneck the verdict named. That is where this dream is actually won. The rest are "high" or "medium". Do not mark everything critical; a spine where every act is urgent says nothing.
 - "boss": a real, datable, EXTERNAL event that ends the act, or null. A score state dressed as an event is not a boss. Most acts have none; the last one usually does.
+- "due": "YYYY-MM-DD" ONLY when the dream itself names a date you can resolve to a single day. A month ("in June") or a season is NOT a date — return null. Never invent one: the operator can type it, and a guessed deadline is a fact nobody supplied.
 - Acts run in order: act 1 is what the operator starts this week, the last act is the dream arriving.
 
 SHELF — 8 to 16 items.
@@ -267,7 +275,7 @@ Respond with ONLY a valid JSON object — no markdown, no code fences, no explan
 
 // ─── Normalising an untrusted read ────────────────────────────────────────────
 
-interface RawAct { key?: unknown; title?: unknown; pressure?: unknown; intent?: unknown; boss?: unknown }
+interface RawAct { key?: unknown; title?: unknown; pressure?: unknown; intent?: unknown; boss?: unknown; due?: unknown }
 interface RawCandidate {
   key?: unknown; kind?: unknown; act?: unknown; title?: unknown; why?: unknown
   cue?: unknown; tier?: unknown; ladder?: unknown; after?: unknown; tool?: unknown; repeats?: unknown
@@ -326,11 +334,13 @@ export function normalizeRead(raw: RawRead, dream: { id?: string; title: string 
       pressure: asPressure(a.pressure),
       intent:   str(a.intent),
       boss:     str(a.boss) || null,
+      // A date with no event is a date for nothing, so it travels with the boss.
+      due:      str(a.boss) && isDueDate(str(a.due)) ? str(a.due) : null,
     }
   })
 
   if (acts.length === 0) {
-    acts.push({ key: 'act-1', title: 'Act 1', pressure: 'critical', intent: '', boss: null })
+    acts.push({ key: 'act-1', title: 'Act 1', pressure: 'critical', intent: '', boss: null, due: null })
     actKeys.push('act-1')
   }
 
@@ -442,6 +452,7 @@ export function readToDraft(
     title:   a.title,
     keys:    i === 0 ? nodes.map(n => n.key) : [],
     boss:    a.boss,
+    due:     a.due,
     planned: i !== 0,
   }))
 
@@ -480,6 +491,7 @@ export function readFromAnalysis(
       pressure: pressureOf(m.priority),
       intent:   m.description,
       boss:     null,
+      due:      null,
     })),
     shelf: a.missions.flatMap(m => m.tasks.map(t => ({
       key:     t.text,

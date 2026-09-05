@@ -8,6 +8,7 @@ import {
 } from './draft'
 import { GRANTABLE_TOOLS } from './spine'
 import { PERIODS, PERIOD_LABEL } from './anchor'
+import { bandColor, bandOf, countdown, daysUntil } from './deadline'
 import { loadState as loadScrap7 } from '../scrap7/store'
 
 // ─── THE FORGE — nothing commits until you've read every node ─────────────────
@@ -285,6 +286,21 @@ export function ChainForge({ draft: initial, installedKeys, accent, busy, onComm
               <input value={chapter.boss ?? ''} onChange={e => patchChapter(ci, { boss: e.target.value || null })}
                 placeholder={tr('e.g. A self-tape shot and submitted', 'напр. Самопроба снята и отправлена')}
                 style={field} />
+              {/* The date appears only once the event does. An empty breach with
+                  a deadline is a date for nothing, and the store drops it anyway. */}
+              {chapter.boss?.trim() && (
+                <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="date" value={chapter.due ?? ''}
+                    onChange={e => patchChapter(ci, { due: e.target.value || null })}
+                    style={{ ...field, width: 148, flex: '0 0 auto', colorScheme: 'dark' }} />
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 10, letterSpacing: '0.08em',
+                    color: chapter.due ? bandColor(bandOf(daysUntil(chapter.due) ?? 0)) : DIM }}>
+                    {chapter.due
+                      ? tr(countdown(chapter.due)?.en ?? '', countdown(chapter.due)?.ru ?? '')
+                      : tr('NO DATE — the schedule check needs one', 'БЕЗ ДАТЫ — без неё нечего сверять')}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>

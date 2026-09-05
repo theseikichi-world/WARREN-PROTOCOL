@@ -4,6 +4,7 @@ import { getHabitTier, type Task } from '../scrap7/types'
 import { nodeScore, unlockRequirements, nodeState, type NodeState } from './chain'
 import { layoutTree, fitScale, NODE_W, NODE_H, BAND_HEAD, type Placed } from './layout'
 import { TIER_META, estimateDays, THRESHOLD_UNLOCK_AT, type ChainNode, type Goal } from './types'
+import { bandColor, countdown, scheduleLine } from './deadline'
 
 const DIM  = 'rgba(148,163,184,0.55)'
 const GOLD = '#ffd700'
@@ -109,6 +110,12 @@ export function SkillTree({ goal, tasks, accent, onInstall, onTrack }: {
         </div>
       </div>
 
+      {/* Dated breaches. Outside the scaled diagram on purpose: the tree shrinks
+          to fit, and a schedule warning rendered at 0.6x is a warning nobody
+          reads. This is also the first place an ACT is legible as a thing — the
+          band labels name them, but the middle layer was never on screen. */}
+      <Schedule goal={goal} tasks={tasks} accent={accent} />
+
       {/* Detail panel — the perk description, only when you ask for it */}
       {sel && (
         <NodeDetail node={sel} goal={goal} tasks={tasks} accent={accent} frozen={frozen}
@@ -120,6 +127,59 @@ export function SkillTree({ goal, tasks, accent, onInstall, onTrack }: {
           {tr('select a node', 'выберите узел')}
         </p>
       )}
+    </div>
+  )
+}
+
+/**
+ * Every chapter that carries a date, and whether its routines project to arrive
+ * before it. Silent when no breach has a date — most don't, and an empty
+ * "SCHEDULE" heading would just be furniture.
+ *
+ * It reports; it never blocks. A routine that cannot mature in time is still
+ * installed, still trained and still worth XP: which one to drop, and whether to
+ * move the date instead, is a judgement about the goal.
+ */
+function Schedule({ goal, tasks, accent }: { goal: Goal; tasks: Task[]; accent: string }) {
+  const dated = goal.chapters.filter(c => c.boss?.due)
+  if (dated.length === 0) return null
+
+  return (
+    <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {dated.map(c => {
+        const count = countdown(c.boss!.due!)
+        const late  = scheduleLine(c, goal, tasks)
+        const cleared = c.boss!.completedAt !== null
+        const color = cleared ? GOLD : count ? bandColor(count.band) : DIM
+
+        return (
+          <div key={c.index} style={{ padding: '7px 9px', borderRadius: 8,
+            background: 'rgba(8,16,28,0.45)', border: `1px solid ${color}2e` }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
+                letterSpacing: '0.16em', color: `${accent}85`, flexShrink: 0 }}>
+                {String(c.index).padStart(2, '0')}
+              </span>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 11, fontWeight: 700,
+                color: 'rgba(230,242,255,0.88)', flex: 1, minWidth: 0,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                ⚑ {c.boss!.title}
+              </span>
+              <span style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800,
+                letterSpacing: '0.1em', color, flexShrink: 0 }}>
+                {cleared ? tr('CLEARED', 'ПРОЙДЕН') : tr(count?.en ?? '', count?.ru ?? '')}
+              </span>
+            </div>
+            {/* A cleared breach has no schedule left to miss. */}
+            {!cleared && late && (
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10, lineHeight: 1.55,
+                color: 'rgba(148,163,184,0.7)', margin: '5px 0 0' }}>
+                ⚠ {tr(late.en, late.ru)}
+              </p>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

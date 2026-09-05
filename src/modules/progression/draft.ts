@@ -16,6 +16,7 @@
 import type { ChainNode, Chapter, Goal, NodeTier } from './types'
 import { DEFAULT_UNLOCKS_AT } from './types'
 import { anchorLabel, type RoutineAnchor } from './anchor'
+import { isDueDate } from './deadline'
 import { SEED_GOALS } from './seed'
 
 export interface DraftNode {
@@ -40,6 +41,8 @@ export interface DraftChapter {
   key?:  string
   /** A real, datable, external event, or nothing. Score states are not bosses. */
   boss:  string | null
+  /** The day it lands on, `YYYY-MM-DD`. Null until someone knows it. */
+  due?:  string | null
   /** Named but not yet filled — see `Chapter.planned`. Never true once it has keys. */
   planned?: boolean
 }
@@ -105,7 +108,7 @@ export function blankNode(title = '', taken: Iterable<string> = []): DraftNode {
 export function blankDraft(title = ''): ChainDraft {
   return {
     goalId: null, title, nodes: [], sourceDreamId: null, note: '',
-    chapters: [{ title: 'Chapter 1', keys: [], boss: null }],
+    chapters: [{ title: 'Chapter 1', keys: [], boss: null, due: null }],
   }
 }
 
@@ -133,6 +136,7 @@ export function goalToDraft(goal: Goal): ChainDraft {
       title:   c.title,
       keys:    c.nodeIds.map(keyOf),
       boss:    c.boss?.title ?? null,
+      due:     c.boss?.due ?? null,
       planned: c.planned === true,
       ...(c.key ? { key: c.key } : {}),
     })),
@@ -296,6 +300,9 @@ function draftChapters(draft: ChainDraft, goalId: string, prior: Chapter[]): Cha
             // The event either happened or it didn't; renaming the chapter
             // doesn't un-happen it, but a different event has not been cleared.
             completedAt: wasBoss?.title === c.boss.trim() ? wasBoss.completedAt : null,
+            // A half-typed date is dropped rather than stored — everything
+            // downstream may then assume a stored date is a real day.
+            ...(isDueDate(c.due) ? { due: c.due } : {}),
           }
         : null,
     }

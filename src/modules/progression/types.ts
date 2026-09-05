@@ -65,6 +65,15 @@ export interface Milestone {
   title:       string
   requirement: { minScore: number }
   completedAt: string | null
+  /**
+   * When it happens, as `YYYY-MM-DD`. Absent whenever the date isn't known —
+   * most breaches don't have one, and a guessed date is worse than none.
+   *
+   * It gates NOTHING. Its whole job is to let `deadline.ts` compare the days
+   * left against how long the chapter's routines project to automate, which is
+   * the one question a tree of scores could never answer on its own.
+   */
+  due?:        string | null
 }
 
 export interface Chapter {
