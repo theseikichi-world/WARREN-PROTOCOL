@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   normalizeRead, normalizeLayer, normalizeInterview, interviewBrief,
-  readToDraft, dreamBrief, goalBrief, routineCandidates,
+  readToDraft, dreamBrief, goalBrief, routineCandidates, mergeLayer,
+  type Candidate, type DreamRead,
 } from './spine'
 import { validateDraft, findCycles } from './draft'
 import type { Dream } from '../log/types'
@@ -327,5 +328,48 @@ describe('goalBrief', () => {
     expect(brief).toContain('shadow — Shadow a scene')
     expect(brief).toContain('automatism 0.42')
     expect(brief).toContain('not installed')      // a node with no habit says so
+  })
+})
+
+describe('deepening an act', () => {
+  const read = (shelf: Partial<Candidate>[]): DreamRead => normalizeRead({
+    verdict: 'v', title: 'T', category: 'c',
+    acts: [{ key: 'one', title: 'One', pressure: 'critical', intent: '', boss: null },
+           { key: 'two', title: 'Two', pressure: 'high', intent: '', boss: 'The exam' }],
+    shelf: shelf.map(c => ({ kind: 'routine', act: 'one', cue: 'after coffee', tier: 2,
+                             ladder: ['10 min'], after: [], ...c })),
+  }, { title: 'T' })
+
+  const layer = (keys: string[]): Candidate[] =>
+    normalizeLayer({ routines: keys.map(k => ({ key: k, title: k, cue: 'after coffee', tier: 2,
+                                                ladder: ['10 min'], after: [] })) }, 'two', [])
+
+  it('adds the act’s routines to the shelf the read already holds', () => {
+    const merged = mergeLayer(read([{ key: 'a', title: 'A' }]), layer(['b', 'c']))
+
+    expect(merged.shelf.map(c => c.key)).toEqual(['a', 'b', 'c'])
+    // They belong to the act that was deepened, which is what makes them
+    // deployable into its chapter — see `applyToGoal`.
+    expect(merged.shelf.filter(c => c.act === 'two')).toHaveLength(2)
+  })
+
+  it('leaves the opening act untouched', () => {
+    const before = read([{ key: 'a', title: 'A' }])
+    expect(mergeLayer(before, layer(['b'])).shelf[0]).toEqual(before.shelf[0])
+  })
+
+  it('does not shelve the same routine twice', () => {
+    // A second press must not counter-suffix a key: the key is permanent, and a
+    // duplicate would quietly claim a slot the first one already owns (rule 13).
+    const once  = mergeLayer(read([]), layer(['b', 'c']))
+    const twice = mergeLayer(once, layer(['b', 'c']))
+    expect(twice.shelf.map(c => c.key)).toEqual(['b', 'c'])
+    expect(twice).toBe(once)          // nothing changed, so nothing is rewritten
+  })
+
+  it('never reuses a key a live routine already holds', () => {
+    const taken = normalizeLayer({ routines: [{ key: 'reading', title: 'R', cue: 'x', tier: 2,
+                                               ladder: ['1'], after: [] }] }, 'two', ['reading'])
+    expect(taken[0].key).not.toBe('reading')
   })
 })

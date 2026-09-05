@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { t as tr } from '../../i18n'
-import { loadLogState } from '../log/store'
+import { loadLogState, saveLogState, setDreamRead } from '../log/store'
 import { loadProgression, saveProgression, syncChain } from './store'
 import {
-  PRESSURE_COLOR, PRESSURE_LABEL, KIND_LABEL, KIND_DEST,
+  PRESSURE_COLOR, PRESSURE_LABEL, KIND_LABEL, KIND_DEST, deepenAct, mergeLayer,
   type Candidate, type DreamRead,
 } from './spine'
 import { shelfContext, deployState, applyToGoal, deployToDay, blockText } from './shelf'
 import type { Goal } from './types'
+import { activeChapter, nodeScore } from './chain'
+import { loadState as loadScrap7 } from '../scrap7/store'
+import { loadSettings } from '../../settings'
 
 // ─── THE SHELF — everything the read found, in the place the goal lives ───────
 // This used to be a second panel on the dream card, behind a second button. The
@@ -109,11 +112,54 @@ export function ShelfPanel({ goal, accent, onChanged }: {
   onChanged: () => void
 }) {
   const [tick, setTick] = useState(0)
+  /** The act key currently being written, so only its own row shows the wait. */
+  const [deepening, setDeepening] = useState<string | null>(null)
+  const [error, setError] = useState('')
   const found = readForGoal(goal)
   if (!found) return null
   const { read, dreamId, dreamTitle } = found
 
   const ctx = shelfContext(dreamId, goal)
+
+  // The act you are actually in. A later one is deliberately not offered: its
+  // routines are work that cannot be started, which is the whole reason the
+  // spine names every act up front and fills only the opening one.
+  //
+  // This is also the first consumer `activeChapter` has ever had. It could not
+  // usefully have one before: a chapter carrying a breach could never complete,
+  // so it never moved off chapter 1 (see `clearBreach`).
+  const tasks   = loadScrap7().tasks
+  const current = activeChapter(goal, tasks)
+
+  /**
+   * Write one act's routines, against the scores the operator actually has.
+   *
+   * Nothing is installed. The layer lands on this shelf and waits to be deployed
+   * one routine at a time, exactly as the opening act's did.
+   */
+  const deepen = async (actKey: string) => {
+    const act = read.acts.find(a => a.key === actKey)
+    if (!act || deepening) return
+    setError('')
+    setDeepening(actKey)
+    try {
+      const layer = await deepenAct(goal, act, id => {
+        const node = goal.nodes.find(n => n.id === id)
+        return node ? nodeScore(node, tasks) : 0
+      })
+      if (layer.length === 0) throw new Error('empty layer')
+      const log = loadLogState()
+      saveLogState(setDreamRead(log, dreamId, mergeLayer(read, layer)))
+      window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'shelf' } }))
+      setTick(t => t + 1)
+      onChanged()
+    } catch {
+      setError(tr('The guide could not write this act. Its routines are yours to write in EDIT.',
+                  'Проводник не смог написать акт. Рутины можно вписать самому в EDIT.'))
+    } finally {
+      setDeepening(null)
+    }
+  }
 
   const deploy = (c: Candidate) => {
     if (c.kind === 'routine' || c.kind === 'proof') {
@@ -134,7 +180,8 @@ export function ShelfPanel({ goal, accent, onChanged }: {
     onChanged()
   }
 
-  const open = read.shelf.filter(c => deployState(c, ctx).kind === 'ready').length
+  const open   = read.shelf.filter(c => deployState(c, ctx).kind === 'ready').length
+  const hasKey = !!loadSettings().aiApiKey
 
   return (
     <div key={tick} style={{ marginTop: 14 }}>
@@ -205,12 +252,17 @@ export function ShelfPanel({ goal, accent, onChanged }: {
               )}
 
               <div style={{ padding: '2px 10px 6px' }}>
+                {/* An act with an empty shelf used to say only "written when
+                    you reach it" — and then, having reached it, you found the
+                    same sentence, because nothing in the app could write it. */}
                 {mine.length === 0 && (
-                  <p style={{ fontFamily: 'var(--font)', fontSize: 11, padding: '6px 0',
-                    color: 'rgba(148,163,184,0.35)', letterSpacing: '0.06em' }}>
-                    ⊘ {tr('nothing to deploy yet — this act is written when you reach it',
-                          'пока нечего разворачивать — акт пишется, когда вы дойдёте')}
-                  </p>
+                  <ActGap
+                    reached={current?.key === act.key}
+                    busy={deepening === act.key}
+                    blocked={deepening !== null && deepening !== act.key}
+                    hasKey={hasKey}
+                    accent={accent}
+                    onDeepen={() => void deepen(act.key)} />
                 )}
                 {mine.map((c, i) => (
                   <ShelfRow key={c.key} c={c} deploy={states[i]} accent={accent}
@@ -221,6 +273,63 @@ export function ShelfPanel({ goal, accent, onChanged }: {
           )
         })}
       </div>
+
+      {error && (
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11, lineHeight: 1.6, marginTop: 8,
+          color: '#ff6b00' }}>{error}</p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * What an act with an empty shelf offers.
+ *
+ * Three different situations wore one sentence before this: the act you have
+ * reached and can now write, an act still ahead of you, and an act nobody can
+ * write because there is no key. Only the first is an action, and only the last
+ * is a wall — and a wall says what opens it (rule 30).
+ */
+function ActGap({ reached, busy, blocked, hasKey, accent, onDeepen }: {
+  reached:  boolean
+  busy:     boolean
+  blocked:  boolean
+  hasKey:   boolean
+  accent:   string
+  onDeepen: () => void
+}) {
+  const line = (text: string) => (
+    <p style={{ fontFamily: 'var(--font)', fontSize: 11, padding: '6px 0',
+      color: 'rgba(148,163,184,0.35)', letterSpacing: '0.06em' }}>{text}</p>
+  )
+
+  if (!reached) {
+    return line('\u2298 ' + tr('written when you reach it — clear the act before it first',
+                                'пишется, когда дойдёте — сначала закройте предыдущий акт'))
+  }
+  if (!hasKey) {
+    return line('\u2298 ' + tr('no guide key — write this act yourself in EDIT',
+                                'нет ключа проводника — впишите акт сами в EDIT'))
+  }
+
+  const off = busy || blocked
+  return (
+    <div style={{ padding: '6px 0', display: 'flex', alignItems: 'center', gap: 9 }}>
+      <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font)', fontSize: 11,
+        color: 'rgba(148,163,184,0.45)', letterSpacing: '0.05em' }}>
+        {busy
+          ? tr('writing it against your real scores...', 'пишем по вашим реальным показателям...')
+          : tr('you are here — this act has no routines yet', 'вы здесь — у акта ещё нет рутин')}
+      </span>
+      <button onClick={onDeepen} disabled={off}
+        style={{ fontFamily: 'var(--font)', fontSize: 10, fontWeight: 800, letterSpacing: '0.12em',
+          padding: '5px 11px', borderRadius: 6, flexShrink: 0,
+          cursor: off ? 'default' : 'pointer',
+          color: off ? 'rgba(148,163,184,0.35)' : accent,
+          background: off ? 'transparent' : accent + '12',
+          border: '1px solid ' + (off ? 'rgba(255,255,255,0.07)' : accent + '40') }}>
+        {busy ? tr('WRITING', 'ПИШЕМ') : tr('WRITE THIS ACT', 'НАПИСАТЬ АКТ')}
+      </button>
     </div>
   )
 }

@@ -596,6 +596,21 @@ export function normalizeLayer(raw: RawLayer, actKey: string, taken: Iterable<st
   return out
 }
 
+/**
+ * Fold a freshly deepened act's routines into the read they belong to.
+ *
+ * The shelf is the only way anything reaches a protocol, so a layer lands there
+ * rather than installing itself — deepening an act proposes work, it does not
+ * start it. Keys already on the shelf are skipped: pressing DEEPEN twice must
+ * not shelve the same routine again under a counted key, because that key would
+ * then be permanent (rule 13).
+ */
+export function mergeLayer(read: DreamRead, layer: Candidate[]): DreamRead {
+  const taken = new Set(read.shelf.map(c => c.key))
+  const fresh = layer.filter(c => !taken.has(c.key))
+  return fresh.length ? { ...read, shelf: [...read.shelf, ...fresh] } : read
+}
+
 /** What the operator is actually running, so a layer builds on it rather than beside it. */
 export function goalBrief(goal: Goal, scoreOf: (nodeId: string) => number): string {
   const keyOf = (id: string) => id.startsWith(`${goal.id}:`) ? id.slice(goal.id.length + 1) : id
