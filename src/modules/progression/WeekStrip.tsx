@@ -1,5 +1,6 @@
 import { thisWeekDates, weeklyDoneSet, calcStreak, firstActiveDate, todayKey, type Task } from '../scrap7/types'
 import { t as tr, plural } from '../../i18n'
+import { upkeep, nextUpkeep } from './xp'
 
 // ─── ON TRACK — the week behind you, on the hub ───────────────────────────────
 // This used to sit above ORBIT's task list, which was the wrong room: that
@@ -23,20 +24,42 @@ export function WeekStrip({ tasks }: { tasks: Task[] }) {
   const doneCnt   = weekDates.filter(d => doneSet.has(d)).length
   // Before your first tracked day there is nothing to have missed.
   const since     = firstActiveDate(tasks)
+  // What the streak is currently worth, and what the next band would pay. The
+  // number used to be decoration; it multiplies every award now — see `upkeep`.
+  const mult      = upkeep(streak)
+  const next      = nextUpkeep(streak)
+  const live      = streak > 0
 
   return (
     <div style={{ padding: '10px 13px', borderRadius: 10, marginBottom: 16,
       background: 'rgba(13,24,48,0.5)', border: '1px solid rgba(255,255,255,0.05)',
       display: 'flex', alignItems: 'center', gap: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, flexShrink: 0 }}>
         <span style={{ fontFamily: 'var(--font)', fontSize: 20, fontWeight: 900,
-          color: streak > 0 ? '#ff6b00' : 'rgba(148,163,184,0.3)',
-          textShadow: streak > 0 ? '0 0 12px #ff6b0070' : 'none', lineHeight: 1 }}>{streak}</span>
+          color: live ? '#ff6b00' : 'rgba(148,163,184,0.3)',
+          textShadow: live ? '0 0 12px #ff6b0070' : 'none', lineHeight: 1 }}>{streak}</span>
         <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
           color: 'rgba(148,163,184,0.35)', letterSpacing: '0.06em' }}>
-          {tr('day streak', `${plural(streak, 'день', 'дня', 'дней')} подряд`)}
+          {tr('UPTIME', `${plural(streak, 'день', 'дня', 'дней')} подряд`)}
         </span>
-        {streak > 0 && <span style={{ fontSize: 16.5 }}>🔥</span>}
+        {/* The bonus, or the one you are next in line for. At zero it says the
+            cheapest true thing: the multiplier is back to nothing, and three
+            days would change that. A streak with no consequence was decoration. */}
+        {mult > 1 ? (
+          <span title={tr('Multiplies everything you earn', 'Умножает всё, что вы зарабатываете')}
+            style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)', fontWeight: 800,
+              letterSpacing: '0.06em', color: '#ff6b00',
+              padding: '1px 5px', borderRadius: 3,
+              border: '1px solid rgba(255,107,0,0.35)', background: 'rgba(255,107,0,0.1)' }}>
+            ×{mult.toFixed(2)}
+          </span>
+        ) : next && (
+          <span className="weekstrip-count" style={{ fontFamily: 'var(--font)',
+            fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.3)', letterSpacing: '0.05em' }}>
+            ×1.00 · {next.days}{tr('d', 'д')} → ×{next.mult.toFixed(2)}
+          </span>
+        )}
+        {live && <span style={{ fontSize: 16.5 }}>🔥</span>}
       </div>
       {/* The seven cells share whatever is left rather than each demanding 24px.
           Fixed widths meant the row needed 192px come what may, and once the

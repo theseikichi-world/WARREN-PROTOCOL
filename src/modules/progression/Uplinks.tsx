@@ -5,7 +5,7 @@ import {
   loadProgression, saveProgression, seedIfEmpty, syncChain, installNode, recordRun, syncQuests,
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
   cooldownRemaining, promoteSecondary, assignPrimary, assignSecondary, archiveGoal,
-  trainingCount, hasCapacity, commitDraft, clearBreach,
+  trainingCount, hasCapacity, commitDraft, clearBreach, raiseThreshold,
 } from './store'
 import { SkillTree } from './SkillTree'
 import { ShelfPanel } from './ShelfPanel'
@@ -130,6 +130,25 @@ export default function Uplinks() {
                                        `⚑ ПРОРЫВ ПРОЙДЕН · +${reward.gained} XP`))
     window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'uplinks' } }))
   }, [state, tasks])
+
+  /**
+   * Hold a mastered routine to its next standard.
+   *
+   * Paid in automatism, not XP: the score drops by THRESHOLD_COST and the
+   * routine goes back into a training slot. You are making something you had
+   * mastered difficult again, which is the only thing in the app that gets
+   * harder as you get better.
+   */
+  const handleRaise = useCallback((nodeId: string) => {
+    const reward = raiseThreshold(state, nodeId)
+    if (!reward.ok) return
+    saveProgression(reward.state)
+    setState(reward.state)
+    setTasks(loadScrap7().tasks)
+    playCue('level')
+    flash(tr(`▲ STANDARD RAISED · +${reward.gained} XP`, `▲ СТАНДАРТ ПОДНЯТ · +${reward.gained} XP`))
+    window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'uplinks' } }))
+  }, [state])
 
   const handleTrack = useCallback((taskId: string) => {
     const s7     = loadScrap7()
@@ -264,8 +283,8 @@ export default function Uplinks() {
 
         {isSlotView && shown ? (
           <>
-            <SkillTree goal={shown} tasks={tasks} accent={accent}
-              onInstall={handleInstall} onTrack={handleTrack}
+            <SkillTree goal={shown} tasks={tasks} accent={accent} level={level}
+              onInstall={handleInstall} onTrack={handleTrack} onRaise={handleRaise}
               onClearBreach={i => handleClearBreach(shown.id, i)} />
 
             {/* A protocol holds routines and nothing else. The bookings, the

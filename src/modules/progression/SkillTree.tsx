@@ -5,7 +5,11 @@ import {
   nodeScore, unlockRequirements, nodeState, chapterState, activeChapter, type NodeState,
 } from './chain'
 import { layoutTree, fitScale, NODE_W, NODE_H, BAND_HEAD, type Placed } from './layout'
-import { TIER_META, estimateDays, THRESHOLD_UNLOCK_AT, type ChainNode, type Goal } from './types'
+import {
+  TIER_META, estimateDays, THRESHOLD_UNLOCK_AT, THRESHOLD_COST,
+  type ChainNode, type Goal,
+} from './types'
+import { raiseState, type RaiseState } from './store'
 import { bandColor, countdown, scheduleLine } from './deadline'
 
 const DIM  = 'rgba(148,163,184,0.55)'
@@ -21,7 +25,7 @@ const STATE_GLYPH: Record<NodeState, string> = {
   locked: '🔒', available: '◈', training: '◆', integrated: '✦',
 }
 
-export function SkillTree({ goal, tasks, accent, onInstall, onTrack, onClearBreach }: {
+export function SkillTree({ goal, tasks, accent, level, onInstall, onTrack, onClearBreach, onRaise }: {
   goal:      Goal
   tasks:     Task[]
   accent:    string
@@ -29,6 +33,10 @@ export function SkillTree({ goal, tasks, accent, onInstall, onTrack, onClearBrea
   onTrack:   (taskId: string) => void
   /** The act's real-world event happened. See `clearBreach`. */
   onClearBreach: (chapterIndex: number) => void
+  /** Hold a mastered routine to its next standard. See `raiseThreshold`. */
+  onRaise:   (nodeId: string) => void
+  /** The operator's level — the ladder opens in two stages. See `rungsOpen`. */
+  level:     number
 }) {
   const [selected, setSelected] = useState<string | null>(null)
   // The live tree draws its acts as bands too — the forge and the thing it
@@ -123,7 +131,8 @@ export function SkillTree({ goal, tasks, accent, onInstall, onTrack, onClearBrea
       {/* Detail panel — the perk description, only when you ask for it */}
       {sel && (
         <NodeDetail node={sel} goal={goal} tasks={tasks} accent={accent} frozen={frozen}
-          state={stateOf(sel)} onInstall={onInstall} onTrack={onTrack} />
+          state={stateOf(sel)} raise={frozen ? null : raiseState(sel, tasks, level)}
+          onInstall={onInstall} onTrack={onTrack} onRaise={onRaise} />
       )}
       {!sel && (
         <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(148,163,184,0.35)',
@@ -298,15 +307,18 @@ function TreeNode({ placed, state, accent, score, selected, onSelect }: {
   )
 }
 
-function NodeDetail({ node, goal, tasks, accent, state, frozen, onInstall, onTrack }: {
+function NodeDetail({ node, goal, tasks, accent, state, frozen, raise, onInstall, onTrack, onRaise }: {
   node:      ChainNode
   goal:      Goal
   tasks:     Task[]
   accent:    string
   state:     NodeState
   frozen:    boolean
+  /** Whether this routine's standard can be raised. Null when it never could. */
+  raise:     RaiseState | null
   onInstall: (id: string) => void
   onTrack:   (taskId: string) => void
+  onRaise:   (nodeId: string) => void
 }) {
   const score = nodeScore(node, tasks)
   const task  = tasks.find(t => t.id === node.scrapTaskId)
@@ -328,10 +340,43 @@ function NodeDetail({ node, goal, tasks, accent, state, frozen, onInstall, onTra
           border: `1px solid ${accent}30` }}>{tier.name}</span>
       </div>
 
-      {/* What you actually do */}
+      {/* What you actually do, and which of its three standards you hold it to */}
       <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: 'rgba(200,220,240,0.75)', marginTop: 7 }}>
         ▸ {node.cue} — <span style={{ color: accent }}>{node.thresholds[node.thresholdIndex]}</span>
+        {node.thresholds.length > 1 && (
+          <span style={{ color: DIM, letterSpacing: '0.08em' }}>
+            {' '}· {tr('RUNG', 'СТУПЕНЬ')} {node.thresholdIndex + 1}/{node.thresholds.length}
+          </span>
+        )}
       </p>
+
+      {/* THE LADDER. The only verb in the app that gets harder as you get
+          better — and the only one paid for in automatism rather than XP. */}
+      {raise && (raise.ok || raise.reason === 'level') && (
+        <div style={{ marginTop: 8, padding: '7px 9px', borderRadius: 7,
+          background: raise.ok ? `${GOLD}0c` : 'rgba(8,16,28,0.5)',
+          border: `1px solid ${raise.ok ? `${GOLD}35` : 'rgba(255,255,255,0.06)'}` }}>
+          {raise.ok ? (
+            <>
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10, lineHeight: 1.55, color: DIM }}>
+                {tr(`Hold it to "${raise.next}" instead. Costs ${THRESHOLD_COST.toFixed(2)} automatism — it goes back into a training slot.`,
+                    `Держать на «${raise.next}». Стоит ${THRESHOLD_COST.toFixed(2)} автоматизма — рутина вернётся в слот тренировки.`)}
+              </p>
+              <button onClick={() => onRaise(node.id)} style={{
+                width: '100%', marginTop: 7, padding: '7px', borderRadius: 6, cursor: 'pointer',
+                fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800, letterSpacing: '0.14em',
+                color: GOLD, background: `${GOLD}14`, border: `1px solid ${GOLD}45` }}>
+                ▲ {tr('RAISE THE STANDARD', 'ПОДНЯТЬ СТАНДАРТ')}
+              </button>
+            </>
+          ) : (
+            <p style={{ fontFamily: 'var(--font)', fontSize: 10, letterSpacing: '0.06em', color: DIM }}>
+              ⊘ {tr(`Next standard opens at level ${raise.needLevel}`,
+                    `Следующий стандарт открывается на уровне ${raise.needLevel}`)}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* State-specific body */}
       {state === 'locked' && (

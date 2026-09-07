@@ -110,9 +110,11 @@ export function awardErrandXp(e: XpEvent, spentToday: number): number {
 
 /**
  * Life support isn't goal work, so no slot rate applies — it belongs to no
- * uplink and is worth the same whichever goal happens to be loaded.
+ * uplink and is worth the same whichever goal happens to be loaded. UPKEEP does
+ * apply: turning up is exactly what a basic is.
  */
-export const awardBaselineXp = (e: XpEvent): number => baseXp(e)
+export const awardBaselineXp = (e: XpEvent, multiplier = 1): number =>
+  Math.round(baseXp(e) * multiplier)
 
 /**
  * Final award. Slot rate keeps the secondary uplink honest at 0.6×; fuel is
@@ -120,6 +122,44 @@ export const awardBaselineXp = (e: XpEvent): number => baseXp(e)
  */
 export function awardXp(e: XpEvent, slot: GoalSlot, fuelMultiplier = 1): number {
   return Math.round(baseXp(e) * xpRateForSlot(slot) * fuelMultiplier)
+}
+
+// ─── UPKEEP — the one streak that does anything ───────────────────────────────
+// Three streaks were being shown at once: days you did ANYTHING, days a single
+// habit hit its dose, and the best of those. Three numbers with three meanings
+// is nought streaks — none of them said anything about the others, and losing
+// any of them cost exactly nothing.
+//
+// This one is the forgiving one, and it is deliberately the forgiving one: a day
+// counts if you did a single thing the app tracks. It is not asking whether you
+// did enough. It is asking whether you were here.
+//
+// It multiplies what everything else pays. That answers the only real objection
+// to a streak in an app about your own life — that watching a number reset
+// punishes you for a bad week. It does not take anything away: the bonus lapses
+// and the base rate is what it always was. The per-habit streak stays exactly
+// where it was, as a fact about that habit; it just stops pretending to be a
+// second economy.
+
+export const UPKEEP_BANDS: { days: number; mult: number }[] = [
+  { days: 0,  mult: 1.00 },
+  { days: 3,  mult: 1.05 },
+  { days: 7,  mult: 1.10 },
+  { days: 14, mult: 1.15 },
+  { days: 30, mult: 1.20 },
+  { days: 66, mult: 1.25 },   // the formation median, and the ceiling
+]
+
+/** What a streak of this length multiplies every award by. */
+export function upkeep(streak: number): number {
+  let mult = 1
+  for (const band of UPKEEP_BANDS) if (streak >= band.days) mult = band.mult
+  return mult
+}
+
+/** The next band, for a strip that would rather say what is coming than nothing. */
+export function nextUpkeep(streak: number): { days: number; mult: number } | null {
+  return UPKEEP_BANDS.find(b => b.days > streak) ?? null
 }
 
 // ─── The one thing XP buys ────────────────────────────────────────────────────
@@ -240,18 +280,47 @@ export function gatedLevel(totalXp: number, completed: Record<string, string> | 
 
 export interface Gate {
   level: number
-  key:   'primary' | 'inventory' | 'secondary' | 'wager' | 'deepTree'
+  key:   'primary' | 'skip' | 'secondary' | 'rung2' | 'rung3'
   label: string
   ru:    string
 }
 
+/**
+ * Every one of these names something the app can actually do.
+ *
+ * Three of the five used to be furniture: "Cache & credits", "Wagers" and
+ * "Chapter 3 · tier IV nodes" described features that were never written, so
+ * the character sheet spent eleven levels promising things that would not
+ * arrive. A locked door has to open onto a room.
+ *
+ * The top two are the endgame, and they are one mechanic: the THRESHOLD LADDER.
+ * Every routine was authored with three ascending standards for the same
+ * behaviour and has sat on the first one forever. Raising a rung is the only
+ * verb that gets harder as you get better — you spend mastery to make a
+ * mastered thing difficult again.
+ */
 export const GATES: Gate[] = [
   { level: 1,  key: 'primary',   label: 'Primary uplink · chapter 1', ru: 'Основной канал · глава 1' },
-  { level: 3,  key: 'inventory', label: 'Cache & credits',            ru: 'Тайник и кредиты' },
+  { level: 3,  key: 'skip',      label: 'Buy a day back',             ru: 'Выкуп дня' },
   { level: 5,  key: 'secondary', label: 'Second uplink',              ru: 'Второй канал' },
-  { level: 8,  key: 'wager',     label: 'Wagers · deeper thresholds', ru: 'Ставки · глубокие пороги' },
-  { level: 12, key: 'deepTree',  label: 'Chapter 3 · tier IV nodes',  ru: 'Глава 3 · узлы тира IV' },
+  { level: 8,  key: 'rung2',     label: 'Standards · second rung',    ru: 'Стандарты · вторая ступень' },
+  { level: 12, key: 'rung3',     label: 'Standards · third rung',     ru: 'Стандарты · третья ступень' },
 ]
+
+/**
+ * How many rungs of a routine's ladder this level permits.
+ *
+ * This is where the level curve stops. Twelve is the last gate on purpose:
+ * a scale that keeps promising past the content it has is worse than one that
+ * says plainly it is finished. What continues past 12 is the ladder itself —
+ * every routine you own has two more standards waiting, and holding all of them
+ * at the top rung is a great deal more work than reaching level 13.
+ */
+export function rungsOpen(level: number): number {
+  if (isUnlockedAt('rung3', level)) return 3
+  if (isUnlockedAt('rung2', level)) return 2
+  return 1
+}
 
 export const isUnlockedAt = (key: Gate['key'], level: number): boolean =>
   level >= (GATES.find(g => g.key === key)?.level ?? Number.POSITIVE_INFINITY)

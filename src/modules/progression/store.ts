@@ -4,14 +4,15 @@
 
 import {
   type Goal, type GoalSlot, type ProgressionState,
-  SWAP_COOLDOWN_DAYS, THRESHOLD_UNLOCK_AT, TIER_META, maxNodesFor,
+  SWAP_COOLDOWN_DAYS, THRESHOLD_UNLOCK_AT, THRESHOLD_COST, TIER_META, maxNodesFor,
+  type ChainNode,
 } from './types'
 import { applyDraft, draftToGoal, type ChainDraft } from './draft'
 import { baselineTaskId, customTaskId, lifeSupportSlots, type LifeSupportTemplate } from './lifeSupport'
 import { evaluateUnlocks, goalComplete, isUnlocked, nodeScore, routineTaskId } from './chain'
 import {
-  awardXp, awardBaselineXp, awardErrandXp, baseXp, gatedLevel,
-  SKIP_COST, SKIP_EVERY_DAYS, type XpEvent,
+  awardXp, awardBaselineXp, awardErrandXp, baseXp, gatedLevel, upkeep, rungsOpen, GATES,
+  SKIP_COST, SKIP_EVERY_DAYS, isUnlockedAt, type XpEvent,
 } from './xp'
 import { evaluateQuests, questFloorXp, type Quest, type QuestContext } from './quests'
 import {
@@ -20,7 +21,7 @@ import {
 } from '../scrap7/store'
 import {
   isBaseline, isErrand, isOrphanHabit, taskOrigin, todayKey as dayKey,
-  daysBetweenKeys,
+  daysBetweenKeys, calcStreak,
   type Priority, type Task,
 } from '../scrap7/types'
 
@@ -523,11 +524,13 @@ export function deleteLifeSupport(taskId: string): void {
  * fuel. Crossing into automatic pays once, detected from the score either side
  * of the run exactly as a routine's crossing is.
  */
-export function recordBaselineRun(state: ProgressionState, before: number, after: number): RunReward {
+export function recordBaselineRun(
+  state: ProgressionState, before: number, after: number, multiplier = 1,
+): RunReward {
   const events: XpEvent[] = [{ kind: 'baseline.run' }]
   if (before < THRESHOLD_UNLOCK_AT && after >= THRESHOLD_UNLOCK_AT) events.push({ kind: 'baseline.automatic' })
 
-  const gained = events.reduce((sum, e) => sum + awardBaselineXp(e), 0)
+  const gained = events.reduce((sum, e) => sum + awardBaselineXp(e, multiplier), 0)
   const levelBefore = gatedLevel(state.xp, state.quests).level
   const next = { ...state, xp: state.xp + gained }
   const levelAfter = gatedLevel(next.xp, next.quests).level
@@ -567,6 +570,11 @@ export function trackFromList(taskId: string): {
   if (!task || task.taskType !== 'habit') return { gained: 0, levelUp: null, integrated: false }
 
   const before = task.score ?? 0
+  // The upkeep you walked in with — measured before the run, exactly as the
+  // run's own price reads the score before. Today's tick would otherwise pay
+  // itself a bonus for having happened.
+  const multiplier = upkeep(calcStreak(s7.tasks))
+
   const { state: next } = trackHabit(s7, taskId, 1)
   saveScrap7(next)
   const after = next.tasks.find(t => t.id === taskId)?.score ?? 0
@@ -574,8 +582,8 @@ export function trackFromList(taskId: string): {
   const origin = taskOrigin(task)
   const state  = loadProgression()
   const reward = origin === 'baseline'
-    ? recordBaselineRun(state, before, after)
-    : recordRun(state, taskId, before, after)
+    ? recordBaselineRun(state, before, after, multiplier)
+    : recordRun(state, taskId, before, after, multiplier)
 
   saveProgression(reward.state)
   window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'orbit' } }))
@@ -692,7 +700,8 @@ export function recordRun(
   taskId: string,
   before: number,
   after: number,
-  fuelMultiplier = 1,
+  /** UPKEEP, and later anything else that scales a whole run. See `upkeep`. */
+  multiplier = 1,
 ): RunReward {
   const goal = state.goals.find(g => g.nodes.some(n => n.scrapTaskId === taskId))
   const node = goal?.nodes.find(n => n.scrapTaskId === taskId)
@@ -704,7 +713,7 @@ export function recordRun(
   if (before < 0.65 && after >= 0.65) events.push({ kind: 'routine.strong' })
   if (before < THRESHOLD_UNLOCK_AT && after >= THRESHOLD_UNLOCK_AT) events.push({ kind: 'routine.integrated' })
 
-  const gained = events.reduce((sum, e) => sum + awardXp(e, goal.slot, fuelMultiplier), 0)
+  const gained = events.reduce((sum, e) => sum + awardXp(e, goal.slot, multiplier), 0)
   const levelBefore = gatedLevel(state.xp, state.quests).level
   const next = { ...state, xp: state.xp + gained }
   const levelAfter = gatedLevel(next.xp, next.quests).level
@@ -714,7 +723,7 @@ export function recordRun(
 
 // ─── Spending ─────────────────────────────────────────────────────────────────
 
-export type SkipRefusal = 'unaffordable' | 'too-soon' | 'not-a-habit' | 'done-today'
+export type SkipRefusal = 'unaffordable' | 'too-soon' | 'not-a-habit' | 'done-today' | 'level'
 
 export interface SkipResult {
   ok:     boolean
@@ -737,9 +746,12 @@ export function lastSkip(task: Pick<Task, 'skippedDates'>): string | null {
 
 /** Whether a skip is available, and if not, what is holding it. */
 export function skipState(
-  task: Task, xp: number, now = new Date(),
+  task: Task, xp: number, now = new Date(), level = Number.POSITIVE_INFINITY,
 ): SkipResult {
   if (task.taskType !== 'habit') return { ok: false, reason: 'not-a-habit' }
+  // A level-3 unlock: on day one the bank is the level curve, and spending it
+  // on a day you have not yet had is a trap rather than a choice.
+  if (!isUnlockedAt('skip', level)) return { ok: false, reason: 'level' }
   // Doneness is judged against the same `now` as the cooldown. `habitDoneToday`
   // reads the wall clock instead, which would make this function answer about
   // two different days at once.
@@ -772,13 +784,103 @@ export function buySkip(taskId: string, now = new Date()): SkipResult {
   if (!task) return { ok: false, reason: 'not-a-habit' }
 
   const state = loadProgression()
-  const check = skipState(task, state.xp, now)
+  const check = skipState(task, state.xp, now, gatedLevel(state.xp, state.quests).level)
   if (!check.ok) return check
 
   saveScrap7(skipHabitDay(s7, taskId))
   saveProgression({ ...state, xp: state.xp - SKIP_COST })
   window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'progression' } }))
   return { ok: true }
+}
+
+// ─── The ladder ───────────────────────────────────────────────────────────────
+
+export type RaiseRefusal = 'not-installed' | 'not-integrated' | 'top-rung' | 'level'
+
+export interface RaiseState {
+  ok:        boolean
+  reason?:   RaiseRefusal
+  /** The level that would open the next rung, on 'level'. */
+  needLevel?: number
+  /** What the standard would become, when there is one to move to. */
+  next?:     string
+}
+
+/**
+ * Whether this routine's standard can be raised, and what stops it.
+ *
+ * Three conditions, and each is the point of a different rule. It must be
+ * INSTALLED and INTEGRATED, because a standard you have not met is not one you
+ * can raise. It must have a rung left. And the level has to have opened that
+ * rung — the ladder is the endgame, and handing it over on day one would make
+ * the first month a menu instead of a decision.
+ */
+export function raiseState(node: ChainNode, tasks: Task[], level: number): RaiseState {
+  if (!node.scrapTaskId) return { ok: false, reason: 'not-installed' }
+  if (nodeScore(node, tasks) < THRESHOLD_UNLOCK_AT) return { ok: false, reason: 'not-integrated' }
+
+  const nextIndex = node.thresholdIndex + 1
+  if (nextIndex >= node.thresholds.length) return { ok: false, reason: 'top-rung' }
+
+  const allowed = rungsOpen(level)
+  if (nextIndex + 1 > allowed) {
+    const gate = GATES.find(g => g.key === (nextIndex + 1 >= 3 ? 'rung3' : 'rung2'))
+    return { ok: false, reason: 'level', needLevel: gate?.level }
+  }
+  return { ok: true, next: node.thresholds[nextIndex] }
+}
+
+/**
+ * Hold this routine to its next standard.
+ *
+ * The cost is paid in AUTOMATISM, not XP: the habit's score drops by
+ * THRESHOLD_COST, which usually puts it back under 0.70 and therefore back into
+ * a training slot. That is the whole mechanic — you are not buying a bigger
+ * number, you are making something you had mastered hard again, and paying for
+ * it with the one currency that cannot be farmed.
+ *
+ * `THRESHOLD_COST` and `thresholdIndex` were both modelled from the beginning
+ * and neither had ever moved. `threshold.raised` was priced and never fired.
+ */
+export function raiseThreshold(
+  state: ProgressionState, nodeId: string,
+): RunReward & { ok: boolean; reason?: RaiseRefusal } {
+  const s7   = loadScrap7()
+  const goal = state.goals.find(g => g.nodes.some(n => n.id === nodeId))
+  const node = goal?.nodes.find(n => n.id === nodeId)
+  const none = { state, gained: 0, events: [], levelUp: null, ok: false }
+  if (!goal || !node) return { ...none, reason: 'not-installed' }
+
+  const level = gatedLevel(state.xp, state.quests).level
+  const check = raiseState(node, s7.tasks, level)
+  if (!check.ok) return { ...none, reason: check.reason }
+
+  saveScrap7({
+    ...s7,
+    tasks: s7.tasks.map(t => t.id !== node.scrapTaskId ? t
+      : { ...t, score: Math.max(0, (t.score ?? 0) - THRESHOLD_COST) }),
+  })
+
+  const events: XpEvent[] = [{ kind: 'threshold.raised' }]
+  const gained = events.reduce((sum, e) => sum + awardXp(e, goal.slot), 0)
+  const levelBefore = gatedLevel(state.xp, state.quests).level
+
+  const next: ProgressionState = {
+    ...state,
+    xp: state.xp + gained,
+    goals: state.goals.map(g => g.id !== goal.id ? g : {
+      ...g,
+      nodes: g.nodes.map(n => n.id !== nodeId ? n
+        : { ...n, thresholdIndex: n.thresholdIndex + 1 }),
+    }),
+  }
+  const levelAfter = gatedLevel(next.xp, next.quests).level
+
+  window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'progression' } }))
+  return {
+    state: next, gained, events, ok: true,
+    levelUp: levelAfter > levelBefore ? levelAfter : null,
+  }
 }
 
 // ─── The breach ───────────────────────────────────────────────────────────────

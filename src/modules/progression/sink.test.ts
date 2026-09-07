@@ -43,24 +43,24 @@ describe('the two files that must agree about 0.70', () => {
 
 describe('buying a day back', () => {
   it('is available when you can afford it and have not just used one', () => {
-    expect(skipState(habit(), SKIP_COST, NOW)).toEqual({ ok: true })
+    expect(skipState(habit(), SKIP_COST, NOW, 3)).toEqual({ ok: true })
   })
 
   it('names the shortfall rather than sitting inert', () => {
-    const poor = skipState(habit(), SKIP_COST - 15, NOW)
+    const poor = skipState(habit(), SKIP_COST - 15, NOW, 3)
     expect(poor).toMatchObject({ ok: false, reason: 'unaffordable', short: 15 })
   })
 
   it('holds for a week per habit, whatever the bank says', () => {
     const used = habit({ skippedDates: ['2026-09-18'] })
-    const soon = skipState(used, 100_000, NOW)
+    const soon = skipState(used, 100_000, NOW, 3)
     expect(soon).toMatchObject({ ok: false, reason: 'too-soon' })
     expect(soon.short).toBe(SKIP_EVERY_DAYS - 2)
   })
 
   it('opens again once the week has passed', () => {
     const used = habit({ skippedDates: ['2026-09-13'] })
-    expect(skipState(used, SKIP_COST, NOW).ok).toBe(true)
+    expect(skipState(used, SKIP_COST, NOW, 3).ok).toBe(true)
   })
 
   it('reads the last purchase off the record of it, not a second counter', () => {
@@ -71,12 +71,19 @@ describe('buying a day back', () => {
 
   it('has nothing to sell for a day already done', () => {
     const done = habit({ lastTrackedDate: '2026-09-20', todayCount: 1 })
-    expect(skipState(done, SKIP_COST, NOW)).toMatchObject({ ok: false, reason: 'done-today' })
+    expect(skipState(done, SKIP_COST, NOW, 3)).toMatchObject({ ok: false, reason: 'done-today' })
+  })
+
+  it('is not on offer before level 3', () => {
+    // On day one the bank IS the level curve, and spending it on a day you have
+    // not had yet is a trap rather than a choice.
+    expect(skipState(habit(), 10_000, NOW, 2)).toMatchObject({ ok: false, reason: 'level' })
+    expect(skipState(habit(), SKIP_COST, NOW, 3).ok).toBe(true)
   })
 
   it('refuses anything that is not a habit', () => {
     const todo = habit({ taskType: 'todo' })
-    expect(skipState(todo, SKIP_COST, NOW)).toMatchObject({ ok: false, reason: 'not-a-habit' })
+    expect(skipState(todo, SKIP_COST, NOW, 3)).toMatchObject({ ok: false, reason: 'not-a-habit' })
   })
 
   it('costs less than a day of a running protocol, and more than any single run', () => {
@@ -103,9 +110,15 @@ function mockStorage(seed: Record<string, unknown> = {}) {
 }
 
 describe('spending, against real storage', () => {
+  // Buying a day back opens at level 3, so the bank alone is not enough — the
+  // quest gate has to have let you past stage 2 as well.
+  const CLEARED = Object.fromEntries(
+    ['s1-first-uplink', 's1-life-support', 'q3-first-routine', 'q2-water']
+      .map(id => [id, '2026-09-01T00:00:00.000Z']))
+
   const seed = (xp: number, task: Task) => mockStorage({
     scrap7_v4: { tasks: [task], categories: ['G'], chatHistory: [], lastDailyReset: '2026-09-20' },
-    warren_progression_v1: { goals: [], seeded: true, xp, quests: {} },
+    warren_progression_v1: { goals: [], seeded: true, xp, quests: CLEARED },
   })
 
   const bank = () => JSON.parse(localStorage.getItem('warren_progression_v1')!).xp as number
@@ -118,16 +131,21 @@ describe('spending, against real storage', () => {
     expect(skips()).toHaveLength(1)
   })
 
-  it('lets the bank fall — a currency you cannot lose is not a currency', () => {
-    seed(SKIP_COST, habit())
-    buySkip('h', NOW)
-    expect(bank()).toBe(0)
+  it('lets the bank fall past a level you had reached', () => {
+    // Level 3 costs 320 banked. Spending down through it takes the level with
+    // it — and takes the shop with it, since buying a day back opens at 3. That
+    // is not a rough edge: it is what makes this a currency rather than a score.
+    seed(340, habit())
+    expect(buySkip('h', NOW)).toEqual({ ok: true })
+    expect(bank()).toBe(300)
+    expect(buySkip('h2', NOW)).toMatchObject({ ok: false })
   })
 
   it('charges nothing when it refuses', () => {
-    seed(10, habit())
-    expect(buySkip('h', NOW)).toMatchObject({ ok: false, reason: 'unaffordable' })
-    expect(bank()).toBe(10)
-    expect(skips()).toHaveLength(0)
+    const used = habit({ skippedDates: ['2026-09-19'] })
+    seed(500, used)
+    expect(buySkip('h', NOW)).toMatchObject({ ok: false, reason: 'too-soon' })
+    expect(bank()).toBe(500)
+    expect(skips()).toHaveLength(1)     // the old record, untouched
   })
 })

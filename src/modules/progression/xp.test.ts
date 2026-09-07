@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { baseXp, awardXp, levelCost, levelFor, gatedLevel, levelCap, isUnlockedAt, nextGate, GATES, levelReward, rewardIsBare } from './xp'
+import { baseXp, awardXp, levelCost, levelFor, gatedLevel, levelCap, isUnlockedAt, nextGate, GATES, levelReward, rewardIsBare, rungsOpen } from './xp'
 import { stageQuests, stageXp, LAST_GATED_STAGE } from './quests'
 import { deriveStats, overallRating } from './stats'
 import type { Task } from '../scrap7/types'
@@ -73,7 +73,7 @@ describe('level gates', () => {
     expect(isUnlockedAt('primary', 1)).toBe(true)
   })
   it('names the next thing being held back', () => {
-    expect(nextGate(1)?.key).toBe('inventory')
+    expect(nextGate(1)?.key).toBe('skip')
     expect(nextGate(GATES[GATES.length - 1].level)).toBeNull()
   })
 })
@@ -200,7 +200,22 @@ describe('the quest gate', () => {
 describe('what a level opens', () => {
   it('names the capacity a level unlocks', () => {
     expect(levelReward(5).gates.map(g => g.key)).toEqual(['secondary'])
-    expect(levelReward(3).gates.map(g => g.key)).toEqual(['inventory'])
+    expect(levelReward(3).gates.map(g => g.key)).toEqual(['skip'])
+  })
+
+  it('opens the ladder in two stages and stops there', () => {
+    // Twelve is the last gate on purpose. What continues past it is holding
+    // every routine at its top standard, which is more work than level 13.
+    expect(rungsOpen(1)).toBe(1)
+    expect(rungsOpen(7)).toBe(1)
+    expect(rungsOpen(8)).toBe(2)
+    expect(rungsOpen(12)).toBe(3)
+    expect(rungsOpen(40)).toBe(3)
+  })
+
+  it('names something real at every gate', () => {
+    // Three of these used to describe features nobody had written.
+    expect(GATES.map(g => g.key)).toEqual(['primary', 'skip', 'secondary', 'rung2', 'rung3'])
   })
 
   it('never claims level 1 unlocked the thing you started with', () => {
