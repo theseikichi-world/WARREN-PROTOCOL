@@ -5,7 +5,11 @@ import {
   archiveGoal, addGoal,
 } from './store'
 import { TEMPLATES, draftToGoal } from './draft'
-import { estimateDays, xpRateForSlot, type Goal, type ProgressionState } from './types'
+import {
+  estimateDays, xpRateForSlot, TIER_META, THRESHOLD_UNLOCK_AT,
+  type Goal, type ProgressionState,
+} from './types'
+import { alphaFor } from '../scrap7/types'
 
 const NOW = new Date('2026-08-01T10:00:00.000Z')
 const daysAgo = (n: number) => new Date(NOW.getTime() - n * 86_400_000).toISOString()
@@ -132,11 +136,33 @@ describe('rates and estimates', () => {
     expect(xpRateForSlot('archived')).toBe(0)
   })
 
-  it('shrinks the day estimate as integration rises', () => {
-    expect(estimateDays(0, 2)).toBe(66)
-    expect(estimateDays(0.5, 2)).toBe(33)
-    expect(estimateDays(1, 2)).toBe(0)
+  it('reads the tier baselines off a routine that has never run', () => {
     expect(estimateDays(0, 1)).toBe(25)
+    expect(estimateDays(0, 2)).toBe(66)
+    expect(estimateDays(0, 3)).toBe(120)
     expect(estimateDays(0, 4)).toBe(150)
+  })
+
+  it('counts the days the ENGINE actually takes, at every score', () => {
+    // The number printed on screen and the number of taps it really costs used
+    // to be different functions of the same inputs — a straight line against an
+    // exponential curve, off by three times near the threshold. Walking the
+    // engine forward is the only assertion that can catch them drifting again.
+    const walk = (from: number, tier: 1 | 2 | 3 | 4): number => {
+      const alpha = alphaFor(TIER_META[tier].baselineDays)
+      let s = from, days = 0
+      while (s < THRESHOLD_UNLOCK_AT && days < 5000) { s = s * (1 - alpha) + alpha; days++ }
+      return days
+    }
+    for (const tier of [1, 2, 3, 4] as const) {
+      for (const from of [0, 0.2, 0.5, 0.65, 0.69]) {
+        expect(estimateDays(from, tier)).toBe(walk(from, tier))
+      }
+    }
+  })
+
+  it('says nothing is left once the routine is automatic', () => {
+    expect(estimateDays(THRESHOLD_UNLOCK_AT, 4)).toBe(0)
+    expect(estimateDays(1, 2)).toBe(0)
   })
 })

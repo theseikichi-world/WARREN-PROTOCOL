@@ -7,6 +7,7 @@
 // modelled and seeded so the shape is fixed, but gating goes live in step 3.
 
 import type { RoutineAnchor } from './anchor'
+import { alphaFor } from '../scrap7/types'
 
 export type NodeTier = 1 | 2 | 3 | 4
 
@@ -19,11 +20,23 @@ export const TIER_META: Record<NodeTier, { name: string; profile: string; baseli
 }
 
 /**
- * Days left before a routine is likely automatic. Real formation ranges roughly
- * 18–254 days per person, so this is a projection, never a promise.
+ * Days left before a routine is likely automatic.
+ *
+ * Read off the SAME curve the score actually moves on, so the number can no
+ * longer disagree with the engine. It used to be a straight line — remaining
+ * score times the baseline — which was wrong twice over: it ignored that the
+ * curve flattens (at 0.65 it claimed 23 more days for a tier-2 routine when the
+ * real answer is 8), and it multiplied by a baseline the engine never used at
+ * all.
+ *
+ * Still a projection, never a promise: it counts PERFECT days, and real
+ * formation ranges roughly 18–254 days per person.
  */
 export function estimateDays(score: number, tier: NodeTier): number {
-  return Math.max(0, Math.round((1 - Math.min(1, Math.max(0, score))) * TIER_META[tier].baselineDays))
+  const s = Math.min(1, Math.max(0, score))
+  if (s >= THRESHOLD_UNLOCK_AT) return 0
+  const alpha = alphaFor(TIER_META[tier].baselineDays)
+  return Math.ceil(Math.log((1 - THRESHOLD_UNLOCK_AT) / (1 - s)) / Math.log(1 - alpha))
 }
 
 export interface ChainNode {

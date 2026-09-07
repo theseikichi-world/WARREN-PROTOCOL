@@ -1,7 +1,7 @@
 import {
   type Task, type Scrap7State, type ChatMessage, type Schedule, type Priority, type Direction,
   type TaskOrigin,
-  DEFAULT_CATEGORIES, HABIT_MILESTONES, todayKey, taskOrigin, isCountableUnit,
+  DEFAULT_CATEGORIES, HABIT_MILESTONES, todayKey, taskOrigin, isCountableUnit, alphaFor,
   daysBetweenKeys, shiftDateKey,
 } from './types'
 
@@ -11,9 +11,9 @@ import {
 const KEY        = 'scrap7_v4'
 const LEGACY_KEY = 'scrap7_v3'
 
-// Exponential smoothing factor — matches Loop Habit Tracker's curve:
-// ~5% after day 1, ~30% after 1 week, ~80% after 1 month, ~96% after 2 months
-const ALPHA = 0.05
+// The smoothing rate is no longer one constant: it comes from each habit's own
+// `formationDays`, so the curve and the printed estimate cannot disagree. See
+// `alphaFor` for why that mattered.
 /** Frozen routines decay at half rate — see Task.frozen. */
 const FROZEN_DECAY = 0.5
 
@@ -85,7 +85,8 @@ export function applyDailyReset(state: Scrap7State): Scrap7State {
 
         // A frozen routine belongs to a goal you set aside — it bleeds at half
         // rate and keeps its streak, because you were never asked to do it.
-        const decay = t.frozen ? ALPHA * FROZEN_DECAY : ALPHA
+        const alpha = alphaFor(t.formationDays)
+        const decay = t.frozen ? alpha * FROZEN_DECAY : alpha
 
         // Apply decay for each day between last tracked and today. Both keys are
         // local dates, so the walk stays on the operator's calendar — mixing a
@@ -192,6 +193,8 @@ export interface ExternalTaskData extends NewTaskData {
   logDream?:   string
   /** Who owns this task. Defaults to 'log' — the only caller today is L.O.G sync. */
   origin?:     TaskOrigin
+  /** How long this habit is expected to take to automate. See `alphaFor`. */
+  formationDays?: number
 }
 
 export function createExternalTask(data: ExternalTaskData): void {
@@ -203,6 +206,7 @@ export function createExternalTask(data: ExternalTaskData): void {
       ...(data.createdAt ? { createdAt: data.createdAt } : {}),
       ...(data.logMission ? { logMission: data.logMission } : {}),
       ...(data.logDream ? { logDream: data.logDream } : {}),
+      ...(data.formationDays ? { formationDays: data.formationDays } : {}),
       origin: data.origin ?? 'log',
     })
 
@@ -258,10 +262,11 @@ export function trackHabit(state: Scrap7State, id: string, dir: 1 | -1 = 1): Tra
 
       if (t.direction === 'negative') {
         // Tracked a bad habit: penalize score
-        newScore = Math.max(0, score - ALPHA * 3)
+        newScore = Math.max(0, score - alphaFor(t.formationDays) * 3)
       } else if (!wasAlreadyDone && newCount >= target) {
         // Just hit daily target for the first time: reward
-        newScore = Math.min(1, score * (1 - ALPHA) + ALPHA)
+        const alpha = alphaFor(t.formationDays)
+        newScore = Math.min(1, score * (1 - alpha) + alpha)
         if (isNewDay) {
           newStreak++
           for (const m of HABIT_MILESTONES) {

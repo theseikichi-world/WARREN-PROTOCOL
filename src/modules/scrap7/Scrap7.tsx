@@ -13,7 +13,11 @@ import {
 import { parseCommand } from './commandParser'
 import { t as tr } from '../../i18n'
 import { loadSettings, aiJson, modelForTask, type AiMessage } from '../../settings'
-import { trackFromList, completeFromList, bankErrands } from '../progression/store'
+import {
+  trackFromList, completeFromList, bankErrands, buySkip, skipState,
+  type SkipResult,
+} from '../progression/store'
+import { SKIP_COST, SKIP_EVERY_DAYS } from '../progression/xp'
 import {
   installLifeSupport, installCustomLifeSupport, deleteLifeSupport, recordBaselineRun,
   loadProgression, saveProgression,
@@ -201,9 +205,12 @@ function PomodoroBar({ pomo, onPause, onStop }: {
 }
 
 // ─── Task row (dailies + todos) ───────────────────────────────────────────────
-function TaskRow({ task, onCheck, onDelete, onEdit, onPomo }: {
+function TaskRow({ task, skip, onCheck, onDelete, onEdit, onPomo, onSkip }: {
   task: Task; onCheck: () => void; onDelete: () => void
   onEdit: () => void; onPomo: () => void
+  /** Whether today can be bought back for this habit. Null for anything else. */
+  skip: SkipResult | null
+  onSkip: () => void
 }) {
   const [hov, setHov]       = useState(false)
   const [editing, setEditing] = useState(false)
@@ -310,6 +317,26 @@ function TaskRow({ task, onCheck, onDelete, onEdit, onPomo }: {
 
       {hov && !editing && (
         <div style={{ display: 'flex', gap: 3, flexShrink: 0, alignItems: 'center' }}>
+          {/* The only thing XP buys. Shown on habits alone, and only where it
+              could actually be used — a price you cannot pay says what it is
+              short by rather than sitting there greyed and silent. */}
+          {skip && (
+            <button onClick={skip.ok ? onSkip : undefined} disabled={!skip.ok}
+              title={skip.ok
+                ? tr(`Buy today back — ${SKIP_COST} XP. No decay, streak kept.`,
+                     `Выкупить день — ${SKIP_COST} XP. Без распада, серия цела.`)
+                : skip.reason === 'unaffordable'
+                  ? tr(`${skip.short} XP short`, `не хватает ${skip.short} XP`)
+                  : tr(`Bought one ${SKIP_EVERY_DAYS - (skip.short ?? 0)}d ago — one a week`,
+                       `Покупали ${SKIP_EVERY_DAYS - (skip.short ?? 0)}д назад — один в неделю`)}
+              style={{ fontSize: 14, padding: '2px 4px', lineHeight: 1,
+                cursor: skip.ok ? 'pointer' : 'default',
+                color: skip.ok ? 'rgba(192,132,252,0.55)' : 'rgba(148,163,184,0.18)',
+                transition: 'color 0.12s' }}
+              onMouseEnter={e => { if (skip.ok) e.currentTarget.style.color = '#c084fc' }}
+              onMouseLeave={e => { if (skip.ok) e.currentTarget.style.color = 'rgba(192,132,252,0.55)' }}
+            >⏻</button>
+          )}
           <button onClick={onPomo} title={tr('Start Pomodoro', 'Запустить Помодоро')} style={{
             fontSize: 16.5, padding: '2px 4px', color: 'rgba(239,68,68,0.35)',
             transition: 'color 0.12s' }}
@@ -782,6 +809,17 @@ export default function Scrap7() {
     else if (capped)  setFlashMsg(tr('DAY CAPPED', 'ЛИМИТ ДНЯ'))
   }
 
+  /**
+   * Spend XP to protect one day. The bank can fall below a level you had, and
+   * the bar going down is the clearest statement that the purchase was real.
+   */
+  const buyDayBack = (t: Task) => {
+    if (!buySkip(t.id).ok) return
+    setState(loadState())
+    playCue('tick')
+    setFlashMsg(tr(`⏻ DAY BOUGHT BACK · −${SKIP_COST} XP`, `⏻ ДЕНЬ ВЫКУПЛЕН · −${SKIP_COST} XP`))
+  }
+
   // ── Life support, where the basics actually live ──────────────────────────
   // The habits were always in this list — taskSource() has ranked them as
   // `basic` between uplink work and your own things for as long as the list has
@@ -942,6 +980,8 @@ export default function Scrap7() {
               control surface that used to be a whole screen in UPLINKS. */}
           {activeTasks.filter(t => taskSource(t) === 'uplink').map(t => (
             <TaskRow key={t.id} task={t}
+              skip={t.taskType === 'habit' ? skipState(t, prog.xp) : null}
+              onSkip={() => buyDayBack(t)}
               onCheck={() => checkOff(t)}
               onDelete={() => persist(deleteTask(state, t.id))}
               onEdit={() => setEditingTask(t)}
@@ -971,6 +1011,8 @@ export default function Scrap7() {
 
           {activeTasks.filter(t => taskSource(t) === 'basic').map(t => (
             <TaskRow key={t.id} task={t}
+              skip={t.taskType === 'habit' ? skipState(t, prog.xp) : null}
+              onSkip={() => buyDayBack(t)}
               onCheck={() => checkOff(t)}
               onDelete={() => persist(deleteTask(state, t.id))}
               onEdit={() => setEditingTask(t)}
@@ -980,6 +1022,8 @@ export default function Scrap7() {
 
           {activeTasks.filter(t => taskSource(t) === 'yours').map(t => (
             <TaskRow key={t.id} task={t}
+              skip={t.taskType === 'habit' ? skipState(t, prog.xp) : null}
+              onSkip={() => buyDayBack(t)}
               onCheck={() => checkOff(t)}
               onDelete={() => persist(deleteTask(state, t.id))}
               onEdit={() => setEditingTask(t)}
@@ -997,6 +1041,8 @@ export default function Scrap7() {
               </div>
               {doneTasks.map(t => (
                 <TaskRow key={t.id} task={t}
+                  skip={t.taskType === 'habit' ? skipState(t, prog.xp) : null}
+                  onSkip={() => buyDayBack(t)}
                   onCheck={() => checkOff(t)}
                   onDelete={() => persist(deleteTask(state, t.id))}
                   onEdit={() => setEditingTask(t)}

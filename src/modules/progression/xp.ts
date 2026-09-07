@@ -122,6 +122,33 @@ export function awardXp(e: XpEvent, slot: GoalSlot, fuelMultiplier = 1): number 
   return Math.round(baseXp(e) * xpRateForSlot(slot) * fuelMultiplier)
 }
 
+// ─── The one thing XP buys ────────────────────────────────────────────────────
+// Until now XP was a scoreboard: it went up, it gated levels, and nothing could
+// ever be spent. A currency with no sink is a number, and a number is not a
+// decision — which is why the bar never felt like it mattered.
+//
+// What it buys is deliberately NOT progress. Buying score would make the whole
+// automatism reading a lie, and buying a slot would dissolve the scarcity the
+// tech tree stands on. It buys a DAY BACK: one habit, one missed day, no decay
+// and the streak kept.
+//
+// `skipHabitDay` has existed, untested and uncalled, since ORBIT shipped. Free
+// and unlimited it would have been an exploit; priced and capped it is the only
+// honest thing a habit tracker can sell you. You are not buying the day — you
+// are declining to be charged for one you already lost.
+
+/**
+ * Roughly what a full running protocol pays in a day. Cheap enough to use on a
+ * day that genuinely went wrong; dear enough that you would rather do the thing.
+ */
+export const SKIP_COST = 40
+
+/**
+ * Per habit. A bad day happens and can be bought back; a bad week is
+ * information, and no amount of XP should be able to buy that away.
+ */
+export const SKIP_EVERY_DAYS = 7
+
 // ─── Level curve ──────────────────────────────────────────────────────────────
 // A gated level costs exactly what its stage pays out, so finishing the stage
 // fills the bar and levels you in the same motion. The alternative — a fixed

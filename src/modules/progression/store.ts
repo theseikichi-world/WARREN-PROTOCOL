@@ -4,19 +4,23 @@
 
 import {
   type Goal, type GoalSlot, type ProgressionState,
-  SWAP_COOLDOWN_DAYS, THRESHOLD_UNLOCK_AT, maxNodesFor,
+  SWAP_COOLDOWN_DAYS, THRESHOLD_UNLOCK_AT, TIER_META, maxNodesFor,
 } from './types'
 import { applyDraft, draftToGoal, type ChainDraft } from './draft'
 import { baselineTaskId, customTaskId, lifeSupportSlots, type LifeSupportTemplate } from './lifeSupport'
 import { evaluateUnlocks, goalComplete, isUnlocked, nodeScore, routineTaskId } from './chain'
-import { awardXp, awardBaselineXp, awardErrandXp, baseXp, gatedLevel, type XpEvent } from './xp'
+import {
+  awardXp, awardBaselineXp, awardErrandXp, baseXp, gatedLevel,
+  SKIP_COST, SKIP_EVERY_DAYS, type XpEvent,
+} from './xp'
 import { evaluateQuests, questFloorXp, type Quest, type QuestContext } from './quests'
 import {
   loadState as loadScrap7, saveState as saveScrap7, createExternalTask, trackHabit,
-  completeTask,
+  completeTask, skipHabitDay,
 } from '../scrap7/store'
 import {
   isBaseline, isErrand, isOrphanHabit, taskOrigin, todayKey as dayKey,
+  daysBetweenKeys,
   type Priority, type Task,
 } from '../scrap7/types'
 
@@ -220,21 +224,28 @@ export function syncChain(state: ProgressionState, now = new Date()): Progressio
 
   // 2. Freeze / thaw. A frozen habit is never deleted — it stays visible and
   //    trackable, decays at half rate, and earns nothing.
-  const frozenIds = new Set<string>()
-  const liveIds   = new Set<string>()
+  //    Formation pace rides along: a routine installed before the tier decided
+  //    the pace has no `formationDays`, and would otherwise keep the default
+  //    REFLEX rate forever. This is the only place that knows both the habit
+  //    and the node it belongs to.
+  const wantFrozen = new Map<string, boolean>()
+  const wantDays   = new Map<string, number>()
   for (const g of goals) {
     for (const n of g.nodes) {
       if (!n.scrapTaskId) continue
-      ;(g.slot === 'archived' ? frozenIds : liveIds).add(n.scrapTaskId)
+      wantFrozen.set(n.scrapTaskId, g.slot === 'archived')
+      wantDays.set(n.scrapTaskId, TIER_META[n.tier].baselineDays)
     }
   }
 
   let touched = false
   const tasks = before.tasks.map(t => {
-    const want = frozenIds.has(t.id) ? true : liveIds.has(t.id) ? false : undefined
-    if (want === undefined || !!t.frozen === want) return t
+    const frozen = wantFrozen.get(t.id)
+    if (frozen === undefined) return t
+    const days = wantDays.get(t.id)
+    if (!!t.frozen === frozen && t.formationDays === days) return t
     touched = true
-    return { ...t, frozen: want }
+    return { ...t, frozen, formationDays: days }
   })
   if (touched) {
     saveScrap7({ ...before, tasks })
@@ -274,6 +285,9 @@ export function installNode(state: ProgressionState, nodeId: string): InstallRes
       origin:    'chain',
       target:    1,
       unit:      'times',
+      // The tier IS the pace — see `alphaFor`. Carried on the habit so the
+      // score engine never has to reach into progression to know it.
+      formationDays: TIER_META[node.tier].baselineDays,
     })
   }
 
@@ -696,6 +710,75 @@ export function recordRun(
   const levelAfter = gatedLevel(next.xp, next.quests).level
 
   return { state: next, gained, events, levelUp: levelAfter > levelBefore ? levelAfter : null }
+}
+
+// ─── Spending ─────────────────────────────────────────────────────────────────
+
+export type SkipRefusal = 'unaffordable' | 'too-soon' | 'not-a-habit' | 'done-today'
+
+export interface SkipResult {
+  ok:     boolean
+  /** Why not, when not. A price you cannot pay says so — it does not sit inert. */
+  reason?: SkipRefusal
+  /** XP still needed, on 'unaffordable'; days still to wait, on 'too-soon'. */
+  short?:  number
+}
+
+/**
+ * The most recent day this habit was bought back, or null.
+ *
+ * Read from `skippedDates` rather than a separate counter: the purchase and the
+ * record of it are the same fact, so they cannot drift.
+ */
+export function lastSkip(task: Pick<Task, 'skippedDates'>): string | null {
+  const days = [...(task.skippedDates ?? [])].sort()
+  return days.length ? days[days.length - 1] : null
+}
+
+/** Whether a skip is available, and if not, what is holding it. */
+export function skipState(
+  task: Task, xp: number, now = new Date(),
+): SkipResult {
+  if (task.taskType !== 'habit') return { ok: false, reason: 'not-a-habit' }
+  // Doneness is judged against the same `now` as the cooldown. `habitDoneToday`
+  // reads the wall clock instead, which would make this function answer about
+  // two different days at once.
+  const doneToday = task.lastTrackedDate === dayKey(now)
+    && (task.todayCount ?? 0) >= (task.target ?? 1)
+  if (doneToday) return { ok: false, reason: 'done-today' }
+
+  const last = lastSkip(task)
+  if (last) {
+    const waited = daysBetweenKeys(last, dayKey(now))
+    if (waited < SKIP_EVERY_DAYS) {
+      return { ok: false, reason: 'too-soon', short: SKIP_EVERY_DAYS - waited }
+    }
+  }
+  if (xp < SKIP_COST) return { ok: false, reason: 'unaffordable', short: SKIP_COST - xp }
+  return { ok: true }
+}
+
+/**
+ * Buy today back for one habit: no decay tonight, and the streak survives.
+ *
+ * The XP leaves the bank, which can drop you below a level you had reached —
+ * and that is the point. A currency you cannot lose is not a currency, and the
+ * level bar going down is the clearest possible statement that the purchase
+ * was real. The quest gate is untouched: what you cleared stays cleared.
+ */
+export function buySkip(taskId: string, now = new Date()): SkipResult {
+  const s7   = loadScrap7()
+  const task = s7.tasks.find(t => t.id === taskId)
+  if (!task) return { ok: false, reason: 'not-a-habit' }
+
+  const state = loadProgression()
+  const check = skipState(task, state.xp, now)
+  if (!check.ok) return check
+
+  saveScrap7(skipHabitDay(s7, taskId))
+  saveProgression({ ...state, xp: state.xp - SKIP_COST })
+  window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'progression' } }))
+  return { ok: true }
 }
 
 // ─── The breach ───────────────────────────────────────────────────────────────

@@ -72,6 +72,17 @@ export interface Task {
   skippedDates?:     string[]  // days marked skip — no decay, streak preserved
   target?:           number    // daily dose target (default 1)
   unit?:             string    // "glasses", "minutes", "km", "pages" etc.
+  /**
+   * How many perfect days this habit is expected to take to become automatic.
+   *
+   * It IS the smoothing rate — see `alphaFor`. A goal routine gets its tier's
+   * figure when it is installed; a basic and anything hand-made keeps the
+   * default, because nobody grades their own teeth-brushing by complexity.
+   *
+   * Absent on everything written before this existed, which is why `alphaFor`
+   * takes undefined and why `syncChain` backfills routines on load.
+   */
+  formationDays?:    number
 
   // Daily-specific
   schedule?:          Schedule
@@ -265,6 +276,39 @@ export function calcStreak(tasks: Task[]): number {
     else if (i > 0) break   // allow today to be not-yet-done
   }
   return streak
+}
+
+// ─── How fast a score moves ───────────────────────────────────────────────────
+// The engine is exponential smoothing: a day done is `s → (1-a)s + a`, a day
+// missed is `s → (1-a)s`. One constant, `a`, decides everything — and it used to
+// be 0.05 for every habit alike, which meant EVERY routine crossed 0.70 on day
+// 24 no matter its tier. The app meanwhile printed 25 / 66 / 120 / 150 days by
+// tier, so it was telling you a number its own engine did not honour, off by up
+// to six times.
+//
+// The rate is now derived from the estimate instead of being unrelated to it.
+// Solve `(1-a)^n = 1 - AUTOMATIC_AT` for `a` and a tier-4 SYSTEM routine really
+// is the five-month project its name promises, while a REFLEX is a month.
+//
+// One property survives untouched, and it is the good one: whatever `a` is, the
+// score converges on the FRACTION OF DAYS YOU SHOW UP. Turn up 70% of days and
+// it settles at 0.70. The rate changes how fast you get there and how much one
+// missed day costs — never what the number means.
+
+/**
+ * The score at which a habit is automatic and stops holding a training slot.
+ * Mirrors progression's THRESHOLD_UNLOCK_AT; `xp.test.ts` pins the two together
+ * so they cannot drift apart in different files.
+ */
+export const AUTOMATIC_AT = 0.70
+
+/** What a habit takes when nothing said otherwise — a REFLEX, near the old 0.05. */
+export const DEFAULT_FORMATION_DAYS = 25
+
+/** The smoothing rate that makes a habit automatic in exactly `formationDays`. */
+export function alphaFor(formationDays: number | undefined): number {
+  const n = Math.max(1, Math.round(formationDays ?? DEFAULT_FORMATION_DAYS))
+  return 1 - Math.pow(1 - AUTOMATIC_AT, 1 / n)
 }
 
 // ─── Habit score tiers (Loop-inspired) ───────────────────────────────────────
