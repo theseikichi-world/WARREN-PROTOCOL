@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { baseXp, awardXp, levelCost, levelFor, gatedLevel, levelCap, isUnlockedAt, nextGate, GATES, levelReward, rewardIsBare, rungsOpen } from './xp'
+import { baseXp, awardXp, levelCost, levelFor, gatedLevel, levelCap, isUnlockedAt, nextGate, GATES, levelReward, rewardIsBare, rungsOpen, runXp } from './xp'
 import { stageQuests, stageXp, LAST_GATED_STAGE } from './quests'
 import { deriveStats, overallRating } from './stats'
 import type { Task } from '../scrap7/types'
@@ -236,5 +236,36 @@ describe('what a level opens', () => {
     // Level 7 gates nothing, widens nothing and starts no stage
     expect(rewardIsBare(levelReward(7))).toBe(true)
     expect(rewardIsBare(levelReward(2))).toBe(false)
+  })
+})
+
+describe('the curve against what a protocol actually earns', () => {
+  // The bug this guards: the stage-4 quest holds you at level 4 for about a
+  // fortnight while XP keeps arriving. At +80 a level the bank reached 2789
+  // against a level-6 price of 1400, so the moment the gate lifted the scale
+  // fired four times in a second. A bar that reads HELD for two weeks and then
+  // means nothing when it moves is worse than no bar.
+  //
+  // The model is the one in the economy doc: five routines of tiers 1·2·2·3·2,
+  // one basic, and UPKEEP at its ceiling — a good day, not a typical one.
+  const MIX = [1, 2, 2, 3, 2] as const
+  const dayAt = (scores: number[]) =>
+    Math.round((MIX.reduce((sum, t, i) => sum + runXp(t, scores[i]), 0) + 3) * 1.25)
+
+  it('prices every level above a single best day', () => {
+    const best = dayAt([0, 0, 0, 0, 0])
+    for (let l = 2; l <= 20; l++) expect(levelCost(l)).toBeGreaterThan(best)
+  })
+
+  it('outruns a fortnight banked behind a held gate', () => {
+    // Sixteen days of full earnings plus everything the five stages pay out.
+    const held = 16 * dayAt([0.3, 0.3, 0.3, 0.3, 0.3])
+      + [1, 2, 3, 4, 5].reduce((sum, s) => sum + stageXp(s), 0)
+
+    // That bank must not carry past ONE level beyond the cap the gate lifts to.
+    // Stage 5 is the last, so the cap becomes level 6; reaching 7 on the same
+    // day would be the burst returning.
+    const through7 = [1, 2, 3, 4, 5, 6].reduce((sum, l) => sum + levelCost(l), 0)
+    expect(held).toBeLessThan(through7)
   })
 })

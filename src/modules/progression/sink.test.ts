@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { skipState, lastSkip, buySkip } from './store'
-import { SKIP_COST, SKIP_EVERY_DAYS } from './xp'
+import { SKIP_COST, SKIP_EVERY_DAYS, levelCost } from './xp'
 import { THRESHOLD_UNLOCK_AT } from './types'
 import { AUTOMATIC_AT, alphaFor, DEFAULT_FORMATION_DAYS, type Task } from '../scrap7/types'
 
@@ -132,12 +132,17 @@ describe('spending, against real storage', () => {
   })
 
   it('lets the bank fall past a level you had reached', () => {
-    // Level 3 costs 320 banked. Spending down through it takes the level with
-    // it — and takes the shop with it, since buying a day back opens at 3. That
-    // is not a rough edge: it is what makes this a currency rather than a score.
-    seed(340, habit())
+    // Spending down through a level boundary takes the level with it — and the
+    // shop with it, since buying a day back opens at 3. That is not a rough
+    // edge: it is what makes this a currency rather than a score.
+    //
+    // Read off `levelCost` rather than written in, so retuning the curve moves
+    // this test with it instead of breaking it.
+    const intoLevel3 = levelCost(1) + levelCost(2)
+    seed(intoLevel3 + SKIP_COST - 1, habit())
+
     expect(buySkip('h', NOW)).toEqual({ ok: true })
-    expect(bank()).toBe(300)
+    expect(bank()).toBe(intoLevel3 - 1)
     expect(buySkip('h2', NOW)).toMatchObject({ ok: false })
   })
 

@@ -197,12 +197,23 @@ export const SKIP_EVERY_DAYS = 7
 // two thirds of the way through the work it represents is just noise.
 //
 // The floor keeps the curve rising even where a stage happens to pay less than
-// the one before, and carries it past the last gated level. It is deliberately
-// gentler than the old level² × 40: that reached 1000 at level 5, this reaches
-// 440, because the gate is what paces early progress now — not the grind.
+// the one before, and carries it past the last gated level.
+//
+// THE STEP IS SET AGAINST INCOME, not against the previous level. At +80 a level
+// cost roughly one day of a running protocol while the stage-4 quest held you
+// for sixteen — so the bank climbed to 2789 against a level-6 price of 1400, and
+// the moment the gate lifted the scale jumped through four levels at once. A bar
+// that reads HELD for a fortnight and then fires four times in a second is
+// telling you nothing either way.
+//
+// At +160 the price keeps pace with what five routines and a basic actually pay
+// (~90-104 a day with UPKEEP), and no level lands on the same day as another.
+// It costs an existing save about two levels: the bank is untouched, the prices
+// moved. That is the right trade while the economy is still being tuned, and the
+// wrong one after anyone has lived with a number for a year.
 
 const BASE_COST = 120
-const COST_STEP = 80
+const COST_STEP = 160
 
 export function levelCost(level: number): number {
   const floor = BASE_COST + Math.max(0, level - 1) * COST_STEP
