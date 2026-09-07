@@ -181,13 +181,17 @@ function MissionBlock({ mission, dream, state, onChange }: {
     transition: 'border-color 0.15s',
   }
 
+  // Sides and accent rail as one axis set — see the note in DreamsPanel.
+  const edge = completed ? 'rgba(245,158,11,0.15)' : 'rgba(192,132,252,0.1)'
+
   return (
     <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{
         margin: '4px 0', borderRadius: 8,
         background: completed ? 'rgba(245,158,11,0.03)' : 'rgba(10,4,26,0.5)',
-        border: `1px solid ${completed ? 'rgba(245,158,11,0.15)' : 'rgba(192,132,252,0.1)'}`,
-        borderLeft: `2px solid ${completed ? '#f59e0b' : pColor}`,
+        borderWidth: '1px 1px 1px 2px',
+        borderStyle: 'solid',
+        borderColor: `${edge} ${edge} ${edge} ${completed ? '#f59e0b' : pColor}`,
         transition: 'all 0.15s',
       }}>
 

@@ -567,6 +567,9 @@ function OptimizePanel({ result, onApplyChange, onApplyAddition, onClose }: {
 // ─── Proportional timeline ────────────────────────────────────────────────────
 // Block HEIGHT = duration, against an hour grid, so you see the day to scale.
 const PPM    = 1.75           // pixels per minute (1 hour ≈ 105px; 20 min ≈ 35px)
+/** The suggestion strip's three quiet sides, kept out of the colour list. */
+const SUGGEST_EDGE = 'rgba(57,255,20,0.28)'
+
 const GUTTER = 42             // left hour-label column
 const TOP_PAD = 18           // room above for the WAKE cap
 
@@ -660,7 +663,8 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
       <div style={{ position: 'absolute', left: GUTTER, right: 0, top: top + 1, height: h,
         borderRadius: 7, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 3,
         padding: '4px 8px', backgroundColor: 'rgba(8,20,14,0.34)',
-        border: '1px dashed rgba(57,255,20,0.28)', borderLeft: '3px dashed rgba(57,255,20,0.5)' }}>
+        borderWidth: '1px 1px 1px 3px', borderStyle: 'dashed',
+        borderColor: `${SUGGEST_EDGE} ${SUGGEST_EDGE} ${SUGGEST_EDGE} rgba(57,255,20,0.5)` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           <span style={{ fontSize: 13.5, opacity: 0.55 }}>✦</span>
           <span style={{ flex: 1, fontFamily: 'var(--font)', fontSize: 'var(--fs-sm)',
@@ -717,9 +721,9 @@ function TimelineBlock({ b, top, height, isNow, suggestions, onRemoveEvent, onGo
       style={{ position: 'absolute', left: GUTTER, right: 0, top: top + 1, height: h,
         borderRadius: 7, overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 7, padding: '0 9px',
         backgroundColor: baseBg,
-        border: `1px solid ${liveColor}`,
-        borderLeft: `3px solid ${isFree ? `${color}50` : color}`,
+        borderWidth: '1px 1px 1px 3px',
         borderStyle: isFree ? 'dashed' : 'solid',
+        borderColor: `${liveColor} ${liveColor} ${liveColor} ${isFree ? `${color}50` : color}`,
         boxShadow: isNow && !isFree ? `0 0 14px ${color}55, ${tint}` : isFree ? 'none' : tint,
         opacity: b.done ? 0.5 : 1, transition: 'all 0.2s',
         zIndex: isNow ? 6 : 1,

@@ -116,8 +116,13 @@ export function DreamsPanel({ onPromote, promotedIds }: {
               width: '100%', display: 'flex', alignItems: 'center', gap: 7,
               padding: '8px 12px', cursor: promoted ? 'default' : 'pointer',
               background: promoted ? 'rgba(0,245,255,0.04)' : 'rgba(0,245,255,0.07)',
-              borderTop: `1px solid rgba(0,245,255,${promoted ? 0.12 : 0.25})`,
-              border: 'none', opacity: promoted ? 0.65 : 1,
+              // Top rule only. This used to set `borderTop` and then
+              // `border: none`, so the shorthand wiped it and the divider never
+              // drew — the React warning was pointing at a real missing line.
+              borderWidth: '1px 0 0',
+              borderStyle: 'solid',
+              borderColor: `rgba(0,245,255,${promoted ? 0.12 : 0.25}) transparent transparent`,
+              opacity: promoted ? 0.65 : 1,
             }}>
               <span style={{ fontSize: 14, filter: 'drop-shadow(0 0 4px #00f5ff)' }}>◈</span>
               <div style={{ flex: 1, textAlign: 'left' }}>

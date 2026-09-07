@@ -786,11 +786,15 @@ function LibraryCard({ item, onUpdate, onRemove, onMove }: {
     { s: 'coming-soon' as Status, l: tr('Coming Soon', 'Скоро') },
   ]).filter(o => o.s !== item.status)
 
+  // Sides and accent rail as one axis set — see the note in DreamsPanel.
+  const edge = expanded ? item.mood_color + '35' : C.border
+
   return (
     <div style={{
       borderRadius: 10, overflow: 'hidden', background: C.card,
-      border: `1px solid ${expanded ? item.mood_color + '35' : C.border}`,
-      borderLeft: `3px solid ${item.mood_color}`,
+      borderWidth: '1px 1px 1px 3px',
+      borderStyle: 'solid',
+      borderColor: `${edge} ${edge} ${edge} ${item.mood_color}`,
       boxShadow: expanded ? '0 4px 24px rgba(0,0,0,0.5)' : 'none',
       transition: 'all 0.2s',
     }}>

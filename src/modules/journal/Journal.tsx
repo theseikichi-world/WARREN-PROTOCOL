@@ -272,8 +272,10 @@ function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId, liveText
         {/* Live polish — the owl typing in real time */}
         {enhancing && (
           <div style={{ marginTop: 9, padding: '9px 12px', borderRadius: 9,
-            background: 'rgba(30,24,6,0.9)', border: `1px solid ${NEON}30`,
-            borderLeft: `3px solid ${NEON}`, boxShadow: `0 0 14px ${NEON}12` }}>
+            background: 'rgba(30,24,6,0.9)',
+            borderWidth: '1px 1px 1px 3px', borderStyle: 'solid',
+            borderColor: `${NEON}30 ${NEON}30 ${NEON}30 ${NEON}`,
+            boxShadow: `0 0 14px ${NEON}12` }}>
             <p style={{ fontFamily: FONT, fontSize: 11.5, fontWeight: 800, color: `${NEON}90`,
               letterSpacing: '0.18em', marginBottom: 5 }}>
               🦉 {tr('THE OWL IS POLISHING', 'СОВА ШЛИФУЕТ')}<span className="pulse">…</span>
@@ -303,7 +305,9 @@ function EntryCard({ entry, onUpdate, onDelete, onEnhance, enhancingId, liveText
       {/* Captain's debrief */}
       {expanded && entry.reflection && (
         <div style={{ margin: '0 14px 10px', padding: '9px 12px', borderRadius: 9,
-          background: RAISED, border: `1px solid ${NEON}1c`, borderLeft: `3px solid ${NEON}60` }}>
+          background: RAISED,
+          borderWidth: '1px 1px 1px 3px', borderStyle: 'solid',
+          borderColor: `${NEON}1c ${NEON}1c ${NEON}1c ${NEON}60` }}>
           <p style={{ fontFamily: FONT, fontSize: 11.5, fontWeight: 800, color: `${NEON}80`,
             letterSpacing: '0.18em', marginBottom: 5 }}>🦉 {tr("FIRST-OFFICER'S DEBRIEF", 'РАЗБОР ПЕРВОГО ПОМОЩНИКА')}</p>
           <p style={{ fontFamily: FONT, fontSize: 12, lineHeight: 1.7, color: 'rgba(255,240,200,0.7)',

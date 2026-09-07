@@ -25,6 +25,9 @@ import { loadSettings } from '../../settings'
 // nowhere in a tech tree and is exactly what used to evaporate. It waits here
 // and is deployed on your say-so, never automatically.
 
+/** An act group's three quiet sides; the left one carries the pressure. */
+const ACT_EDGE = 'rgba(255,255,255,0.06)'
+
 const KIND_COLOR: Record<Candidate['kind'], string> = {
   routine: '#00f5ff',   // the protocol's colour — this one is scored
   task:    '#00b4ff',   // ORBIT
@@ -215,8 +218,9 @@ export function ShelfPanel({ goal, accent, onChanged }: {
             <div key={act.key} style={{
               borderRadius: 8, overflow: 'hidden',
               background: 'rgba(8,16,28,0.45)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              borderLeft: `2px solid ${pColor}`,
+              borderWidth: '1px 1px 1px 2px',
+              borderStyle: 'solid',
+              borderColor: `${ACT_EDGE} ${ACT_EDGE} ${ACT_EDGE} ${pColor}`,
             }}>
               <div style={{ padding: '7px 10px', display: 'flex', alignItems: 'center', gap: 8,
                 borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
