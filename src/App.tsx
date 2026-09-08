@@ -10,7 +10,8 @@ import { Onboarding } from './Onboarding'
 import { RouteTour } from './TourOverlay'
 import { Initiation } from './modules/progression/Initiation'
 import { LevelUp } from './modules/progression/LevelUp'
-import { gatedLevel } from './modules/progression/xp'
+import { Ascension } from './modules/progression/Ascension'
+import { gatedLevel, ASCEND_AT } from './modules/progression/xp'
 import { loadProgression, saveProgression, adoptOrphanHabits } from './modules/progression/store'
 import { autoSync } from './sync'
 import { moduleLevel, moduleUnlocked } from './moduleAccess'
@@ -1121,6 +1122,7 @@ export default function App() {
   }, [])
   const [initiated, setInitiated] = useState(() => !!loadProgression().initiatedAt)
   const [levelUp, setLevelUp] = useState<number | null>(null)
+  const [ascending, setAscending] = useState(false)
   const [level, setLevel] = useState(() => { const p = loadProgression(); return gatedLevel(p.xp, p.quests).level })
   const [lockNote, setLockNote] = useState('')
   const entitlements: Entitlements = {}
@@ -1162,6 +1164,10 @@ export default function App() {
       const p = loadProgression()
       const reached = gatedLevel(p.xp, p.quests).level
       setLevel(reached)
+      // At the milestone the rite REPLACES the level screen. Level ten's "what
+      // opened" is the ceremony itself, and two overlays stacked would make the
+      // one moment the app has look like a queue.
+      if (reached >= ASCEND_AT && !p.ascendedAt) { setAscending(true); return }
       if (reached > (p.celebratedLevel ?? 1)) setLevelUp(reached)
     }
     check()
@@ -1218,11 +1224,13 @@ export default function App() {
   const showIntro      = intro && settings.showIntro
   const showOnboarding = !showIntro && !settings.onboardedAt
   const showInitiation = !showIntro && !showOnboarding && !initiated && onHub
-  const showLevelUp    = levelUp !== null && !showIntro && !showOnboarding && !showInitiation
+  const showAscension  = ascending && !showIntro && !showOnboarding && !showInitiation
+  const showLevelUp    = levelUp !== null && !showIntro && !showOnboarding && !showInitiation && !showAscension
   // Reached by URL, back button, or a level that dropped — never a dead render
   const lockedRoute = GUILD.some(m =>
     m.built && location.pathname.startsWith(m.path) && !moduleUnlocked(m.id, level, settings.unlockAll))
-  const tourEnabled    = !showIntro && !showOnboarding && !showInitiation && !showLevelUp && !settingsOpen
+  const tourEnabled    = !showIntro && !showOnboarding && !showInitiation && !showLevelUp
+    && !showAscension && !settingsOpen
 
   // Window transparency only means something when there is a desktop behind the
   // window. In a browser there is nothing behind it, so the slider would just
@@ -1284,6 +1292,17 @@ export default function App() {
             saveProgression({ ...loadProgression(), initiatedAt: new Date().toISOString() })
             setInitiated(true)
           }} />
+      )}
+
+      {/* The starting zone closing. Plays once in the life of a save, and the
+          hub leads with STANDING rather than a level from here on. */}
+      {showAscension && (
+        <Ascension onDone={() => {
+          const now = new Date().toISOString()
+          saveProgression({ ...loadProgression(), ascendedAt: now, celebratedLevel: level })
+          setAscending(false)
+          window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'ascension' } }))
+        }} />
       )}
 
       {/* A threshold crossed. Says what changed, never "well done". */}

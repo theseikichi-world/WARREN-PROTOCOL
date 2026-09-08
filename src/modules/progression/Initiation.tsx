@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { t as tr } from '../../i18n'
 
-// ─── ARRIVAL — the one time the app is allowed to be theatrical ───────────────
-// Everywhere else the rule holds: rewards inform, never congratulate. This is
-// the exception, and it earns the exception by being about the *stakes* rather
-// than about you being wonderful. It plays once, before there is anything to be
-// congratulated for, and it never plays again.
+// ─── RITES — the two times the app is allowed to be theatrical ────────────────
+// Everywhere else the rule holds: rewards inform, never congratulate. These earn
+// the exception by being about the *stakes* rather than about you being
+// wonderful, and each plays exactly once in the life of a save.
 //
-// The last line is the whole thesis of the app, so it lands alone.
+// There are two. ARRIVAL, below, before there is anything to be congratulated
+// for. And ASCENSION at level ten, when there is nothing left to unlock and the
+// scale hands over to what you are actually holding — see `Ascension.tsx`.
+//
+// The machinery is shared because they are one ceremony in two acts, and a
+// second copy of a typewriter would drift from the first inside a month.
 
 const CYAN = '#00f5ff'
 
-interface Line {
+export interface RiteLine {
   text:  string
   ru:    string
   size:  number
@@ -19,7 +23,7 @@ interface Line {
   pause: number     // ms held after this line finishes typing
 }
 
-const lines = (name: string): Line[] => [
+const arrival = (name: string): RiteLine[] => [
   { text: 'ESTABLISHING UPLINK…', ru: 'УСТАНОВКА КАНАЛА…',
     size: 9,  color: `${CYAN}70`, pause: 260 },
   { text: 'PROTOCOL #1', ru: 'ПРОТОКОЛ №1',
@@ -36,8 +40,27 @@ const lines = (name: string): Line[] => [
 
 const CHAR_MS = 26
 
+/** The arrival. Plays before the first dream exists — see `initiatedAt`. */
 export function Initiation({ name, onDone }: { name: string; onDone: () => void }) {
-  const script = lines(name || tr('OPERATOR', 'ОПЕРАТОР'))
+  return (
+    <Rite script={arrival(name || tr('OPERATOR', 'ОПЕРАТОР'))} accent={CYAN}
+      cta={tr('BEGIN', 'НАЧАТЬ')} onDone={onDone} />
+  )
+}
+
+/**
+ * A script, typed out, skippable, with one button at the end.
+ *
+ * `accent` is what makes the two rites feel like the same object at different
+ * points of a life: the arrival is cyan, the ascension gold, and nothing else
+ * about them differs.
+ */
+export function Rite({ script, accent, cta, onDone }: {
+  script: RiteLine[]
+  accent: string
+  cta:    string
+  onDone: () => void
+}) {
   const [shown, setShown]   = useState<string[]>([])   // fully-typed lines
   const [typing, setTyping] = useState('')             // the line in progress
   const [done, setDone]     = useState(false)
@@ -88,12 +111,12 @@ export function Initiation({ name, onDone }: { name: string; onDone: () => void 
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       gap: 10, padding: '32px 26px', cursor: done ? 'default' : 'pointer',
       paddingTop: 'calc(32px + var(--sa-top))', paddingBottom: 'calc(32px + var(--sa-bottom))',
-      background: 'radial-gradient(ellipse at 50% 45%, rgba(0,60,80,0.28), rgba(1,4,9,0.99) 70%)',
+      background: `radial-gradient(ellipse at 50% 45%, ${accent}22, rgba(1,4,9,0.99) 70%)`,
       backdropFilter: 'blur(8px)',
     }}>
       {/* Scanline wash — cheap, and it sells the terminal */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.5,
-        background: 'repeating-linear-gradient(0deg, rgba(0,245,255,0.035) 0px, rgba(0,245,255,0.035) 1px, transparent 1px, transparent 3px)' }} />
+        background: `repeating-linear-gradient(0deg, ${accent}09 0px, ${accent}09 1px, transparent 1px, transparent 3px)` }} />
 
       <div style={{ width: '100%', maxWidth: 420, textAlign: 'center', position: 'relative' }}>
         {script.map((line, i) => {
@@ -105,10 +128,10 @@ export function Initiation({ name, onDone }: { name: string; onDone: () => void 
               fontFamily: 'var(--font)', fontSize: line.size, fontWeight: line.size > 12 ? 900 : 700,
               color: line.color, letterSpacing: line.size > 12 ? '0.12em' : '0.06em',
               lineHeight: 1.65, margin: i === 0 ? 0 : '9px 0 0',
-              textShadow: line.color === CYAN ? `0 0 14px ${CYAN}70` : 'none',
+              textShadow: line.color === accent ? `0 0 14px ${accent}70` : 'none',
             }}>
               {complete ? shown[i] : typing}
-              {active && <span className="pulse" style={{ color: CYAN }}>▌</span>}
+              {active && <span className="pulse" style={{ color: accent }}>▌</span>}
             </p>
           )
         })}
@@ -118,9 +141,9 @@ export function Initiation({ name, onDone }: { name: string; onDone: () => void 
         <button onClick={onDone} style={{
           marginTop: 18, padding: '10px 30px', borderRadius: 8, cursor: 'pointer',
           fontFamily: 'var(--font)', fontSize: 12.5, fontWeight: 900, letterSpacing: '0.22em',
-          color: '#02121a', background: `linear-gradient(135deg, ${CYAN}, ${CYAN}b0)`,
-          border: 'none', boxShadow: `0 0 22px ${CYAN}55`,
-        }}>{tr('BEGIN', 'НАЧАТЬ')}</button>
+          color: '#02121a', background: `linear-gradient(135deg, ${accent}, ${accent}b0)`,
+          border: 'none', boxShadow: `0 0 22px ${accent}55`,
+        }}>{cta}</button>
       ) : (
         <p style={{ marginTop: 18, fontFamily: 'var(--font)', fontSize: 11.5,
           letterSpacing: '0.16em', color: 'rgba(148,163,184,0.3)' }}>

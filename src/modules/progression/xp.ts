@@ -332,6 +332,8 @@ export const GATES: Gate[] = [
  * every routine you own has two more standards waiting, and holding all of them
  * at the top rung is a great deal more work than reaching level 13.
  */
+export const ASCEND_AT = 10
+
 export function rungsOpen(level: number): number {
   if (isUnlockedAt('rung3', level)) return 3
   if (isUnlockedAt('rung2', level)) return 2

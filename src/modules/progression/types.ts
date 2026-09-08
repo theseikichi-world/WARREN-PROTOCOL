@@ -151,6 +151,14 @@ export interface ProgressionState {
   quests:  Record<string, string>  // quest id → cleared at
   /** When the operator was first briefed. The arrival plays exactly once. */
   initiatedAt?: string | null
+  /**
+   * When the starting zone closed. The second and last rite, at level ten.
+   *
+   * It is a stamp rather than a setting: past it the hub stops leading with a
+   * level and leads with STANDING instead, and there is no way back. A
+   * reversible ceremony is a preference with music.
+   */
+  ascendedAt?: string | null
   /** Highest level already celebrated, so the moment fires once per threshold. */
   celebratedLevel?: number
   /**

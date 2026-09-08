@@ -9,6 +9,7 @@ import {
   stageState, questCta, QUEST_DESTINATIONS,
   type Quest, type QuestContext,
 } from './quests'
+import { deriveStats, overallRating, type Stat } from './stats'
 import { questNav } from './questNav'
 import { play as playCue } from '../../sound'
 
@@ -20,6 +21,73 @@ import { play as playCue } from '../../sound'
 
 const GOLD = '#ffd700'
 const DIM  = 'rgba(148,163,184,0.5)'
+
+/**
+ * STANDING — the number that replaces the level once there is nothing left to
+ * unlock.
+ *
+ * It is not the level wearing a costume, and the difference is the whole point.
+ * A level only rises and can only be waited out; this is the average of seven
+ * attributes read off what is running RIGHT NOW, so it falls when you let go.
+ * That is what makes it something to work on rather than something to reach.
+ *
+ * The seven bars are the reason it is not one number: a reading of 38 with the
+ * streak column dark tells you what to fix, and 38 on its own tells you off.
+ * `overallRating` and `deriveStats` have both existed since the character
+ * sheet — all that was missing was putting them where you look first.
+ */
+function Standing({ stats }: { stats: Stat[] }) {
+  const rating = overallRating(stats)
+  const live   = stats.filter((s): s is Stat & { value: number } => s.value !== null)
+  const tone   = rating === null ? DIM : rating >= 60 ? GOLD : rating >= 35 ? '#ff9d2e' : '#ff5a5a'
+
+  return (
+    <div style={{ marginBottom: 16, padding: '11px 13px', borderRadius: 10,
+      background: `${GOLD}08`, border: `1px solid ${GOLD}28`,
+      display: 'flex', alignItems: 'center', gap: 14 }}>
+
+      <div style={{ flexShrink: 0 }}>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
+          letterSpacing: '0.2em', color: `${GOLD}b0` }}>{tr('STANDING', 'ПОКАЗАТЕЛЬ')}</p>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 27, fontWeight: 900, lineHeight: 1.1,
+          color: tone, textShadow: rating === null ? 'none' : `0 0 14px ${tone}55` }}>
+          {rating === null ? '—' : rating}
+        </p>
+      </div>
+
+      {/* One column per attribute. Identity is never colour alone — each carries
+          its own three letters underneath. */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-end',
+        gap: 5, height: 46 }}>
+        {stats.map(st => (
+          <div key={st.key} title={`${tr(st.label, st.ru)} — ${st.detail}`}
+            style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 3 }}>
+            <div style={{ width: '100%', height: 34, display: 'flex', alignItems: 'flex-end',
+              background: 'rgba(255,255,255,0.04)', borderRadius: 2 }}>
+              <div style={{ width: '100%', height: `${st.value ?? 0}%`, minHeight: st.value ? 2 : 0,
+                borderRadius: 2, background: st.color,
+                boxShadow: st.value ? `0 0 5px ${st.color}70` : 'none' }} />
+            </div>
+            <span style={{ fontFamily: 'var(--font)', fontSize: 'var(--fs-2xs)',
+              letterSpacing: '0.04em', color: st.value === null ? 'rgba(148,163,184,0.3)' : `${st.color}b0` }}>
+              {tr(st.label, st.ru).slice(0, 3)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* What the reading is even made of. Silent when nothing is measurable —
+          seven dashes and a "—" already said it. */}
+      {live.length > 0 && (
+        <span className="weekstrip-count" style={{ flexShrink: 0, fontFamily: 'var(--font)',
+          fontSize: 'var(--fs-2xs)', color: 'rgba(148,163,184,0.4)', letterSpacing: '0.05em' }}>
+          {live.length}/{stats.length}
+        </span>
+      )}
+    </div>
+  )
+}
 
 export function QuestPanel() {
   const navigate = useNavigate()
@@ -91,16 +159,25 @@ export function QuestPanel() {
     navigate(path, { state: questNav(quest, quest.spotlight) })
   }
 
-  // The starting zone is finite by design
+  // ── Past the starting zone ────────────────────────────────────────────────
+  // This slot used to hold one sentence saying the line was over — a whole card
+  // spent on a fact that never changes again. It holds STANDING instead.
+  //
+  // But only once the RITE has played. Clearing the last stage lifts the level
+  // cap without necessarily paying for level ten, so there is a window where the
+  // quests are done and the ceremony has not happened; swapping the card during
+  // it would make the hinge a state change that nobody witnessed, which is the
+  // one thing `ascendedAt` exists to prevent.
   if (stage.stage === null) {
+    if (state.ascendedAt) return <Standing stats={deriveStats(ctx.goals, ctx.tasks, ctx.sums)} />
     return (
       <div style={{ marginBottom: 16, padding: '11px 13px', borderRadius: 10,
         background: `${GOLD}08`, border: `1px solid ${GOLD}28` }}>
         <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.2em',
           color: `${GOLD}b0` }}>⚑ {tr('MAIN QUEST', 'ОСНОВНОЙ КВЕСТ')}</p>
         <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: 'rgba(230,242,255,0.85)', marginTop: 6 }}>
-          {tr('The starting zone is behind you. Everything from here is your own line.',
-              'Стартовая зона позади. Дальше — только ваша линия.')}
+          {tr('Every objective is cleared. The last threshold is the XP itself.',
+              'Все задачи закрыты. Последний порог — сам опыт.')}
         </p>
       </div>
     )

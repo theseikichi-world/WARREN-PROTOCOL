@@ -27,7 +27,10 @@ import {
 
 const KEY = 'warren_progression_v1'
 
-const INITIAL: ProgressionState = { goals: [], seeded: false, xp: 0, quests: {}, initiatedAt: null, celebratedLevel: 1 }
+const INITIAL: ProgressionState = {
+  goals: [], seeded: false, xp: 0, quests: {},
+  initiatedAt: null, ascendedAt: null, celebratedLevel: 1,
+}
 
 export function loadProgression(): ProgressionState {
   try {
@@ -46,6 +49,7 @@ export function loadProgression(): ProgressionState {
       xp:     Math.max(banked, questFloorXp(quests)),
       quests,
       initiatedAt: typeof parsed.initiatedAt === 'string' ? parsed.initiatedAt : null,
+      ascendedAt:  typeof parsed.ascendedAt  === 'string' ? parsed.ascendedAt  : null,
       celebratedLevel: typeof parsed.celebratedLevel === 'number' ? parsed.celebratedLevel : 1,
       errands: (parsed.errands && typeof parsed.errands.date === 'string'
         && typeof parsed.errands.xp === 'number') ? parsed.errands : undefined,
