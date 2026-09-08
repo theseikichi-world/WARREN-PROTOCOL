@@ -10,6 +10,7 @@ import {
   type ChainNode, type Goal,
 } from './types'
 import { raiseState, type RaiseState } from './store'
+import { nodeSkin, type NodeSkin, type Ring } from './skin'
 import { bandColor, countdown, scheduleLine } from './deadline'
 
 const DIM  = 'rgba(148,163,184,0.55)'
@@ -114,6 +115,7 @@ export function SkillTree({ goal, tasks, accent, level, onInstall, onTrack, onCl
 
           {placed.map(p => (
             <TreeNode key={p.node.id} placed={p} state={stateOf(p.node)} accent={accent}
+              skin={nodeSkin(p.node, tasks)}
               score={nodeScore(p.node, tasks)}
               selected={selected === p.node.id}
               onSelect={() => setSelected(selected === p.node.id ? null : p.node.id)} />
@@ -255,9 +257,31 @@ function Breaches({ goal, tasks, accent, onClear }: {
   )
 }
 
-function TreeNode({ placed, state, accent, score, selected, onSelect }: {
+/**
+ * How each ring is drawn — two properties carrying two different facts.
+ *
+ * WIDTH IS DEPTH: one pixel while a routine still costs you a decision, two once
+ * it does not. BRIGHTNESS IS LIVENESS: a node waiting on your say-so is lit, one
+ * grinding away quietly is not, and a locked one is barely there.
+ *
+ * That split is why OPEN can sit between LOCKED and TRAINING without confusing
+ * either — it is the brightest thin ring on the tree, because it is the only one
+ * asking for something. Widths are whole pixels: a 1.5 rounds to 1 and the code
+ * would be promising something it does not draw.
+ */
+const RING: Record<Ring, { width: number; style: 'solid' | 'dashed'; alpha: string }> = {
+  locked:     { width: 1, style: 'dashed', alpha: '30' },
+  open:       { width: 1, style: 'solid',  alpha: 'd0' },
+  training:   { width: 1, style: 'solid',  alpha: '55' },
+  strong:     { width: 2, style: 'solid',  alpha: 'aa' },
+  integrated: { width: 2, style: 'solid',  alpha: 'ff' },
+}
+
+function TreeNode({ placed, state, skin, accent, score, selected, onSelect }: {
   placed:   Placed
   state:    NodeState
+  /** The two axes the frame is drawn from. See `skin.ts`. */
+  skin:     NodeSkin
   accent:   string
   score:    number
   selected: boolean
@@ -266,8 +290,10 @@ function TreeNode({ placed, state, accent, score, selected, onSelect }: {
   const { node, x, y } = placed
   const locked     = state === 'locked'
   const available  = state === 'available'
-  const integrated = state === 'integrated'
+  const integrated = skin.ring === 'integrated'
   const color      = integrated ? GOLD : locked ? 'rgba(148,163,184,0.45)' : accent
+  const ring       = RING[skin.ring]
+  const edge       = selected ? color : integrated ? `${GOLD}${ring.alpha}` : `${color}${ring.alpha}`
 
   return (
     <button onClick={onSelect} title={node.title}
@@ -277,12 +303,36 @@ function TreeNode({ placed, state, accent, score, selected, onSelect }: {
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         gap: 4, padding: '6px 8px', textAlign: 'center',
         background: integrated ? `${GOLD}14` : locked ? 'rgba(13,24,48,0.4)' : `${accent}12`,
-        border: `1px ${locked ? 'dashed' : 'solid'} ${selected ? color : `${color}${locked ? '30' : '55'}`}`,
+        // Axis properties, never `border` plus `borderWidth` — React reconciles
+        // the pair in an order the browser does not guarantee.
+        borderWidth: ring.width,
+        borderStyle: ring.style,
+        borderColor: edge,
         boxShadow: selected ? `0 0 16px ${color}55`
+          : skin.held ? `0 0 14px ${GOLD}30`
           : available ? `0 0 12px ${accent}35` : 'none',
         animation: available ? 'pulse 2.6s ease-in-out infinite' : undefined,
         transition: 'box-shadow 0.15s, border-color 0.15s',
       }}>
+
+      {/* HELD — the top standard, made automatic. Both axes at their end, which
+          is months of work and the only thing here that cannot be shortcut. It
+          gets an inner rule rather than another colour: the frame doubles. */}
+      {skin.held && (
+        <span style={{ position: 'absolute', inset: 3, borderRadius: 7, pointerEvents: 'none',
+          borderWidth: 1, borderStyle: 'solid', borderColor: `${GOLD}55` }} />
+      )}
+
+      {/* THE STARS — which of its three standards it is held to. Above the
+          glyph, so a raised routine reads as raised before you read anything. */}
+      {skin.stars > 0 && (
+        <span style={{ position: 'absolute', top: 4, right: 7, display: 'flex', gap: 1,
+          fontSize: 9, lineHeight: 1, color: GOLD,
+          filter: `drop-shadow(0 0 4px ${GOLD}90)`, pointerEvents: 'none' }}>
+          {'★'.repeat(skin.stars)}
+        </span>
+      )}
+
       <span style={{ fontSize: 14.5, lineHeight: 1, filter: locked ? 'grayscale(1)' : `drop-shadow(0 0 5px ${color})` }}>
         {STATE_GLYPH[state]}
       </span>
@@ -292,7 +342,7 @@ function TreeNode({ placed, state, accent, score, selected, onSelect }: {
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
       }}>{node.title}</span>
 
-      {/* Integration ring — a bar, because a bar is readable at this size */}
+      {/* Integration bar — a bar, because a bar is readable at this size */}
       {(state === 'training' || integrated) && (
         <div style={{ width: '80%', height: 2.5, borderRadius: 2, background: 'rgba(255,255,255,0.08)' }}>
           <div style={{ height: '100%', width: `${Math.round(score * 100)}%`, borderRadius: 2,
