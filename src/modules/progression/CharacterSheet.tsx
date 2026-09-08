@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { t as tr, plural } from '../../i18n'
 import type { Task } from '../scrap7/types'
-import type { Goal } from './types'
+import type { Goal, ProgressionState } from './types'
 import { gatedLevel, nextGate, GATES, isUnlockedAt } from './xp'
 import { deriveStats, overallRating, type Stat } from './stats'
 import { nodeState } from './chain'
+import { loadProgression, saveProgression, wearTitle } from './store'
+import { TITLES, heldTitles, wornTitle } from './titles'
 import type { ModuleSummaries } from '../bigscreen/moduleStats'
 
 const CYAN = '#00f5ff'
@@ -15,18 +18,106 @@ const DIM  = 'rgba(148,163,184,0.5)'
 // you actually did, which is the only version of an RPG sheet that stays true
 // when the character is a real person.
 
-export function CharacterSheet({ goals, tasks, xp, sums, name, quests }: {
+/**
+ * Every title, earned or not, and which one is worn.
+ *
+ * A locked one still says what it takes. The set read as a tease when it was a
+ * list of words you did not have; as a list of conditions it is a map of what
+ * this app thinks is worth doing.
+ */
+function TitlePicker({ state, onWear, onClose }: {
+  state:   ProgressionState
+  onWear:  (id: string | null) => void
+  onClose: () => void
+}) {
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'flex-end',
+      justifyContent: 'center', background: 'rgba(2,6,12,0.75)', backdropFilter: 'blur(6px)',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: '100%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto',
+        padding: '16px 16px calc(16px + var(--sa-bottom))',
+        background: '#08111d', borderTopLeftRadius: 14, borderTopRightRadius: 14,
+        borderWidth: '1px 1px 0', borderStyle: 'solid', borderColor: `${GOLD}30`,
+      }}>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
+          letterSpacing: '0.2em', color: `${GOLD}b0` }}>{tr('TITLES', 'ТИТУЛЫ')}</p>
+        <p style={{ fontFamily: 'var(--font)', fontSize: 11, color: DIM, marginTop: 5, lineHeight: 1.6 }}>
+          {tr('Each one restates something that already happened. Wearing one is your choice, and changing costs nothing.',
+              'Каждый пересказывает то, что уже случилось. Какой носить — ваш выбор, и менять ничего не стоит.')}
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 12 }}>
+          {TITLES.map(t => {
+            const on   = !!state.titles?.[t.id]
+            const worn = state.title === t.id
+            return (
+              <button key={t.id} onClick={on ? () => onWear(worn ? null : t.id) : undefined}
+                disabled={!on}
+                style={{ textAlign: 'left', padding: '9px 11px', borderRadius: 8,
+                  cursor: on ? 'pointer' : 'default',
+                  background: worn ? `${GOLD}14` : on ? 'rgba(255,255,255,0.03)' : 'transparent',
+                  borderWidth: 1, borderStyle: 'solid',
+                  borderColor: worn ? `${GOLD}55` : on ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontFamily: 'var(--font)', fontSize: 12, fontWeight: 800,
+                    letterSpacing: '0.14em', flex: 1, minWidth: 0,
+                    color: on ? GOLD : 'rgba(148,163,184,0.4)' }}>
+                    {tr(t.en, t.ru)}
+                  </span>
+                  {worn && (
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 10, letterSpacing: '0.12em',
+                      color: GOLD }}>{tr('WORN', 'НАДЕТ')}</span>
+                  )}
+                  {on && !worn && (
+                    <span style={{ fontFamily: 'var(--font)', fontSize: 10,
+                      color: 'rgba(148,163,184,0.45)' }}>{state.titles![t.id].slice(0, 10)}</span>
+                  )}
+                </div>
+                <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, marginTop: 3, lineHeight: 1.5,
+                  color: on ? 'rgba(148,163,184,0.5)' : 'rgba(148,163,184,0.35)' }}>
+                  {on ? '✦ ' : '⊘ '}{tr(t.needEn, t.needRu)}
+                </p>
+              </button>
+            )
+          })}
+        </div>
+
+        <button onClick={onClose} style={{ width: '100%', marginTop: 12, padding: '9px',
+          borderRadius: 8, cursor: 'pointer', background: 'transparent',
+          borderWidth: 1, borderStyle: 'solid', borderColor: 'rgba(255,255,255,0.1)',
+          fontFamily: 'var(--font)', fontSize: 11.5, fontWeight: 800,
+          letterSpacing: '0.16em', color: DIM }}>{tr('CLOSE', 'ЗАКРЫТЬ')}</button>
+      </div>
+    </div>
+  )
+}
+
+export function CharacterSheet({ goals, tasks, xp, sums, name, quests, state }: {
   goals:  Goal[]
   tasks:  Task[]
   xp:     number
   sums:   ModuleSummaries
   name:   string
   quests: Record<string, string>
+  /** The whole record — titles need the ledger, not a slice of it. */
+  state:  ProgressionState
 }) {
+  const [picking, setPicking] = useState(false)
   const lvl    = gatedLevel(xp, quests)
   const stats  = deriveStats(goals, tasks, sums)
   const rating = overallRating(stats)
   const gate   = nextGate(lvl.level)
+
+  const held = heldTitles(state)
+  const worn = wornTitle(state)
+
+  const wear = (id: string | null) => {
+    saveProgression(wearTitle(loadProgression(), id))
+    setPicking(false)
+    window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'titles' } }))
+  }
 
   const live = goals.filter(g => g.slot !== 'archived')
   const installed = live.flatMap(g => g.nodes.filter(n => n.scrapTaskId))
@@ -34,6 +125,8 @@ export function CharacterSheet({ goals, tasks, xp, sums, name, quests }: {
 
   return (
     <div>
+      {picking && <TitlePicker state={state} onWear={wear} onClose={() => setPicking(false)} />}
+
       {/* Identity + level */}
       <div style={{ padding: '14px 15px', borderRadius: 12,
         background: `linear-gradient(140deg, ${CYAN}12, rgba(6,14,26,0.5))`,
@@ -47,6 +140,21 @@ export function CharacterSheet({ goals, tasks, xp, sums, name, quests }: {
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {name || tr('UNNAMED', 'БЕЗ ИМЕНИ')}
             </p>
+            {/* Worn by choice, under the name it belongs to. Nothing shows here
+                until something has been earned — an empty slot inviting you to
+                pick would be the app asking for a title it has not given. */}
+            {held.length > 0 && (
+              <button onClick={() => setPicking(true)}
+                title={tr('Choose a title', 'Выбрать титул')}
+                style={{ marginTop: 4, padding: 0, background: 'transparent', border: 'none',
+                  cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 11, fontWeight: 800,
+                  letterSpacing: '0.16em',
+                  color: worn ? GOLD : 'rgba(148,163,184,0.45)',
+                  textShadow: worn ? `0 0 10px ${GOLD}55` : 'none' }}>
+                {worn ? tr(worn.en, worn.ru)
+                      : `+ ${tr(`${held.length} TITLES`, `ТИТУЛОВ: ${held.length}`)}`}
+              </button>
+            )}
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <p style={{ fontFamily: 'var(--font)', fontSize: 26, fontWeight: 900, lineHeight: 1,

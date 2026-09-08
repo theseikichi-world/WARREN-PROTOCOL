@@ -6,6 +6,7 @@ import {
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
   cooldownRemaining, promoteSecondary, assignPrimary, assignSecondary, archiveGoal,
   trainingCount, hasCapacity, commitDraft, clearBreach, raiseThreshold, slipFromList,
+  syncTitles,
 } from './store'
 import { SkillTree } from './SkillTree'
 import { ShelfPanel } from './ShelfPanel'
@@ -45,9 +46,16 @@ export default function Uplinks() {
     const tasksNow = loadScrap7().tasks
     const sumsNow  = getModuleSummaries()
     const chained  = syncChain(seedIfEmpty(loadProgression()))
-    const { state: next, cleared } = syncQuests(chained, {
+    const { state: quested, cleared } = syncQuests(chained, {
       sums: sumsNow, goals: chained.goals, tasks: tasksNow })
+    // Titles are stamped in the same pass. They pay nothing, so there is no
+    // reward to announce — the set simply has one more in it next time you look.
+    const { state: next, newly } = syncTitles(quested, sumsNow)
     saveProgression(next)
+    if (newly.length) {
+      flash(tr(`✦ TITLE EARNED — ${newly[0].en}`, `✦ ТИТУЛ ПОЛУЧЕН — ${newly[0].ru}`))
+      playCue('quest')
+    }
     if (cleared.length) {
       flash(`⚑ ${tr(cleared[0].title, cleared[0].ru)} — +${cleared[0].xp} XP`)
       playCue('quest')
@@ -291,7 +299,7 @@ export default function Uplinks() {
         {view === 'character' && (
           <CharacterSheet goals={state.goals} tasks={tasks} xp={state.xp}
             sums={sums} name={loadSettings().displayName} quests={state.quests}
-            />
+            state={state} />
         )}
 
         {isSlotView && shown ? (

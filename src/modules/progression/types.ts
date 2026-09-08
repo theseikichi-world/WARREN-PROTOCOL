@@ -168,6 +168,14 @@ export interface ProgressionState {
    * reversible ceremony is a preference with music.
    */
   ascendedAt?: string | null
+  /**
+   * Titles unlocked, id → the day it happened. Stamped once and never
+   * recomputed, exactly like `quests` — a title derived live could be taken back
+   * by a deleted journal entry, and a record that can fall is not a record.
+   */
+  titles?: Record<string, string>
+  /** The one being worn. Null is a real answer, and the default one. */
+  title?:  string | null
   /** Highest level already celebrated, so the moment fires once per threshold. */
   celebratedLevel?: number
   /**

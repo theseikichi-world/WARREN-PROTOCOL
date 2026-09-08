@@ -15,6 +15,8 @@ import {
   SKIP_COST, SKIP_EVERY_DAYS, isUnlockedAt, type XpEvent,
 } from './xp'
 import { evaluateQuests, questFloorXp, type Quest, type QuestContext } from './quests'
+import { evaluateTitles, type Title } from './titles'
+import type { ModuleSummaries } from '../bigscreen/moduleStats'
 import {
   loadState as loadScrap7, saveState as saveScrap7, createExternalTask, trackHabit,
   completeTask, skipHabitDay, slipHabit,
@@ -30,6 +32,7 @@ const KEY = 'warren_progression_v1'
 const INITIAL: ProgressionState = {
   goals: [], seeded: false, xp: 0, quests: {},
   initiatedAt: null, ascendedAt: null, celebratedLevel: 1,
+  titles: {}, title: null,
 }
 
 export function loadProgression(): ProgressionState {
@@ -50,6 +53,8 @@ export function loadProgression(): ProgressionState {
       quests,
       initiatedAt: typeof parsed.initiatedAt === 'string' ? parsed.initiatedAt : null,
       ascendedAt:  typeof parsed.ascendedAt  === 'string' ? parsed.ascendedAt  : null,
+      titles: (parsed.titles && typeof parsed.titles === 'object') ? parsed.titles : {},
+      title:  typeof parsed.title === 'string' ? parsed.title : null,
       celebratedLevel: typeof parsed.celebratedLevel === 'number' ? parsed.celebratedLevel : 1,
       errands: (parsed.errands && typeof parsed.errands.date === 'string'
         && typeof parsed.errands.xp === 'number') ? parsed.errands : undefined,
@@ -977,6 +982,34 @@ export function clearBreach(
     levelUp: levelAfter > levelBefore ? levelAfter : null,
     goalDone,
   }
+}
+
+/**
+ * Stamp any title the record now earns.
+ *
+ * Pays nothing. A title is not a reward in the economy's sense — it restates
+ * something that already happened, and attaching XP to it would price a fact.
+ */
+export function syncTitles(
+  state: ProgressionState, sums: ModuleSummaries, now = new Date(),
+): { state: ProgressionState; newly: Title[] } {
+  const { earned, newly } = evaluateTitles(state.titles, {
+    goals: state.goals, ascendedAt: state.ascendedAt,
+    initiatedAt: state.initiatedAt, sums, now,
+  }, now)
+  if (newly.length === 0) return { state, newly }
+  return { state: { ...state, titles: earned }, newly }
+}
+
+/**
+ * Wear one, or take it off with null.
+ *
+ * Refuses anything not in the ledger. The worn id is the only part of this the
+ * operator sets by hand, so it is the only part that can be wrong.
+ */
+export function wearTitle(state: ProgressionState, id: string | null): ProgressionState {
+  if (id !== null && !state.titles?.[id]) return state
+  return { ...state, title: id }
 }
 
 /**
