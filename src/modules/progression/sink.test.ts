@@ -112,9 +112,10 @@ function mockStorage(seed: Record<string, unknown> = {}) {
 describe('spending, against real storage', () => {
   // Buying a day back opens at level 3, so the bank alone is not enough — the
   // quest gate has to have let you past stage 2 as well.
+  // Exactly stages 1 and 2 — enough for the cap to allow level 3, and no more,
+  // because `questFloorXp` would otherwise repair the bank above what is seeded.
   const CLEARED = Object.fromEntries(
-    ['s1-first-uplink', 's1-life-support', 'q3-first-routine', 'q2-water']
-      .map(id => [id, '2026-09-01T00:00:00.000Z']))
+    ['s1-first-uplink', 's1-life-support'].map(id => [id, '2026-09-01T00:00:00.000Z']))
 
   const seed = (xp: number, task: Task) => mockStorage({
     scrap7_v4: { tasks: [task], categories: ['G'], chatHistory: [], lastDailyReset: '2026-09-20' },

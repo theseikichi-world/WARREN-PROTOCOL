@@ -30,7 +30,10 @@ const habit = (id: string, score = 0, runs = 0): Task => ({
 const ctx = (over: Partial<QuestContext> = {}): QuestContext =>
   ({ sums: EMPTY_SUMS, goals: [], tasks: [], ...over })
 
-/** Everything stage 1 asks for, satisfied at once: an uplink and a basic. */
+/** Stage 1: one uplink, and nothing else. */
+const stage1Done = () => ctx({ goals: [goal([], 'primary')] })
+
+/** Stages 1 and 2: the uplink, and the floor under it. */
 const setupDone = () => ctx({
   tasks: [{ ...habit('life:sleep'), origin: 'baseline' } as Task],
   goals: [goal([], 'primary')],
@@ -44,11 +47,29 @@ describe('quest line', () => {
     expect(QUEST_LINE.every(q => q.brief.length > 0 && q.briefRu.length > 0)).toBe(true)
   })
 
-  it('asks stage 1 for the two things that put a person in the app', () => {
-    // A journal entry used to be the third. It moved to stage 3: on day one
-    // there is nothing to write about yet, and its module now opens there.
-    expect(stageQuests(1).map(q => q.objective.kind).sort()).toEqual(
-      ['baseline.installed', 'uplink.created'])
+  it('asks stage 1 for one thing — the dream everything else serves', () => {
+    // The basic moved to stage 2 when the line went from five stages to nine.
+    // Day one is one decision, not a checklist.
+    expect(stageQuests(1).map(q => q.objective.kind)).toEqual(['uplink.created'])
+    expect(stageQuests(2).map(q => q.objective.kind)).toEqual(['baseline.installed'])
+  })
+
+  it('paces itself on how long an objective physically takes', () => {
+    // The five-stage line held you at one level for thirteen days because stage
+    // 4 wanted a routine at 0.65 — twenty-two days of showing up. Nine stages
+    // land on days 1, 2, 4, 7, 10, 14, 19, 23, 27, and no depth objective jumps
+    // more than 0.15 over the one before it.
+    const depths = QUEST_LINE
+      .filter(q => q.objective.kind === 'routine.depth')
+      .map(q => q.objective.need)
+    expect(depths).toEqual([30, 55, 70])
+    for (let i = 1; i < depths.length; i++) {
+      expect(depths[i] - depths[i - 1]).toBeLessThanOrEqual(25)
+    }
+  })
+
+  it('ends the starting zone at level 10', () => {
+    expect(LAST_GATED_STAGE).toBe(9)
   })
 
   it('pays each gated stage exactly what its level costs', () => {
@@ -114,25 +135,33 @@ describe('measure', () => {
 })
 
 describe('stages', () => {
-  it('clears stage 1 in any order — setup is a checklist, not a queue', () => {
-    // The basic alone, with no uplink: one of the two clears, the stage does not.
-    const partial = ctx({ tasks: [{ ...habit('life:sleep'), origin: 'baseline' } as Task] })
-    const { completed, cleared } = evaluateQuests({}, partial, NOW)
-    expect(cleared.map(q => q.id)).toEqual(['s1-life-support'])
-    expect(stageComplete(1, completed)).toBe(false)
-    expect(activeStage(completed)).toBe(1)
+  it('holds a stage until every quest in it is done, whatever order they come', () => {
+    // Stage 3 is the first with two quests in it: install a routine, and reach
+    // the water target. Either may clear first; the stage waits for both.
+    const done12 = evaluateQuests({}, setupDone(), NOW).completed
+    const routineOnly = ctx({
+      tasks: [{ ...habit('life:sleep'), origin: 'baseline' } as Task, habit('t1')],
+      goals: [goal([node('a', 't1')])],
+    })
+    const { completed, cleared } = evaluateQuests(done12, routineOnly, NOW)
+    expect(cleared.map(q => q.id)).toEqual(['q3-first-routine'])
+    expect(stageComplete(3, completed)).toBe(false)
+    expect(activeStage(completed)).toBe(3)
   })
 
-  it('clears the whole of stage 1 when everything is in place', () => {
-    const { completed, cleared } = evaluateQuests({}, setupDone(), NOW)
-    expect(cleared).toHaveLength(2)
-    expect(stageComplete(1, completed)).toBe(true)
-    expect(activeStage(completed)).toBe(2)
+  it('clears the opening stages one at a time', () => {
+    const first = evaluateQuests({}, stage1Done(), NOW)
+    expect(first.cleared.map(q => q.id)).toEqual(['s1-first-uplink'])
+    expect(activeStage(first.completed)).toBe(2)
+
+    const second = evaluateQuests(first.completed, setupDone(), NOW)
+    expect(second.cleared.map(q => q.id)).toEqual(['s1-life-support'])
+    expect(activeStage(second.completed)).toBe(3)
   })
 
   it('will not clear a later stage while setup is outstanding', () => {
-    // A routine installed, run twenty times and nearly automatic — but no name,
-    // no journal entry, no life support. None of stage 2 or 3 may clear.
+    // A routine installed, run twenty times and nearly automatic — but no
+    // uplink-first, no basic. Nothing past stage 1 may clear.
     const later = ctx({ goals: [goal([node('a', 't1')])], tasks: [habit('t1', 0.9, 20)] })
     const { cleared } = evaluateQuests({}, later, NOW)
     expect(cleared.every(q => q.stage === 1)).toBe(true)
@@ -148,19 +177,18 @@ describe('stages', () => {
   it('reports what the current stage still wants', () => {
     const st = stageState({}, ctx())
     expect(st.stage).toBe(1)
-    expect(st.total).toBe(2)
+    expect(st.total).toBe(1)
     expect(st.cleared).toBe(0)
-    expect(st.remaining.map(q => q.id)).toContain('s1-first-uplink')
+    expect(st.remaining.map(q => q.id)).toEqual(['s1-first-uplink'])
   })
 
   it('never shows a stage ahead of the level — its modules are not open yet', () => {
-    // The real failure this fixes: setup complete, so the active stage is 2,
-    // but the XP bank was short of level 2. The panel offered WATER DISCIPLINE,
-    // which points at a kitchen that opens at level 2. A locked dead end.
+    // The real failure this fixes: the ledger ran ahead of the bank, so the
+    // panel offered WATER DISCIPLINE while the kitchen was still shut.
     const { completed } = evaluateQuests({}, setupDone(), NOW)
-    expect(activeStage(completed)).toBe(2)
+    expect(activeStage(completed)).toBe(3)
     expect(stageState(completed, setupDone(), 1).stage).toBe(1)
-    expect(stageState(completed, setupDone(), 2).stage).toBe(2)
+    expect(stageState(completed, setupDone(), 3).stage).toBe(3)
   })
 
   it('shows every quest of the shown stage against an open module', () => {
@@ -181,7 +209,8 @@ describe('questFloorXp', () => {
 
   it('adds up exactly what the cleared quests paid', () => {
     const { completed } = evaluateQuests({}, setupDone(), NOW)
-    expect(questFloorXp(completed)).toBe(stageQuests(1).reduce((s, q) => s + q.xp, 0))
+    const paid = [1, 2].flatMap(stageQuests).reduce((s, q) => s + q.xp, 0)
+    expect(questFloorXp(completed)).toBe(paid)
   })
 
   it('ignores a quest id that is no longer in the line', () => {

@@ -206,14 +206,19 @@ export const SKIP_EVERY_DAYS = 7
 // that reads HELD for a fortnight and then fires four times in a second is
 // telling you nothing either way.
 //
-// At +160 the price keeps pace with what five routines and a basic actually pay
+// At +140 the price keeps pace with what five routines and a basic actually pay
 // (~90-104 a day with UPKEEP), and no level lands on the same day as another.
-// It costs an existing save about two levels: the bank is untouched, the prices
+// It was briefly +160, set against a quest line that held you at one level for a
+// fortnight; the nine-stage line never holds longer than five days, so the step
+// that stopped THAT burst is now simply expensive — and +140 keeps the milestone
+// at level 10 from being followed by a twenty-day cliff.
+//
+// It costs an existing save a level or so: the bank is untouched, the prices
 // moved. That is the right trade while the economy is still being tuned, and the
 // wrong one after anyone has lived with a number for a year.
 
 const BASE_COST = 120
-const COST_STEP = 160
+const COST_STEP = 140
 
 export function levelCost(level: number): number {
   const floor = BASE_COST + Math.max(0, level - 1) * COST_STEP

@@ -162,10 +162,14 @@ describe('the quest gate', () => {
     expect(g.progress).toBe(1)          // the bar reads full, and the copy says why
   })
 
-  it('opens level 2 only once every stage-1 quest is done', () => {
-    const partial = clear(stageQuests(1)[0].id)
-    expect(gatedLevel(1_000_000, partial).level).toBe(1)
+  it('opens a level only once every quest of its stage is done', () => {
+    // Stage 1 is a single quest now; stage 3 is the first with two in it, so it
+    // is where a half-finished stage can still be observed.
     expect(gatedLevel(1_000_000, stage(1)).level).toBe(2)
+
+    const half = { ...all(2), ...clear(stageQuests(3)[0].id) }
+    expect(gatedLevel(1_000_000, half).level).toBe(3)
+    expect(gatedLevel(1_000_000, all(3)).level).toBe(4)
   })
 
   it('still requires the XP — clearing a stage is not a free level', () => {
@@ -233,8 +237,9 @@ describe('what a level opens', () => {
   })
 
   it('admits when a level opened nothing but the number', () => {
-    // Level 7 gates nothing, widens nothing and starts no stage
-    expect(rewardIsBare(levelReward(7))).toBe(true)
+    // Level 11 gates nothing, widens no floor, opens no module and — now that
+    // the starting zone runs to ten — starts no stage either.
+    expect(rewardIsBare(levelReward(11))).toBe(true)
     expect(rewardIsBare(levelReward(2))).toBe(false)
   })
 })
@@ -257,15 +262,39 @@ describe('the curve against what a protocol actually earns', () => {
     for (let l = 2; l <= 20; l++) expect(levelCost(l)).toBeGreaterThan(best)
   })
 
-  it('outruns a fortnight banked behind a held gate', () => {
-    // Sixteen days of full earnings plus everything the five stages pay out.
-    const held = 16 * dayAt([0.3, 0.3, 0.3, 0.3, 0.3])
-      + [1, 2, 3, 4, 5].reduce((sum, s) => sum + stageXp(s), 0)
+  it('never lets one stage pay for two levels', () => {
+    // This is the burst, stated as arithmetic and without a simulation. A stage
+    // lifts the cap by exactly one; if its own payout covers TWO levels, the
+    // scale jumps the moment it clears and the second level means nothing.
+    //
+    // Together with the test above the pair is complete: one day cannot buy a
+    // level, and one stage cannot buy two. The five-stage line broke the second
+    // of those by holding you at level 4 for a fortnight.
+    for (let stage = 1; stage <= LAST_GATED_STAGE; stage++) {
+      expect(stageXp(stage), `stage ${stage} pays for two levels on its own`)
+        .toBeLessThan(levelCost(stage) + levelCost(stage + 1))
+    }
+  })
 
-    // That bank must not carry past ONE level beyond the cap the gate lifts to.
-    // Stage 5 is the last, so the cap becomes level 6; reaching 7 on the same
-    // day would be the burst returning.
-    const through7 = [1, 2, 3, 4, 5, 6].reduce((sum, l) => sum + levelCost(l), 0)
-    expect(held).toBeLessThan(through7)
+  it('carries the first two levels on quest XP alone', () => {
+    // Days one and two have essentially no routine income — one habit, no
+    // UPKEEP — so those stages have to pay for their level outright or the
+    // opening of the game stalls on arithmetic.
+    for (const stage of [1, 2]) {
+      expect(stageXp(stage), `stage ${stage} cannot reach its own level`)
+        .toBeGreaterThanOrEqual(levelCost(stage))
+    }
+  })
+
+  it('leaves the rest of every level to income, and never overpays', () => {
+    // The tempting design is to pay each stage exactly what its level costs, so
+    // the bar fills as the stage clears. It does not work: routine income then
+    // becomes pure surplus, and by the last stage the bank is ~2000 ahead —
+    // enough to take level 11 on the same day as 10. Underpaying by the income
+    // earned during the hold is what keeps the bank near zero at the milestone.
+    for (let stage = 1; stage <= LAST_GATED_STAGE; stage++) {
+      expect(stageXp(stage), `stage ${stage} overpays its level`)
+        .toBeLessThanOrEqual(levelCost(stage))
+    }
   })
 })
