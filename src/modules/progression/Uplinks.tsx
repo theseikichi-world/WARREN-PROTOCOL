@@ -5,7 +5,7 @@ import {
   loadProgression, saveProgression, seedIfEmpty, syncChain, installNode, recordRun, syncQuests,
   primaryGoal, secondaryGoal, archivedGoals, bandwidthUsed,
   cooldownRemaining, promoteSecondary, assignPrimary, assignSecondary, archiveGoal,
-  trainingCount, hasCapacity, commitDraft, clearBreach, raiseThreshold,
+  trainingCount, hasCapacity, commitDraft, clearBreach, raiseThreshold, slipFromList,
 } from './store'
 import { SkillTree } from './SkillTree'
 import { ShelfPanel } from './ShelfPanel'
@@ -150,6 +150,19 @@ export default function Uplinks() {
     window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'uplinks' } }))
   }, [state])
 
+  /**
+   * The day you did the thing you are quitting.
+   *
+   * Earns nothing, on purpose: every other row pays for the tap, and paying for
+   * this one would make the honest answer the profitable one.
+   */
+  const handleSlip = useCallback((taskId: string) => {
+    if (!slipFromList(taskId)) return
+    setTasks(loadScrap7().tasks)
+    playCue('tick')
+    flash(tr('− SLIP LOGGED · the run starts again', '− СРЫВ ЗАПИСАН · серия начнётся заново'))
+  }, [])
+
   const handleTrack = useCallback((taskId: string) => {
     const s7     = loadScrap7()
     const before = s7.tasks.find(t => t.id === taskId)?.score ?? 0
@@ -285,6 +298,7 @@ export default function Uplinks() {
           <>
             <SkillTree goal={shown} tasks={tasks} accent={accent} level={level}
               onInstall={handleInstall} onTrack={handleTrack} onRaise={handleRaise}
+              onSlip={handleSlip}
               onClearBreach={i => handleClearBreach(shown.id, i)} />
 
             {/* A protocol holds routines and nothing else. The bookings, the

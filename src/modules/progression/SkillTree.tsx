@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { t as tr } from '../../i18n'
-import { getHabitTier, type Task } from '../scrap7/types'
+import { getHabitTier, todayKey, type Task } from '../scrap7/types'
 import {
   nodeScore, unlockRequirements, nodeState, chapterState, activeChapter, type NodeState,
 } from './chain'
@@ -26,7 +26,7 @@ const STATE_GLYPH: Record<NodeState, string> = {
   locked: '🔒', available: '◈', training: '◆', integrated: '✦',
 }
 
-export function SkillTree({ goal, tasks, accent, level, onInstall, onTrack, onClearBreach, onRaise }: {
+export function SkillTree({ goal, tasks, accent, level, onInstall, onTrack, onClearBreach, onRaise, onSlip }: {
   goal:      Goal
   tasks:     Task[]
   accent:    string
@@ -36,6 +36,8 @@ export function SkillTree({ goal, tasks, accent, level, onInstall, onTrack, onCl
   onClearBreach: (chapterIndex: number) => void
   /** Hold a mastered routine to its next standard. See `raiseThreshold`. */
   onRaise:   (nodeId: string) => void
+  /** The day you did the thing you are quitting. See `slipHabit`. */
+  onSlip:    (taskId: string) => void
   /** The operator's level — the ladder opens in two stages. See `rungsOpen`. */
   level:     number
 }) {
@@ -134,7 +136,7 @@ export function SkillTree({ goal, tasks, accent, level, onInstall, onTrack, onCl
       {sel && (
         <NodeDetail node={sel} goal={goal} tasks={tasks} accent={accent} frozen={frozen}
           state={stateOf(sel)} raise={frozen ? null : raiseState(sel, tasks, level)}
-          onInstall={onInstall} onTrack={onTrack} onRaise={onRaise} />
+          onInstall={onInstall} onTrack={onTrack} onRaise={onRaise} onSlip={onSlip} />
       )}
       {!sel && (
         <p style={{ fontFamily: 'var(--font)', fontSize: 10, color: 'rgba(148,163,184,0.35)',
@@ -357,7 +359,7 @@ function TreeNode({ placed, state, skin, accent, score, selected, onSelect }: {
   )
 }
 
-function NodeDetail({ node, goal, tasks, accent, state, frozen, raise, onInstall, onTrack, onRaise }: {
+function NodeDetail({ node, goal, tasks, accent, state, frozen, raise, onInstall, onTrack, onRaise, onSlip }: {
   node:      ChainNode
   goal:      Goal
   tasks:     Task[]
@@ -369,6 +371,8 @@ function NodeDetail({ node, goal, tasks, accent, state, frozen, raise, onInstall
   onInstall: (id: string) => void
   onTrack:   (taskId: string) => void
   onRaise:   (nodeId: string) => void
+  /** The day you did the thing you are quitting. See `slipHabit`. */
+  onSlip:    (taskId: string) => void
 }) {
   const score = nodeScore(node, tasks)
   const task  = tasks.find(t => t.id === node.scrapTaskId)
@@ -376,6 +380,8 @@ function NodeDetail({ node, goal, tasks, accent, state, frozen, raise, onInstall
   const hTier = getHabitTier(score)
   const reqs  = unlockRequirements(node, goal, tasks)
   const doneToday = (task?.todayCount ?? 0) >= (task?.target ?? 1)
+  const quitting  = node.direction === 'negative'
+  const slippedToday = !!task?.slips?.includes(todayKey())
 
   return (
     <div style={{ marginTop: 10, padding: '11px 13px', borderRadius: 10,
@@ -486,6 +492,9 @@ function NodeDetail({ node, goal, tasks, accent, state, frozen, raise, onInstall
               background: `${GOLD}90` }} title="0.70" />
           </div>
 
+          {/* On a habit you are QUITTING the daily mark means you held — the
+              same button, the same reward, a different sentence. The second
+              button is the day you did not, and it earns nothing on purpose. */}
           <button onClick={() => onTrack(task.id)} style={{
             width: '100%', marginTop: 10, padding: '9px', borderRadius: 8, cursor: 'pointer',
             fontFamily: 'var(--font)', fontSize: 12, fontWeight: 800, letterSpacing: '0.12em',
@@ -494,8 +503,30 @@ function NodeDetail({ node, goal, tasks, accent, state, frozen, raise, onInstall
             border: `1px solid ${doneToday ? 'rgba(57,255,20,0.4)' : 'transparent'}`,
             boxShadow: doneToday ? 'none' : `0 0 14px ${accent}40`,
           }}>
-            {doneToday ? `✓ ${tr('LOGGED TODAY', 'ОТМЕЧЕНО СЕГОДНЯ')}` : `+1 ${tr('RUN IT', 'ВЫПОЛНИТЬ')}`}
+            {quitting
+              ? (doneToday ? `✓ ${tr('HELD TODAY', 'УДЕРЖАЛИСЬ СЕГОДНЯ')}` : `✓ ${tr('I HELD', 'Я УДЕРЖАЛСЯ')}`)
+              : (doneToday ? `✓ ${tr('LOGGED TODAY', 'ОТМЕЧЕНО СЕГОДНЯ')}` : `+1 ${tr('RUN IT', 'ВЫПОЛНИТЬ')}`)}
           </button>
+
+          {quitting && (
+            slippedToday ? (
+              <p style={{ fontFamily: 'var(--font)', fontSize: 10.5, textAlign: 'center',
+                marginTop: 7, color: 'rgba(239,68,68,0.75)', letterSpacing: '0.06em' }}>
+                {tr('Slipped today. The run starts again tomorrow.',
+                    'Сегодня сорвались. Отсчёт начнётся заново завтра.')}
+              </p>
+            ) : (
+              <button onClick={() => onSlip(task.id)}
+                title={tr('Costs three days of progress and the run', 'Стоит трёх дней прогресса и серии')}
+                style={{ width: '100%', marginTop: 6, padding: '6px', borderRadius: 7,
+                  cursor: 'pointer', fontFamily: 'var(--font)', fontSize: 10.5, fontWeight: 700,
+                  letterSpacing: '0.12em', color: 'rgba(239,68,68,0.8)',
+                  background: 'transparent', borderWidth: 1, borderStyle: 'solid',
+                  borderColor: 'rgba(239,68,68,0.3)' }}>
+                {tr('I SLIPPED', 'Я СОРВАЛСЯ')}
+              </button>
+            )
+          )}
         </>
       )}
     </div>

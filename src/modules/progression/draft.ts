@@ -16,6 +16,7 @@
 import type { ChainNode, Chapter, Goal, NodeTier } from './types'
 import { DEFAULT_UNLOCKS_AT } from './types'
 import { anchorLabel, type RoutineAnchor } from './anchor'
+import type { Direction } from '../scrap7/types'
 import { isDueDate } from './deadline'
 import { SEED_GOALS } from './seed'
 
@@ -28,6 +29,8 @@ export interface DraftNode {
   anchor?: RoutineAnchor
   /** How long a run takes, in minutes — what makes fitting it into free time real. */
   minutes?: number
+  /** 'negative' is a habit being quit — see `ChainNode.direction`. */
+  direction?: Direction
   tier:   NodeTier
   ladder: string[]      // thresholds, ascending
   after:  string[]      // prerequisite keys — empty means chain entry
@@ -127,6 +130,7 @@ export function goalToDraft(goal: Goal): ChainDraft {
       cue:    n.cue,
       ...(n.anchor ? { anchor: n.anchor } : {}),
       ...(n.minutes ? { minutes: n.minutes } : {}),
+      ...(n.direction ? { direction: n.direction } : {}),
       tier:   n.tier,
       ladder: [...n.thresholds],
       after:  n.prerequisiteIds.map(keyOf),
@@ -271,6 +275,7 @@ export function draftToNodes(draft: ChainDraft, goalId = draft.goalId ?? 'draft'
     title:           n.title.trim() || n.key,
     cue:             n.anchor ? anchorLabel(n.anchor) : n.cue,
     ...(n.anchor ? { anchor: n.anchor } : {}),
+    ...(n.direction ? { direction: n.direction } : {}),
     tier:            n.tier,
     thresholds:      cleanLadder(n.ladder),
     thresholdIndex:  0,
@@ -346,6 +351,7 @@ export function applyDraft(
       cue:            dn.anchor ? anchorLabel(dn.anchor, nameOf) : dn.cue.trim(),
       ...(dn.anchor ? { anchor: dn.anchor } : {}),
       ...(dn.minutes ? { minutes: dn.minutes } : {}),
+      ...(dn.direction ? { direction: dn.direction } : {}),
       tier:           dn.tier,
       thresholds:     ladder,
       thresholdIndex: Math.min(was?.thresholdIndex ?? 0, ladder.length - 1),

@@ -17,7 +17,7 @@ import {
 import { evaluateQuests, questFloorXp, type Quest, type QuestContext } from './quests'
 import {
   loadState as loadScrap7, saveState as saveScrap7, createExternalTask, trackHabit,
-  completeTask, skipHabitDay,
+  completeTask, skipHabitDay, slipHabit,
 } from '../scrap7/store'
 import {
   isBaseline, isErrand, isOrphanHabit, taskOrigin, todayKey as dayKey,
@@ -286,7 +286,10 @@ export function installNode(state: ProgressionState, nodeId: string): InstallRes
       text:      node.title,
       category:  goal.title,
       taskType:  'habit',
-      direction: 'positive',
+      // A routine from the `quit` shape runs the other way: its daily tap means
+      // you held, and slipping is its own action. Every routine written before
+      // that was reachable has no direction and defaults to building.
+      direction: node.direction ?? 'positive',
       origin:    'chain',
       target:    1,
       unit:      'times',
@@ -685,6 +688,27 @@ export function bankErrands(tasks: Task[]): { gained: number; levelUp: number | 
   }
   saveProgression(state)
   return { gained, levelUp }
+}
+
+/**
+ * You did the thing you are quitting.
+ *
+ * Deliberately not routed through `recordRun`: a slip earns nothing. Every
+ * other row in the app pays for the tap, and paying for this one would make the
+ * honest answer the profitable one, which is the fastest way to stop getting
+ * honest answers.
+ *
+ * What it does pay is the truth — the score and the run both move, so the
+ * number on the tree is still the number you would give if asked.
+ */
+export function slipFromList(taskId: string): boolean {
+  const s7   = loadScrap7()
+  const task = s7.tasks.find(t => t.id === taskId)
+  if (!task || task.taskType !== 'habit' || task.direction !== 'negative') return false
+
+  saveScrap7(slipHabit(s7, taskId))
+  window.dispatchEvent(new CustomEvent('warren:sync', { detail: { source: 'orbit' } }))
+  return true
 }
 
 export interface RunReward {

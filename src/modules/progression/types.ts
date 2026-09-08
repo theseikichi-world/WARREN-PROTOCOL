@@ -7,6 +7,7 @@
 // modelled and seeded so the shape is fixed, but gating goes live in step 3.
 
 import type { RoutineAnchor } from './anchor'
+import type { Direction } from '../scrap7/types'
 import { alphaFor } from '../scrap7/types'
 
 export type NodeTier = 1 | 2 | 3 | 4
@@ -56,6 +57,14 @@ export interface ChainNode {
   anchor?:         RoutineAnchor
   /** How long one run takes, in minutes. What lets ORBIT fit it into real free time. */
   minutes?:        number
+  /**
+   * Which way this routine runs. 'negative' is a habit you are QUITTING: the
+   * daily tap means you held, and slipping is its own button.
+   *
+   * Absent means 'positive', which is what every routine written before the
+   * `quit` shape had a way to reach the tree was.
+   */
+  direction?:      Direction
   tier:            NodeTier
   thresholds:      string[]      // ordered, ascending
   thresholdIndex:  number

@@ -563,6 +563,29 @@ function NodeEditor({
 
           <AnchorPicker node={node} accent={accent} habits={habits} onPatch={onPatch} />
 
+          {/* Which way it runs. A quit-habit is the one case where the daily
+              tap means "I held" and there is a second button for the day you
+              did not — see `slipHabit`. */}
+          <div>
+            <p style={label}>{tr('DIRECTION', 'НАПРАВЛЕНИЕ')}</p>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button onClick={() => onPatch({ direction: 'positive' })}
+                style={chip((node.direction ?? 'positive') === 'positive')}>
+                {tr('BUILD', 'РАЗВИВАТЬ')}
+              </button>
+              <button onClick={() => onPatch({ direction: 'negative' })}
+                style={chip(node.direction === 'negative')}>
+                {tr('QUIT', 'БРОСАТЬ')}
+              </button>
+            </div>
+            {node.direction === 'negative' && (
+              <p style={{ fontFamily: 'var(--font)', fontSize: 11.5, color: DIM, marginTop: 4, lineHeight: 1.55 }}>
+                {tr('The daily mark means you held. Slipping is its own button, and costs three days.',
+                    'Ежедневная отметка означает, что вы удержались. Срыв — отдельная кнопка, стоит три дня.')}
+              </p>
+            )}
+          </div>
+
           <div>
             <p style={label}>{tr('COMPLEXITY', 'СЛОЖНОСТЬ')}</p>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>

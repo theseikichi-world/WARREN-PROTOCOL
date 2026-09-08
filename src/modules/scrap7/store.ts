@@ -260,11 +260,14 @@ export function trackHabit(state: Scrap7State, id: string, dir: 1 | -1 = 1): Tra
 
       if (isNewDay && !trackHist.includes(today)) trackHist.push(today)
 
-      if (t.direction === 'negative') {
-        // Tracked a bad habit: penalize score
-        newScore = Math.max(0, score - alphaFor(t.formationDays) * 3)
-      } else if (!wasAlreadyDone && newCount >= target) {
-        // Just hit daily target for the first time: reward
+      // A TAP ALWAYS MEANS THE GOOD OUTCOME, whichever direction the habit runs.
+      //
+      // It used to mean the opposite on a habit you were quitting — a tap was a
+      // cigarette, and the score fell. That read backwards against every other
+      // row in the app and it left the good day with nothing to press, so a week
+      // of not smoking decayed to zero exactly like a week of not showing up.
+      // Holding is the daily act here; `slipHabit` is the other button.
+      if (!wasAlreadyDone && newCount >= target) {
         const alpha = alphaFor(t.formationDays)
         newScore = Math.min(1, score * (1 - alpha) + alpha)
         if (isNewDay) {
@@ -292,6 +295,43 @@ export function trackHabit(state: Scrap7State, id: string, dir: 1 | -1 = 1): Tra
   })
 
   return { state: { ...state, tasks }, milestone }
+}
+
+// ─── Slipping ─────────────────────────────────────────────────────────────────
+
+/** What a single slip takes off the score, as a multiple of the habit's rate. */
+export const SLIP_COST = 3
+
+/**
+ * You did the thing you are quitting.
+ *
+ * Costs three days of progress and resets the run, which is roughly what a slip
+ * costs in life — not a catastrophe, and not nothing. The day is stamped as
+ * accounted for so the decay pass does not charge for it a second time.
+ *
+ * It is NOT written to `trackingHistory`. That array answers "did you show up
+ * for this", and every reader of it — UPTIME, the STEADY HAND objective, the
+ * week strip — would otherwise count a cigarette as a day's work.
+ */
+export function slipHabit(state: Scrap7State, id: string): Scrap7State {
+  const today = todayKey()
+  const tasks = state.tasks.map(t => {
+    if (t.id !== id || t.taskType !== 'habit') return t
+    const slips = t.slips ?? []
+    if (slips.includes(today)) return t
+
+    return {
+      ...t,
+      score:           Math.max(0, (t.score ?? 0) - alphaFor(t.formationDays) * SLIP_COST),
+      streak:          0,
+      slips:           [...slips, today],
+      // Accounted for, so `applyDailyReset` does not also decay it. The day is
+      // already paid for at three times the rate.
+      lastTrackedDate: today,
+      todayCount:      t.target ?? 1,
+    }
+  })
+  return { ...state, tasks }
 }
 
 // ─── Skip habit day ───────────────────────────────────────────────────────────

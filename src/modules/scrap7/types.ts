@@ -70,6 +70,15 @@ export interface Task {
   lastTrackedDate?:  string | null
   trackingHistory?:  string[]
   skippedDates?:     string[]  // days marked skip — no decay, streak preserved
+  /**
+   * Days you SLIPPED, on a habit you are quitting. Its own list rather than a
+   * value in `trackingHistory`, because that array answers "did you show up for
+   * this" — and a slip is the one day you did not.
+   *
+   * Kept so the stretch can be counted honestly: the fourth act of the `quit`
+   * shape is "a stretch, counted", and a number you cannot check is not evidence.
+   */
+  slips?:            string[]
   target?:           number    // daily dose target (default 1)
   unit?:             string    // "glasses", "minutes", "km", "pages" etc.
   /**
